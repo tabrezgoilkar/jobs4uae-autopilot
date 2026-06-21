@@ -22,8 +22,11 @@ export default function Layout({ children }: { children: ReactNode }) {
       <header className="bg-white border-b border-slate-200">
         <div className="max-w-4xl mx-auto px-6 py-3 flex items-center gap-2">
           <span className="font-bold text-slate-800 mr-4">Jobs4UAE Autopilot</span>
-          <NavLink to="/" label="Home" />
-          <NavLink to="/profile" label="My Profile" />
+          <nav aria-label="Main" className="flex gap-2">
+            <NavLink to="/" label="Home" />
+            <NavLink to="/profile" label="My Profile" />
+            <NavLink to="/evaluate" label="Evaluate Jobs" />
+          </nav>
         </div>
       </header>
       <main className="max-w-4xl mx-auto px-6 py-8">{children}</main>

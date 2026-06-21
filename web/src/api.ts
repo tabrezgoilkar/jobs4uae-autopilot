@@ -76,3 +76,36 @@ export async function importCv(file: File): Promise<Profile> {
   }
   return res.json();
 }
+
+export interface Dimension { name: string; score: string; comment: string; }
+export interface Evaluation {
+  id: string;
+  createdAt: string;
+  jobTitle: string;
+  company: string;
+  location: string;
+  grade: string;
+  recommendation: 'apply' | 'maybe' | 'skip';
+  summary: string;
+  dimensions: Dimension[];
+  matchedSkills: string[];
+  missingSkills: string[];
+}
+
+export async function runEvaluation(jobText: string): Promise<Evaluation> {
+  const res = await fetch('/api/evaluate', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ jobText }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({ error: `Server error ${res.status}` }));
+    throw new Error(body.error || `Server error ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function listEvaluations(): Promise<Evaluation[]> {
+  const res = await fetch('/api/evaluations').then(checkOk);
+  return res.json();
+}

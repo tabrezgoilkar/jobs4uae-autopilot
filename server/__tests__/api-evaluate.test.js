@@ -72,4 +72,14 @@ describe('evaluate API', () => {
     expect(res.status).toBe(200);
     expect(res.body.id).toBe(created.body.id);
   });
+
+  it('POST /api/evaluate persists the original jobText on the saved evaluation', async () => {
+    writeConfig();
+    stubGemini(JSON.stringify({ jobTitle: 'Accountant', grade: 'B', recommendation: 'apply', summary: 'ok', dimensions: [], matchedSkills: [], missingSkills: [] }));
+    const { createApp } = await import('../app.js');
+    const app = createApp();
+    const res = await request(app).post('/api/evaluate').send({ jobText: 'UNIQUE-JOB-TEXT-12345' });
+    const fetched = await request(app).get(`/api/evaluations/${res.body.id}`);
+    expect(fetched.body.jobText).toBe('UNIQUE-JOB-TEXT-12345');
+  });
 });

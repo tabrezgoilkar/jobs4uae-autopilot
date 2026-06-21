@@ -36,6 +36,23 @@ A setup wizard lets you pick:
 9. LinkedIn (assisted) + Batch evaluation
 10. Local LLM automation + Windows one-click packaging
 
+## Run it locally (developers)
+
+```bash
+npm install
+npm run dev   # starts the server (:5123) and the web app (:5173, opens automatically)
+```
+
+On first launch the **Setup Wizard** opens: pick an AI engine (Gemini free / your own key / local Ollama), paste a key if needed, click **Test AI**, then **Save & continue**. Your choice is saved to a git-ignored `data/config.json` and the app skips straight to Home on the next launch.
+
+Run the tests:
+
+```bash
+npm test
+```
+
+> Status: **Phase 1 complete** — foundation + setup wizard. Phases 2–10 add CV intake, job evaluation, document generation, GCC scanning, and Windows packaging.
+
 ## Privacy & honesty
 
 - Your CV and data stay **on your machine** (local SQLite + files). API keys are stored locally and never committed.

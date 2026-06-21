@@ -177,8 +177,12 @@ Each phase ships a working, **tested** increment before the next begins. Each ha
 - Windows **one-click installer/launcher** (bundled portable Node + Start shortcut that boots server and opens browser). Onboarding help + community docs. Error-handling/polish pass.
 - **Acceptance:** On a clean Windows PC: install → launch → complete the full loop **online (Gemini)** and **offline (Ollama auto-installed)**.
 
-### Phase 11 — Full Automation (planned; user's ideas TBD)
+### Phase 11 — Full Automation (planned; user's ideas being captured)
 Vision: move beyond "AI assists, user submits" toward a more fully automated end-to-end job-search loop (e.g. continuous scanning → auto-evaluate → auto-tailor → queue for one-click apply, and beyond). Concrete scope to be defined from the user's ideas. Must consciously revisit the human-in-the-loop / no-auto-submit constraints in §3 — any automation of actual submissions is an explicit, deliberate decision, not a default.
+
+**Ideas captured (to be designed/sequenced later):**
+
+1. **Auto-discover & auto-update OpenRouter free models.** When a user stores an OpenRouter API key, the app automatically queries OpenRouter's models endpoint (`GET https://openrouter.ai/api/v1/models`), filters for *currently free* models (zero pricing / `:free`), validates one with a quick test call, and sets it as the active model — no manual model typing. Because free models expire or get rate-limited (e.g. `nex-agi/nex-n2-pro:free` was free only until 2026-06-23), the app re-checks periodically and on failure auto-rotates to another working free model, so the user never has to hand-edit the model again. (Note: this is an onboarding/AI-engine UX win and could reasonably be pulled forward earlier than the rest of Phase 11.)
 
 ## 10. Risks & Mitigations
 

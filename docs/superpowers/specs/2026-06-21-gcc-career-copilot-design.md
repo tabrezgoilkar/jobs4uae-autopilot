@@ -166,9 +166,11 @@ Each phase ships a working, **tested** increment before the next begins. Each ha
 - Config-driven scanners for Bayt + Naukrigulf by keyword/country/city → normalized listings into the app → one-click "Evaluate".
 - **Acceptance:** Run a search → real listings returned and stored → evaluate one end-to-end.
 
-### Phase 8 — GCC Scanning, Tier 2 (GulfTalent + Indeed + local boards)
-- Add GulfTalent, Indeed (ae/sa/qa), Tanqeeb, Laimoon, Dubizzle Jobs. Board defs are pure config for easy extension.
-- **Acceptance:** Each board returns results for a sample query; a deliberately-broken board fails gracefully without breaking the run.
+### Phase 8 — GCC Scanning, Tier 2 (GulfTalent + Indeed + local boards) + per-board verification gating
+- **Board registry with per-board status** (the user's requirement): each board carries a `status` of `experimental` → `verified` → `production`. The UI only offers **verified/production** boards to end users by default; `experimental` boards are hidden or clearly badged. A board is promoted to `verified` only after it's **live-tested** against the real site. This also retroactively gates the Phase 7 Bayt/Naukrigulf boards (currently `experimental` until live-tuned).
+- Foundation for Phases 8–9: a shared **board-status registry + a standard per-board verification harness** so each board is developed and confirmed against the live site independently before going production-live.
+- Add GulfTalent, Indeed (ae/sa/qa), Tanqeeb, Laimoon, Dubizzle Jobs. Board defs are pure config for easy extension; each ships `experimental` and is verified individually.
+- **Acceptance:** Each board returns results for a sample query; a deliberately-broken board fails gracefully without breaking the run; only `verified`/`production` boards appear to end users.
 
 ### Phase 9 — LinkedIn (assisted) + Batch Evaluation
 - LinkedIn via user-assisted logged-in browser session (no credential storage). Batch-evaluate many saved/scanned jobs with a progress UI.
@@ -203,6 +205,20 @@ Assisted Auto-Apply (Connections + autofill + accumulating answer memory + Linke
 - For each **missing skill** (from an evaluation or a generated CV), show curated links to **free** public learning resources.
 - Anti-fabrication: link to reputable free platforms via a **search link for the skill** (e.g. freeCodeCamp, YouTube, Khan Academy, Microsoft Learn, Google for Education, edX/Coursera audit) rather than inventing specific course URLs that may not exist.
 - **Acceptance:** Each missing skill shows one-click "Learn this free" links that open a relevant, real search/landing page on a reputable free platform.
+
+## 9b. Design & Polish Track (from the approved Lumzi design)
+
+The user approved a full product design (claude.ai/design project `jobs4uae-autopilot design`, files `Jobs4UAE Autopilot.dc.html` + `Jobs4UAE Directions.dc.html`) built on the **Lumzi/Cadence design system** (IBM Plex Sans/Mono; cobalt primary; **iris reserved for AI affordances only**; hairline-first, light + dark). The design is the full product vision and is folded into the roadmap as the phases below. **Information-architecture changes adopted from the design:** left **sidebar** shell (replaces top nav); **Evaluate merged into the Scan hub** (inline evaluation on a selected listing — no standalone Evaluate route); **Auto-apply** becomes a first-class route; a global **AI Career Copilot**.
+
+- **Phase 13 — Design System + App Shell (foundation; build next).** Port the Lumzi tokens to CSS variables + Tailwind theme; self-host IBM Plex (via fontsource); light/dark via `data-theme` + toggle; build the **sidebar app-shell** (logo, icon nav, user/engine chip) + topbar + content area; replace the current top-nav `Layout`. Existing pages render inside the new shell and inherit the new type/colour immediately. Acceptance: every existing route works inside the new sidebar shell with Lumzi tokens + fonts; dark mode toggles.
+- **Phase 14 — Re-skin existing pages** to the Lumzi components (Profile, Documents, Tracker, Scan). Includes **merging Evaluate into the Scan hub** (inline fit verdict on a selected listing) and removing the standalone Evaluate route.
+- **Phase 15 — Home dashboard:** morning briefing, pipeline stats, "to review" queue, learning + interview-prep insights, activity/provenance timeline.
+- **Phase 16 — AI Career Copilot:** right-side copilot pane + global drawer + command palette ("Ask the UAE market"), with cited reasoning and the "you decide / never applies on your behalf" transparency.
+- **Phase 17 — Scan-hub extras:** salary benchmark, WhatsApp pitch, schedule, bulk bar.
+- **Phase 18 — Mock interview** practice.
+- Cross-cutting: AI-transparency affordances (scored-by-AI badges, "Why this score?", undo/audit) carried throughout, matching the design.
+
+(Design-track phases run alongside the feature phases 8–11; the design foundation (13) is built next per the user's direction.)
 
 ## 10. Risks & Mitigations
 

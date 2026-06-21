@@ -5,6 +5,7 @@ import SetupWizard from './pages/SetupWizard';
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import ProfilePage from './pages/ProfilePage';
+import EvaluatePage from './pages/EvaluatePage';
 
 export default function App() {
   const [config, setConfig] = useState<AppConfig | null>(null);
@@ -36,6 +37,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Dashboard config={config} />} />
           <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/evaluate" element={<EvaluatePage />} />
         </Routes>
       </Layout>
     </BrowserRouter>

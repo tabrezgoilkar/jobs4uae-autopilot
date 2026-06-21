@@ -22,8 +22,16 @@ export default function Dashboard({ config }: { config: AppConfig }) {
         </Link>
       </div>
 
+      <div className="mt-4 bg-white rounded-2xl shadow p-6">
+        <h2 className="font-semibold text-slate-800">Step 2: Evaluate a job</h2>
+        <p className="mt-1 text-sm text-slate-500">Paste any job description to get an A–F fit score based on your profile.</p>
+        <Link to="/evaluate" className="inline-block mt-4 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium">
+          Evaluate a Job →
+        </Link>
+      </div>
+
       <p className="mt-6 text-sm text-slate-400">
-        Coming next: job evaluation, tailored resumes & cover letters, and GCC job scanning.
+        Coming next: tailored resumes & cover letters, and GCC job scanning.
       </p>
     </div>
   );

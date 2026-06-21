@@ -24,6 +24,7 @@ export default function Layout({ children }: { children: ReactNode }) {
           <span className="font-bold text-slate-800 mr-4">Jobs4UAE Autopilot</span>
           <NavLink to="/" label="Home" />
           <NavLink to="/profile" label="My Profile" />
+          <NavLink to="/evaluate" label="Evaluate Jobs" />
         </div>
       </header>
       <main className="max-w-4xl mx-auto px-6 py-8">{children}</main>

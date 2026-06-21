@@ -45,7 +45,7 @@ export function updateDocument(id, patch) {
   const list = listDocuments();
   const idx = list.findIndex((d) => d.id === id);
   if (idx === -1) return null;
-  const { id: _i, createdAt: _c, ...rest } = patch ?? {};
+  const { id: _i, createdAt: _c, updatedAt: _u, ...rest } = patch ?? {};
   list[idx] = { ...list[idx], ...rest, updatedAt: new Date().toISOString() };
   writeAll(list);
   return list[idx];

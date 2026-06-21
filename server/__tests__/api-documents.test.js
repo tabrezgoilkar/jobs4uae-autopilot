@@ -82,4 +82,21 @@ describe('documents API', () => {
     const missing = await request(app).post('/api/documents/nope').send({ resumeMarkdown: 'x' });
     expect(missing.status).toBe(404);
   });
+
+  it('POST /api/documents/generate falls back to body jobText when the evaluation lacks it', async () => {
+    writeConfig();
+    // Older-format evaluation record with no jobText field.
+    fs.writeFileSync(
+      path.join(tmpDir, 'evaluations.json'),
+      JSON.stringify([{ id: 'ev_old', jobTitle: 'Legacy', company: 'Old', grade: 'C', createdAt: '2026-01-01T00:00:00.000Z' }]),
+    );
+    stubGemini(JSON.stringify({ resumeMarkdown: '# Fallback', coverLetterMarkdown: 'Hi' }));
+    const { createApp } = await import('../app.js');
+    const res = await request(createApp())
+      .post('/api/documents/generate')
+      .send({ evaluationId: 'ev_old', jobText: 'FALLBACK-JD' });
+    expect(res.status).toBe(200);
+    expect(res.body.resumeMarkdown).toContain('Fallback');
+    expect(res.body.jobTitle).toBe('Legacy');
+  });
 });

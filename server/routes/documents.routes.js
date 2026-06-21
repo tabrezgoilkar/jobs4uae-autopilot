@@ -24,6 +24,7 @@ export function documentsRouter() {
       if (evaluationId) {
         const ev = getEvaluation(evaluationId);
         if (!ev) return res.status(404).json({ error: 'Evaluation not found.' });
+        // Fall back to the request body's jobText for evaluations saved before jobText was persisted.
         jobText = (ev.jobText ?? jobText ?? '').trim();
         jobTitle = jobTitle || ev.jobTitle || '';
         company = company || ev.company || '';

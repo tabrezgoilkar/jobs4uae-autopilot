@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import path from 'node:path';
 import { configPath } from './paths.js';
 
 export const DEFAULT_CONFIG = {
@@ -14,7 +15,13 @@ export function loadConfig() {
   if (!fs.existsSync(p)) return structuredClone(DEFAULT_CONFIG);
   try {
     const raw = JSON.parse(fs.readFileSync(p, 'utf8'));
-    return { ...structuredClone(DEFAULT_CONFIG), ...raw };
+    return {
+      ...structuredClone(DEFAULT_CONFIG),
+      ...raw,
+      gemini: { ...DEFAULT_CONFIG.gemini, ...raw.gemini },
+      byok: { ...DEFAULT_CONFIG.byok, ...raw.byok },
+      ollama: { ...DEFAULT_CONFIG.ollama, ...raw.ollama },
+    };
   } catch {
     return structuredClone(DEFAULT_CONFIG);
   }
@@ -22,6 +29,8 @@ export function loadConfig() {
 
 export function saveConfig(partial) {
   const next = { ...loadConfig(), ...partial };
-  fs.writeFileSync(configPath(), JSON.stringify(next, null, 2));
+  const p = configPath();
+  fs.mkdirSync(path.dirname(p), { recursive: true });
+  fs.writeFileSync(p, JSON.stringify(next, null, 2));
   return next;
 }

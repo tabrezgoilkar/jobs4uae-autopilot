@@ -2,6 +2,7 @@ export function createOllamaEngine({
   baseUrl = 'http://127.0.0.1:11434',
   model = 'llama3.2',
 } = {}) {
+  baseUrl = baseUrl.replace(/\/+$/, '');
   async function generate({ system, prompt }) {
     const res = await fetch(`${baseUrl}/api/generate`, {
       method: 'POST',

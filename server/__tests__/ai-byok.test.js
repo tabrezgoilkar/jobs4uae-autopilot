@@ -19,4 +19,14 @@ describe('byok engine', () => {
     const r = await engine.testConnection();
     expect(r.ok).toBe(true);
   });
+
+  it('reports not-ok on an HTTP error', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => ({
+      ok: false, status: 401, text: async () => 'invalid api key',
+    })));
+    const engine = createByoKeyEngine({ apiKey: 'bad' });
+    const r = await engine.testConnection();
+    expect(r.ok).toBe(false);
+    expect(r.message).toMatch(/401/);
+  });
 });

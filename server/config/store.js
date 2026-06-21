@@ -28,7 +28,14 @@ export function loadConfig() {
 }
 
 export function saveConfig(partial) {
-  const next = { ...loadConfig(), ...partial };
+  const base = loadConfig();
+  const next = {
+    ...base,
+    ...partial,
+    gemini: { ...base.gemini, ...partial.gemini },
+    byok: { ...base.byok, ...partial.byok },
+    ollama: { ...base.ollama, ...partial.ollama },
+  };
   const p = configPath();
   fs.mkdirSync(path.dirname(p), { recursive: true });
   fs.writeFileSync(p, JSON.stringify(next, null, 2));

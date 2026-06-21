@@ -3,6 +3,7 @@ export function createByoKeyEngine({
   apiKey = '',
   model = 'gpt-4o-mini',
 } = {}) {
+  baseUrl = baseUrl.replace(/\/+$/, '');
   async function generate({ system, prompt }) {
     const messages = [];
     if (system) messages.push({ role: 'system', content: system });

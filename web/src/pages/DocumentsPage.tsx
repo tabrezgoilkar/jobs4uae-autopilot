@@ -9,6 +9,7 @@ import {
   type DocumentRecord,
   type Evaluation,
 } from '../api';
+import { gradeToStars, learningLinks } from '../lib/skills';
 
 export default function DocumentsPage() {
   const [params] = useSearchParams();
@@ -20,6 +21,8 @@ export default function DocumentsPage() {
   const [resume, setResume] = useState('');
   const [cover, setCover] = useState('');
   const [docId, setDocId] = useState<string | null>(null);
+  const [fitScore, setFitScore] = useState('');
+  const [missingSkills, setMissingSkills] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
@@ -42,6 +45,8 @@ export default function DocumentsPage() {
       setCover(draft.coverLetterMarkdown);
       setJobTitle(draft.jobTitle);
       setCompany(draft.company);
+      setFitScore(draft.fitScore);
+      setMissingSkills(draft.missingSkills ?? []);
       setDocId(null);
       setMessage({ ok: true, text: 'Documents generated! Edit below, then Save.' });
     } catch (e) {
@@ -55,7 +60,7 @@ export default function DocumentsPage() {
     setSaving(true);
     setMessage(null);
     try {
-      const payload = { jobTitle, company, evaluationId: evalId || null, resumeMarkdown: resume, coverLetterMarkdown: cover };
+      const payload = { jobTitle, company, evaluationId: evalId || null, resumeMarkdown: resume, coverLetterMarkdown: cover, fitScore, missingSkills };
       const saved = docId ? await updateDocument(docId, payload) : await saveDocument(payload);
       setDocId(saved.id);
       setMessage({ ok: true, text: 'Saved.' });
@@ -77,6 +82,8 @@ export default function DocumentsPage() {
     setEvalId(d.evaluationId ?? '');
     setResume(d.resumeMarkdown);
     setCover(d.coverLetterMarkdown);
+    setFitScore(d.fitScore ?? '');
+    setMissingSkills(d.missingSkills ?? []);
     setMessage(null);
   }
 
@@ -139,6 +146,40 @@ export default function DocumentsPage() {
       {message && (
         <div className={`text-sm rounded-lg p-3 ${message.ok ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
           {message.text}
+        </div>
+      )}
+
+      {hasContent && fitScore && (
+        <div className="bg-white rounded-2xl shadow p-6">
+          <div className="flex items-center gap-3">
+            <h2 className="font-semibold text-slate-800">Fit for this job</h2>
+            <span className="text-amber-500 text-lg" aria-label={`${gradeToStars(fitScore)} out of 5`}>
+              {'★'.repeat(gradeToStars(fitScore))}
+              {'☆'.repeat(5 - gradeToStars(fitScore))}
+            </span>
+            <span className="text-sm text-slate-500">({fitScore})</span>
+          </div>
+          {missingSkills.length > 0 ? (
+            <div className="mt-3">
+              <p className="text-sm font-medium text-slate-700">Skills to add — and where to learn them free:</p>
+              <ul className="mt-2 space-y-2">
+                {missingSkills.map((s) => (
+                  <li key={s} className="text-sm">
+                    <span className="font-medium text-slate-800">{s}</span>
+                    <span className="ml-2 space-x-3">
+                      {learningLinks(s).map((l) => (
+                        <a key={l.url} href={l.url} target="_blank" rel="noreferrer" className="text-blue-600 underline">
+                          {l.label}
+                        </a>
+                      ))}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : (
+            <p className="mt-2 text-sm text-green-700">No major skill gaps — strong match! 🎯</p>
+          )}
         </div>
       )}
 

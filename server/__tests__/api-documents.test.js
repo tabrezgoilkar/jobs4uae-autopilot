@@ -44,13 +44,15 @@ describe('documents API', () => {
 
   it('POST /api/documents/generate returns tailored markdown from pasted jobText', async () => {
     writeConfig();
-    stubGemini(JSON.stringify({ resumeMarkdown: '# Jane', coverLetterMarkdown: 'Dear team' }));
+    stubGemini(JSON.stringify({ resumeMarkdown: '# Jane', coverLetterMarkdown: 'Dear team', fitScore: 'A', missingSkills: ['SAP'] }));
     const { createApp } = await import('../app.js');
     const res = await request(createApp()).post('/api/documents/generate').send({ jobText: 'Accountant', jobTitle: 'Accountant', company: 'ACME' });
     expect(res.status).toBe(200);
     expect(res.body.resumeMarkdown).toContain('Jane');
     expect(res.body.coverLetterMarkdown).toContain('Dear');
     expect(res.body.jobTitle).toBe('Accountant');
+    expect(res.body.fitScore).toBe('A');
+    expect(res.body.missingSkills).toEqual(['SAP']);
   });
 
   it('POST /api/documents/generate can pull jobText from a saved evaluation', async () => {

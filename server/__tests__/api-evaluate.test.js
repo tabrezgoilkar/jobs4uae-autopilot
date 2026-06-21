@@ -55,4 +55,21 @@ describe('evaluate API', () => {
     expect(list.body).toHaveLength(1);
     expect(list.body[0].id).toBe(res.body.id);
   });
+
+  it('GET /api/evaluations/:id returns 404 for an unknown id', async () => {
+    const { createApp } = await import('../app.js');
+    const res = await request(createApp()).get('/api/evaluations/nope');
+    expect(res.status).toBe(404);
+  });
+
+  it('GET /api/evaluations/:id returns the saved evaluation', async () => {
+    writeConfig();
+    stubGemini(JSON.stringify({ jobTitle: 'Accountant', grade: 'B', recommendation: 'apply', summary: 'ok', dimensions: [], matchedSkills: [], missingSkills: [] }));
+    const { createApp } = await import('../app.js');
+    const app = createApp();
+    const created = await request(app).post('/api/evaluate').send({ jobText: 'Accountant role in Dubai' });
+    const res = await request(app).get(`/api/evaluations/${created.body.id}`);
+    expect(res.status).toBe(200);
+    expect(res.body.id).toBe(created.body.id);
+  });
 });

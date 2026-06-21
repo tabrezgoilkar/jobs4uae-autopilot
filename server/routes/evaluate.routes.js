@@ -24,7 +24,8 @@ export function evaluateRouter() {
       const saved = addEvaluation(result);
       res.json(saved);
     } catch (e) {
-      res.status(400).json({ error: e.message });
+      // Input errors return 400 above; anything reaching here is a server/AI failure.
+      res.status(500).json({ error: e.message });
     }
   });
 
@@ -37,9 +38,13 @@ export function evaluateRouter() {
   });
 
   router.get('/evaluations/:id', (req, res) => {
-    const found = getEvaluation(req.params.id);
-    if (!found) return res.status(404).json({ error: 'Evaluation not found.' });
-    res.json(found);
+    try {
+      const found = getEvaluation(req.params.id);
+      if (!found) return res.status(404).json({ error: 'Evaluation not found.' });
+      res.json(found);
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
   });
 
   return router;

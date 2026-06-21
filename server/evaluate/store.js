@@ -28,7 +28,9 @@ function newId() {
 }
 
 export function addEvaluation(evaluation) {
-  const record = { ...evaluation, id: newId(), createdAt: new Date().toISOString() };
+  // id and createdAt are always server-generated; strip any incoming values.
+  const { id: _ignoredId, createdAt: _ignoredTs, ...rest } = evaluation ?? {};
+  const record = { ...rest, id: newId(), createdAt: new Date().toISOString() };
   const list = listEvaluations();
   list.unshift(record); // newest first
   writeAll(list);

@@ -42,6 +42,9 @@ export default function TrackerPage() {
   // Per-card busy tracking: appId -> true
   const [busyIds, setBusyIds] = useState<Record<string, boolean>>({});
 
+  // Top-level action error (status change / delete)
+  const [actionError, setActionError] = useState<string | null>(null);
+
   async function load() {
     setLoading(true);
     setLoadError(null);
@@ -80,11 +83,13 @@ export default function TrackerPage() {
 
   async function handleStatusChange(app: Application, newStatus: ApplicationStatus) {
     setBusyIds((b) => ({ ...b, [app.id]: true }));
+    setActionError(null);
     try {
       const updated = await updateApplication(app.id, { status: newStatus });
       setApps((prev) => prev.map((a) => (a.id === app.id ? updated : a)));
-    } catch {
+    } catch (e) {
       // Leave card as-is; the select will snap back on next render
+      setActionError(e instanceof Error ? e.message : 'Could not update status. Please try again.');
     } finally {
       setBusyIds((b) => ({ ...b, [app.id]: false }));
     }
@@ -92,10 +97,13 @@ export default function TrackerPage() {
 
   async function handleDelete(id: string) {
     setBusyIds((b) => ({ ...b, [id]: true }));
+    setActionError(null);
     try {
       await deleteApplication(id);
       setApps((prev) => prev.filter((a) => a.id !== id));
-    } catch {
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : 'Could not delete. Please try again.');
+    } finally {
       setBusyIds((b) => ({ ...b, [id]: false }));
     }
   }
@@ -177,6 +185,10 @@ export default function TrackerPage() {
           {adding ? 'Adding…' : 'Add application'}
         </button>
       </form>
+
+      {actionError && (
+        <p role="alert" className="text-sm rounded-lg p-3 bg-red-50 text-red-700">{actionError}</p>
+      )}
 
       {/* Load error fallback */}
       {loadError && (

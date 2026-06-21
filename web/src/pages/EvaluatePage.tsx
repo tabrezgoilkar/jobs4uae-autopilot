@@ -91,9 +91,10 @@ export default function EvaluatePage() {
         <label className="block">
           <span className="text-sm font-medium text-slate-700">Job description</span>
           <textarea
-            className="mt-1 w-full rounded-lg border border-slate-300 p-3 text-sm"
+            className="mt-1 w-full rounded-lg border border-slate-300 p-3 text-sm disabled:bg-slate-50 disabled:text-slate-400"
             rows={8}
             value={jobText}
+            disabled={busy}
             onChange={(e) => setJobText(e.target.value)}
             placeholder="Paste the full job posting here…"
           />
@@ -110,7 +111,7 @@ export default function EvaluatePage() {
 
       {result && <ResultCard ev={result} />}
 
-      {recent.length > 0 && (
+      {!result && recent.length > 0 && (
         <div className="bg-white rounded-2xl shadow p-6">
           <h2 className="font-semibold text-slate-800">Recent evaluations</h2>
           <ul className="mt-3 divide-y divide-slate-100">

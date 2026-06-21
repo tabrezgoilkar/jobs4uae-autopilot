@@ -188,6 +188,20 @@ Vision: move beyond "AI assists, user submits" toward a more fully automated end
 
 3. **Built-in provider presets.** First-class "Free (OpenRouter)", "Free (Groq)", and "OpenAI" presets in the setup wizard that pre-fill the base URL and a sensible model, so the user only pastes a key (or, with idea #1, pastes nothing beyond the key). Combined with the auto-discovery above, the OpenRouter path becomes "paste key → done", with no base-URL or model typing.
 
+Assisted Auto-Apply (Connections + autofill + accumulating answer memory + LinkedIn profile sync) is specced separately in `docs/superpowers/specs/2026-06-21-phase-11-assisted-auto-apply-design.md`.
+
+### Phase 4.5 — Fit Score + Skill Gaps on Generated Documents (near-term enhancement)
+**Why:** When a user generates a tailored CV (Phase 4), the page currently shows no fit feedback even though Phase 3 already computes a grade + matched/missing skills. Surface it where the CV is created.
+- On the Documents page, show, for the job the CV was generated for: a **fit score (A–F mapped to ★ out of 5)** and the **missing skills** list.
+- Source: reuse the linked evaluation when generating from one; when generating from a pasted job, run an evaluation of the **tailored** resume against the job so the score reflects the improved CV.
+- **Acceptance:** Generating a CV shows a ★/5 score and the missing-skills list beside it.
+
+### Phase 12 — Skill-Gap Learning Resources (planned)
+**Why:** Help GCC community users actually close the gaps the evaluation surfaces.
+- For each **missing skill** (from an evaluation or a generated CV), show curated links to **free** public learning resources.
+- Anti-fabrication: link to reputable free platforms via a **search link for the skill** (e.g. freeCodeCamp, YouTube, Khan Academy, Microsoft Learn, Google for Education, edX/Coursera audit) rather than inventing specific course URLs that may not exist.
+- **Acceptance:** Each missing skill shows one-click "Learn this free" links that open a relevant, real search/landing page on a reputable free platform.
+
 ## 10. Risks & Mitigations
 
 - **Scraping breakage / ToS** → config-driven boards, graceful failures, assisted LinkedIn, polite rate limits, clear user messaging.

@@ -177,6 +177,9 @@ Each phase ships a working, **tested** increment before the next begins. Each ha
 - Windows **one-click installer/launcher** (bundled portable Node + Start shortcut that boots server and opens browser). Onboarding help + community docs. Error-handling/polish pass.
 - **Acceptance:** On a clean Windows PC: install → launch → complete the full loop **online (Gemini)** and **offline (Ollama auto-installed)**.
 
+### Phase 11 — Full Automation (planned; user's ideas TBD)
+Vision: move beyond "AI assists, user submits" toward a more fully automated end-to-end job-search loop (e.g. continuous scanning → auto-evaluate → auto-tailor → queue for one-click apply, and beyond). Concrete scope to be defined from the user's ideas. Must consciously revisit the human-in-the-loop / no-auto-submit constraints in §3 — any automation of actual submissions is an explicit, deliberate decision, not a default.
+
 ## 10. Risks & Mitigations
 
 - **Scraping breakage / ToS** → config-driven boards, graceful failures, assisted LinkedIn, polite rate limits, clear user messaging.

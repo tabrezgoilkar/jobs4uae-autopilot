@@ -21,7 +21,7 @@ export function evaluateRouter() {
       const engine = createEngine(config);
       const profile = loadProfile();
       const result = await evaluateJob(profile, jobText, engine);
-      const saved = addEvaluation(result);
+      const saved = addEvaluation({ ...result, jobText });
       res.json(saved);
     } catch (e) {
       // Input errors return 400 above; anything reaching here is a server/AI failure.

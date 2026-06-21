@@ -5,6 +5,7 @@ import { loadConfig, saveConfig } from './config/store.js';
 import { createEngine } from './ai/index.js';
 import { profileRouter } from './routes/profile.routes.js';
 import { evaluateRouter } from './routes/evaluate.routes.js';
+import { documentsRouter } from './routes/documents.routes.js';
 
 export function createApp() {
   const app = express();
@@ -31,6 +32,7 @@ export function createApp() {
 
   app.use('/api/profile', profileRouter());
   app.use('/api', evaluateRouter());
+  app.use('/api', documentsRouter());
 
   // In production, serve the built web app if it exists.
   const webDist = path.resolve(process.cwd(), 'web/dist');

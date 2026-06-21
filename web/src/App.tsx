@@ -2,13 +2,14 @@ import { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { getConfig, type AppConfig } from './api';
 import SetupWizard from './pages/SetupWizard';
-import Layout from './components/Layout';
+import AppShell from './components/AppShell';
 import Dashboard from './pages/Dashboard';
 import ProfilePage from './pages/ProfilePage';
 import EvaluatePage from './pages/EvaluatePage';
 import DocumentsPage from './pages/DocumentsPage';
 import TrackerPage from './pages/TrackerPage';
 import ScanPage from './pages/ScanPage';
+import AutoApplyPage from './pages/AutoApplyPage';
 
 export default function App() {
   const [config, setConfig] = useState<AppConfig | null>(null);
@@ -20,14 +21,14 @@ export default function App() {
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-6 text-center text-red-600">
+      <div className="min-h-screen flex items-center justify-center p-6 text-center" style={{ color: 'var(--danger-text)' }}>
         Cannot reach the Jobs4UAE Autopilot server. Make sure it is running, then refresh this page.
       </div>
     );
   }
 
   if (!config) {
-    return <div className="min-h-screen flex items-center justify-center text-slate-400">Loading…</div>;
+    return <div className="min-h-screen flex items-center justify-center" style={{ color: 'var(--text-muted)' }}>Loading…</div>;
   }
 
   if (!config.setupComplete) {
@@ -36,7 +37,7 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      <Layout>
+      <AppShell engine={config.engine}>
         <Routes>
           <Route path="/" element={<Dashboard config={config} />} />
           <Route path="/profile" element={<ProfilePage />} />
@@ -44,8 +45,9 @@ export default function App() {
           <Route path="/documents" element={<DocumentsPage />} />
           <Route path="/tracker" element={<TrackerPage />} />
           <Route path="/scan" element={<ScanPage />} />
+          <Route path="/auto-apply" element={<AutoApplyPage />} />
         </Routes>
-      </Layout>
+      </AppShell>
     </BrowserRouter>
   );
 }

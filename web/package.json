@@ -10,6 +10,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@fontsource-variable/ibm-plex-sans": "^5.2.8",
+    "@fontsource/ibm-plex-mono": "^5.2.7",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "react-router-dom": "^6.30.4"

@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { getConfig, type AppConfig } from './api';
 import SetupWizard from './pages/SetupWizard';
-import Home from './pages/Home';
+import Layout from './components/Layout';
+import Dashboard from './pages/Dashboard';
+import ProfilePage from './pages/ProfilePage';
 
 export default function App() {
   const [config, setConfig] = useState<AppConfig | null>(null);
@@ -23,9 +26,18 @@ export default function App() {
     return <div className="min-h-screen flex items-center justify-center text-slate-400">Loading…</div>;
   }
 
-  return config.setupComplete ? (
-    <Home config={config} />
-  ) : (
-    <SetupWizard initial={config} onComplete={setConfig} />
+  if (!config.setupComplete) {
+    return <SetupWizard initial={config} onComplete={setConfig} />;
+  }
+
+  return (
+    <BrowserRouter>
+      <Layout>
+        <Routes>
+          <Route path="/" element={<Dashboard config={config} />} />
+          <Route path="/profile" element={<ProfilePage />} />
+        </Routes>
+      </Layout>
+    </BrowserRouter>
   );
 }

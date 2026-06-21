@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { loadConfig, saveConfig } from './config/store.js';
 import { createEngine } from './ai/index.js';
+import { profileRouter } from './routes/profile.routes.js';
 
 export function createApp() {
   const app = express();
@@ -26,6 +27,8 @@ export function createApp() {
       res.status(400).json({ ok: false, message: e.message });
     }
   });
+
+  app.use('/api/profile', profileRouter());
 
   // In production, serve the built web app if it exists.
   const webDist = path.resolve(process.cwd(), 'web/dist');

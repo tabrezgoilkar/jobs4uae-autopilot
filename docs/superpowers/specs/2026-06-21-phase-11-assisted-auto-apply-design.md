@@ -20,6 +20,7 @@ This is new scope: the forked `santifer/career-ops` is human-in-the-loop and doe
 - An **apply flow**: open a job → autofill contact fields, attach the resume PDF, paste the cover letter, fill known screening answers → ask the user any unknown questions → user reviews the live form and submits.
 - A reusable **Application Details** store of standard GCC answers (nationality, visa/iqama status, notice period, current & expected salary, willing-to-relocate, driving licence, languages, …) **plus an accumulating Q&A memory** that grows every time the user answers a new question — so it's asked only once (LinkedIn-Easy-Apply style).
 - **Anti-fabrication guardrail:** factual answers are filled only from stored data or asked from the user; the AI may *draft* free-text answers from the real profile, clearly marked for review.
+- **LinkedIn profile sync:** once LinkedIn is connected, optionally read the user's **own** LinkedIn profile and propose enrichments to their app Profile (headline, summary, experience, skills, education, certifications) for **review-and-merge** — capturing what people keep current on LinkedIn but stale in their CV.
 - Local, free, private: sessions and answers stay on the user's PC.
 
 ## 3. Non-Goals (v1) — explicit safety boundaries
@@ -79,6 +80,7 @@ Apply page ──────┼─ React UI (control) ───►│   per-boa
 - **Autofiller** — given a job page + board config + Application Details: fills mapped/heuristic fields, uploads the resume PDF, pastes the cover letter, fills matched screening answers, and returns a list of **pending questions** it couldn't answer. Applies user-provided answers on a second pass. Never submits.
 - **AI matcher** (`match.js`) — maps a detected form question/label to a stored answer (semantic match); drafts free-text answers from the real profile with the anti-fabrication rule. Uses the existing AI adapter.
 - **Application Details store** (`answers/store.js`) — see §6.
+- **LinkedIn profile sync** (`apply/linkedin/profile-sync.js`) — reads the user's own LinkedIn profile via the connected session and produces a profile diff for review-and-merge; reuses the AI adapter and the Phase 2 profile schema. See §6.5.
 
 ### 5.2 Data model (JSON files, consistent with Phases 1–4)
 
@@ -109,6 +111,17 @@ When the autofiller meets a form question:
 
 Factual fields (salary, visa, nationality, dates) are **never** invented in steps 3–4 — they are filled from `fields`/`memory` or asked. This is the user's explicit "don't fake any data" requirement.
 
+## 6.5 LinkedIn Profile Sync (profile enrichment)
+
+People keep their LinkedIn profile current but rarely update their CV. Once the user **connects LinkedIn** (§4 Connect flow), the Connections card (and the Profile page) offer **"Sync from LinkedIn"**:
+
+1. Using the connected LinkedIn session, the app opens the user's **own** profile page and reads the visible structured content (headline, about/summary, experience, education, skills, certifications, languages).
+2. The AI normalizes it into the app's Profile shape (the Phase 2 schema) and produces a **diff** against the current saved profile: new items, changed items, and items only in the CV.
+3. The user sees a **review-and-merge** screen — accept all, pick individual additions, or skip. Nothing is silently overwritten.
+4. Accepted changes are merged into `data/profile.json`, immediately improving evaluations, tailored documents, and autofill.
+
+**Constraints:** reads only the **user's own** profile (their data, their session); **review-and-merge** only (no silent overwrite, no fabrication — it captures real LinkedIn content); subject to LinkedIn anti-bot, so it's a one-shot read of one's own page, not a crawler. If reading fails, the app says so and the profile is unchanged.
+
 ## 7. Boards (Indeed first)
 
 - **v1: Indeed** (`ae/sa/qa` regional) — `loginUrl` for Connect; field-map for the "Apply with Indeed" hosted form + a generic heuristic filler fallback.
@@ -120,6 +133,8 @@ Factual fields (salary, visa, nationality, dates) are **never** invented in step
 - `POST /api/connections/:board/connect` — open login window for the board.
 - `POST /api/connections/:board/confirm` — user confirms login; persist session, mark connected.
 - `POST /api/connections/:board/disconnect` — clear saved session.
+- `POST /api/connections/linkedin/sync-profile` — read the user's own LinkedIn profile via the connected session and return `{ proposed, diff }` for review-and-merge (does not save until accepted).
+- `POST /api/profile/merge` — apply the user-accepted subset of LinkedIn enrichments into `data/profile.json`.
 - `GET/POST /api/application-details` — load/save the structured fields + memory.
 - `POST /api/apply/start` — `{ board, jobUrl, evaluationId?, documentId? }` → open job, autofill, return `{ filledCount, pendingQuestions[] }`.
 - `POST /api/apply/answer` — `{ answers: [{questionId, answer}] }` → fill them, persist new ones to memory, return remaining pending.
@@ -127,7 +142,8 @@ Factual fields (salary, visa, nationality, dates) are **never** invented in step
 
 ## 9. Frontend
 
-- **Connections page** (`/connections`) + nav — board cards with status, Connect/Reconnect/Disconnect.
+- **Connections page** (`/connections`) + nav — board cards with status, Connect/Reconnect/Disconnect. The LinkedIn card (when connected) also shows **"Sync from LinkedIn"**, opening the review-and-merge screen.
+- **LinkedIn sync review-and-merge** — a side-by-side of proposed LinkedIn data vs current profile, with per-item accept/skip, then merge.
 - **Apply page** (`/apply`) — choose a connected board, paste a job URL (or pick a saved evaluation/document), **Start** → shows filled summary + a **review panel** listing pending questions to answer (with AI drafts for free-text), then a clear instruction: *"Review the form in the browser window and click Submit."*
 - **Application Details page** (or section) — edit the standard GCC fields + view/edit remembered answers.
 
@@ -136,6 +152,7 @@ Factual fields (salary, visa, nationality, dates) are **never** invented in step
 - **Resume PDF attachment requires Phase 5 (PDF export).** Recommended order: **build Phase 5 first, then Phase 11 v1.** (Alternative: prototype the apply flow with cover-letter text only and add PDF attach once Phase 5 lands.)
 - **Job-URL entry** is used in v1 so this does **not** block on scanning (Phases 7–9); scanning integration (apply straight from a scanned job) comes later.
 - Optional tie-in to **Phase 6 tracker** to record "applied" status (additive; not required for v1).
+- **LinkedIn connect + profile sync** come after the Indeed apply pattern is proven (LinkedIn is the most anti-bot/ToS-sensitive board); profile sync depends on LinkedIn being connected, so it ships with the LinkedIn connector, not in the Indeed-first slice.
 
 ## 11. Risks & Mitigations
 
@@ -144,6 +161,7 @@ Factual fields (salary, visa, nationality, dates) are **never** invented in step
 - **ToS:** assisting a logged-in human who clicks Submit is materially different from unattended automation; we keep it assistive and never store credentials. LinkedIn kept deliberately light.
 - **Wrong answers:** anti-fabrication memory + user review at submit time.
 - **Privacy:** sessions + answers are local-only and git-ignored.
+- **LinkedIn profile-read reliability/ToS:** profile sync is a one-shot, user-initiated read of the user's *own* page via their session; it may be blocked by anti-bot and is best-effort — on failure the profile is left unchanged. Kept assistive (read-only, review-and-merge), never a crawler.
 
 ## 12. Testing Strategy
 

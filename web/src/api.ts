@@ -116,6 +116,8 @@ export interface DocumentDraft {
   jobTitle: string;
   company: string;
   evaluationId: string | null;
+  fitScore: string;
+  missingSkills: string[];
 }
 export interface DocumentRecord extends DocumentDraft {
   id: string;

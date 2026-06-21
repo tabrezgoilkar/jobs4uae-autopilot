@@ -10,6 +10,7 @@ import {
   type Evaluation,
 } from '../api';
 import { gradeToStars, learningLinks } from '../lib/skills';
+import DownloadButtons from '../features/pdf/DownloadButtons';
 
 export default function DocumentsPage() {
   const [params] = useSearchParams();
@@ -213,11 +214,11 @@ export default function DocumentsPage() {
       )}
 
       {hasContent && (
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
           <button onClick={onSave} disabled={saving} className="px-5 py-2 rounded-lg bg-blue-600 text-white font-medium disabled:opacity-50">
             {saving ? 'Saving…' : docId ? 'Update saved documents' : 'Save documents'}
           </button>
-          <span className="text-xs text-slate-400">Download as PDF arrives in the next phase.</span>
+          <DownloadButtons docId={docId} />
         </div>
       )}
 

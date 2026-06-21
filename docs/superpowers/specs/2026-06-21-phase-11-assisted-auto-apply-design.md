@@ -21,6 +21,7 @@ This is new scope: the forked `santifer/career-ops` is human-in-the-loop and doe
 - A reusable **Application Details** store of standard GCC answers (nationality, visa/iqama status, notice period, current & expected salary, willing-to-relocate, driving licence, languages, …) **plus an accumulating Q&A memory** that grows every time the user answers a new question — so it's asked only once (LinkedIn-Easy-Apply style).
 - **Anti-fabrication guardrail:** factual answers are filled only from stored data or asked from the user; the AI may *draft* free-text answers from the real profile, clearly marked for review.
 - **LinkedIn profile sync:** once LinkedIn is connected, optionally read the user's **own** LinkedIn profile and propose enrichments to their app Profile (headline, summary, experience, skills, education, certifications) for **review-and-merge** — capturing what people keep current on LinkedIn but stale in their CV.
+- **Email Apply for "hidden" jobs:** for roles advertised as **posts** with a recruiter email (very common in the GCC — "send your CV to hr@…"), compose a tailored application **email** + resume PDF and send it (review-before-send by default; optional SMTP). Boolean-search discovery on connected LinkedIn is **assistive**, not a scraper.
 - Local, free, private: sessions and answers stay on the user's PC.
 
 ## 3. Non-Goals (v1) — explicit safety boundaries
@@ -122,6 +123,17 @@ People keep their LinkedIn profile current but rarely update their CV. Once the 
 
 **Constraints:** reads only the **user's own** profile (their data, their session); **review-and-merge** only (no silent overwrite, no fabrication — it captures real LinkedIn content); subject to LinkedIn anti-bot, so it's a one-shot read of one's own page, not a crawler. If reading fails, the app says so and the profile is unchanged.
 
+## 6.6 Email Apply (hidden "post" jobs)
+
+Many GCC roles are advertised as **LinkedIn posts** (or WhatsApp/forum posts), not in formal Jobs sections — "DM me / send your CV to hr@company.com". These have **no application form**, which actually makes them the *easiest legitimate auto-apply channel*: a tailored email with the resume attached.
+
+**Flow:**
+1. **Discover (assisted):** with LinkedIn connected, the app helps the user run a **boolean content search** (e.g. `("hiring" OR "we are looking for") AND "accountant" AND ("send your CV" OR "email")`). Because automated LinkedIn scraping is ToS-sensitive and anti-bot-heavy, discovery is **assistive** — the user is logged in and viewing results; the app reads the **visible** posts (one-shot, not a crawler) and extracts the **role text + any recruiter email** (regex). The same Email-Apply works for an email from **any** source (a Bayt listing, a referral, a pasted post).
+2. **Compose:** generate a tailored application **email** — subject + cover-letter body (from the documents engine) with the **resume PDF** (and optionally cover-letter PDF) attached.
+3. **Send (human-in-the-loop default):** open a **prefilled draft** for the user to review and click Send — a `mailto:` / Gmail-compose deep link, or a draft via the user's connected email. **Optional one-click SMTP send** for users who explicitly enable it (their own account via app-password or OAuth). The app **never mass-blasts** — one reviewed email per job.
+
+**Constraints:** only emails the recruiter **publicly posted**; user reviews before send by default; no fabricated content; rate-limited, never bulk/spam (anti-spam law + sender-reputation); LinkedIn discovery stays assistive (no aggressive scraping). Email credentials, if SMTP send is enabled, are stored **locally only** — prefer OAuth / app-passwords over raw passwords.
+
 ## 7. Boards (Indeed first)
 
 - **v1: Indeed** (`ae/sa/qa` regional) — `loginUrl` for Connect; field-map for the "Apply with Indeed" hosted form + a generic heuristic filler fallback.
@@ -162,6 +174,7 @@ People keep their LinkedIn profile current but rarely update their CV. Once the 
 - **Wrong answers:** anti-fabrication memory + user review at submit time.
 - **Privacy:** sessions + answers are local-only and git-ignored.
 - **LinkedIn profile-read reliability/ToS:** profile sync is a one-shot, user-initiated read of the user's *own* page via their session; it may be blocked by anti-bot and is best-effort — on failure the profile is left unchanged. Kept assistive (read-only, review-and-merge), never a crawler.
+- **Email Apply discovery + sending:** automated LinkedIn post scraping violates ToS — discovery is assistive (user logged in, one-shot read of visible posts). Email send is **review-before-send by default**, rate-limited, and never bulk (anti-spam law + sender reputation). SMTP credentials, if the user enables auto-send, are local-only with OAuth/app-password preferred over raw passwords.
 
 ## 12. Testing Strategy
 

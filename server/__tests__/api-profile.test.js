@@ -58,4 +58,13 @@ describe('profile API', () => {
     const res = await request(createApp()).post('/api/profile/import');
     expect(res.status).toBe(400);
   });
+
+  it('POST /api/profile/import returns 409 when AI is not configured', async () => {
+    const { createApp } = await import('../app.js');
+    const res = await request(createApp())
+      .post('/api/profile/import')
+      .attach('cv', Buffer.from('some text'), 'resume.txt');
+    expect(res.status).toBe(409);
+    expect(res.body.error).toBeTruthy();
+  });
 });

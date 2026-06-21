@@ -7,14 +7,27 @@ import { normalizeProfile } from '../profile/schema.js';
 import { loadConfig } from '../config/store.js';
 import { createEngine } from '../ai/index.js';
 
+// multer@1.x: acceptable for local single-user use; upgrade to 2.x when it is stable.
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 8 * 1024 * 1024 } });
 
 export function profileRouter() {
   const router = Router();
 
-  router.get('/', (req, res) => res.json(loadProfile()));
+  router.get('/', (req, res) => {
+    try {
+      res.json(loadProfile());
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
+  });
 
-  router.post('/', (req, res) => res.json(saveProfile(req.body ?? {})));
+  router.post('/', (req, res) => {
+    try {
+      res.json(saveProfile(req.body ?? {}));
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
+  });
 
   router.post('/import', upload.single('cv'), async (req, res) => {
     try {
@@ -23,7 +36,11 @@ export function profileRouter() {
       if (!text || !text.trim()) {
         return res.status(422).json({ error: 'Could not read any text from that file.' });
       }
-      const engine = createEngine(loadConfig());
+      const config = loadConfig();
+      if (!config.setupComplete) {
+        return res.status(409).json({ error: 'Please complete the AI setup wizard before importing a CV.' });
+      }
+      const engine = createEngine(config);
       const parsed = await parseCvText(text, engine);
       res.json(normalizeProfile(parsed));
     } catch (e) {

@@ -9,11 +9,11 @@ function profilePath() {
 
 export function loadProfile() {
   const p = profilePath();
-  if (!fs.existsSync(p)) return { ...EMPTY_PROFILE };
+  if (!fs.existsSync(p)) return structuredClone(EMPTY_PROFILE);
   try {
     return normalizeProfile(JSON.parse(fs.readFileSync(p, 'utf8')));
   } catch {
-    return { ...EMPTY_PROFILE };
+    return structuredClone(EMPTY_PROFILE);
   }
 }
 

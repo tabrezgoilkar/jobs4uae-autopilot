@@ -7,6 +7,7 @@ import Dashboard from './pages/Dashboard';
 import ProfilePage from './pages/ProfilePage';
 import EvaluatePage from './pages/EvaluatePage';
 import DocumentsPage from './pages/DocumentsPage';
+import TrackerPage from './pages/TrackerPage';
 
 export default function App() {
   const [config, setConfig] = useState<AppConfig | null>(null);
@@ -40,6 +41,7 @@ export default function App() {
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/evaluate" element={<EvaluatePage />} />
           <Route path="/documents" element={<DocumentsPage />} />
+          <Route path="/tracker" element={<TrackerPage />} />
         </Routes>
       </Layout>
     </BrowserRouter>

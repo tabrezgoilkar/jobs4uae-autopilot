@@ -27,6 +27,7 @@ export default function Layout({ children }: { children: ReactNode }) {
             <NavLink to="/profile" label="My Profile" />
             <NavLink to="/evaluate" label="Evaluate Jobs" />
             <NavLink to="/documents" label="Documents" />
+            <NavLink to="/tracker" label="Tracker" />
           </nav>
         </div>
       </header>

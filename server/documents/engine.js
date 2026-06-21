@@ -1,10 +1,19 @@
 import { extractJson } from '../lib/json.js';
 import { DOC_SYSTEM, buildDocumentsPrompt } from './prompt.js';
 
+const GRADES = ['A', 'B', 'C', 'D', 'F'];
+
+function coerceGrade(g) {
+  const up = String(g || '').trim().toUpperCase();
+  return GRADES.includes(up) ? up : 'C';
+}
+
 function normalizeDocuments(raw = {}) {
   return {
     resumeMarkdown: typeof raw.resumeMarkdown === 'string' ? raw.resumeMarkdown : '',
     coverLetterMarkdown: typeof raw.coverLetterMarkdown === 'string' ? raw.coverLetterMarkdown : '',
+    fitScore: coerceGrade(raw.fitScore),
+    missingSkills: Array.isArray(raw.missingSkills) ? raw.missingSkills.map(String) : [],
   };
 }
 

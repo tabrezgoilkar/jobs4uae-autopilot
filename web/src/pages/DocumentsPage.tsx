@@ -42,7 +42,7 @@ export default function DocumentsPage() {
       setCover(draft.coverLetterMarkdown);
       setJobTitle(draft.jobTitle);
       setCompany(draft.company);
-      setDocId(null); // fresh draft, not yet saved
+      setDocId(null);
       setMessage({ ok: true, text: 'Documents generated! Edit below, then Save.' });
     } catch (e) {
       setMessage({ ok: false, text: e instanceof Error ? e.message : 'Generation failed.' });
@@ -58,13 +58,16 @@ export default function DocumentsPage() {
       const payload = { jobTitle, company, evaluationId: evalId || null, resumeMarkdown: resume, coverLetterMarkdown: cover };
       const saved = docId ? await updateDocument(docId, payload) : await saveDocument(payload);
       setDocId(saved.id);
-      setRecent(await listDocuments());
       setMessage({ ok: true, text: 'Saved.' });
-    } catch {
-      setMessage({ ok: false, text: 'Could not save. Please try again.' });
+    } catch (e) {
+      setMessage({ ok: false, text: e instanceof Error ? e.message : 'Could not save. Please try again.' });
+      setSaving(false);
+      return;
     } finally {
       setSaving(false);
     }
+    // List refresh is non-critical; a failure here must not look like a save failure.
+    listDocuments().then(setRecent).catch(() => {});
   }
 
   function loadDoc(d: DocumentRecord) {
@@ -103,6 +106,13 @@ export default function DocumentsPage() {
           </label>
         )}
 
+        {evals.length === 0 && evalId && (
+          <p className="text-sm text-amber-700 bg-amber-50 rounded-lg p-2">
+            Using a pre-selected job evaluation.
+            <button className="ml-2 underline" onClick={() => setEvalId('')}>Clear and paste a job instead</button>
+          </p>
+        )}
+
         {!evalId && (
           <label className="block">
             <span className="text-sm font-medium text-slate-700">Or paste a job description</span>
@@ -135,20 +145,26 @@ export default function DocumentsPage() {
       {hasContent && (
         <div className="grid gap-6 lg:grid-cols-2">
           <div className="bg-white rounded-2xl shadow p-6">
-            <h2 className="font-semibold text-slate-800">Resume (Markdown)</h2>
+            <label htmlFor="doc-resume" className="font-semibold text-slate-800">Resume (Markdown)</label>
             <textarea
-              className="mt-2 w-full rounded-lg border border-slate-300 p-3 text-sm font-mono"
+              id="doc-resume"
+              aria-label="Resume content in Markdown"
+              className="mt-2 w-full rounded-lg border border-slate-300 p-3 text-sm font-mono disabled:bg-slate-50"
               rows={20}
               value={resume}
+              disabled={saving}
               onChange={(e) => setResume(e.target.value)}
             />
           </div>
           <div className="bg-white rounded-2xl shadow p-6">
-            <h2 className="font-semibold text-slate-800">Cover letter (Markdown)</h2>
+            <label htmlFor="doc-cover" className="font-semibold text-slate-800">Cover letter (Markdown)</label>
             <textarea
-              className="mt-2 w-full rounded-lg border border-slate-300 p-3 text-sm font-mono"
+              id="doc-cover"
+              aria-label="Cover letter content in Markdown"
+              className="mt-2 w-full rounded-lg border border-slate-300 p-3 text-sm font-mono disabled:bg-slate-50"
               rows={20}
               value={cover}
+              disabled={saving}
               onChange={(e) => setCover(e.target.value)}
             />
           </div>
@@ -171,7 +187,7 @@ export default function DocumentsPage() {
             {recent.map((d) => (
               <li key={d.id} className="py-2 flex items-center justify-between">
                 <span className="text-sm text-slate-700">{d.jobTitle || 'Documents'}{d.company ? ` · ${d.company}` : ''}</span>
-                <button onClick={() => loadDoc(d)} className="text-sm text-blue-600">Open</button>
+                <button onClick={() => loadDoc(d)} aria-label={`Open documents for ${d.jobTitle || 'saved job'}`} className="text-sm text-blue-600">Open</button>
               </li>
             ))}
           </ul>

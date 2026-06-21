@@ -151,7 +151,11 @@ export async function saveDocument(doc: Partial<DocumentRecord>): Promise<Docume
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(doc),
-  }).then(checkOk);
+  });
+  if (!res.ok) {
+    const e = await res.json().catch(() => ({ error: `Server error ${res.status}` }));
+    throw new Error(e.error || `Server error ${res.status}`);
+  }
   return res.json();
 }
 
@@ -160,6 +164,10 @@ export async function updateDocument(id: string, patch: Partial<DocumentRecord>)
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(patch),
-  }).then(checkOk);
+  });
+  if (!res.ok) {
+    const e = await res.json().catch(() => ({ error: `Server error ${res.status}` }));
+    throw new Error(e.error || `Server error ${res.status}`);
+  }
   return res.json();
 }

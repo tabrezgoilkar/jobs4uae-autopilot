@@ -6,6 +6,7 @@ import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import ProfilePage from './pages/ProfilePage';
 import EvaluatePage from './pages/EvaluatePage';
+import DocumentsPage from './pages/DocumentsPage';
 
 export default function App() {
   const [config, setConfig] = useState<AppConfig | null>(null);
@@ -38,6 +39,7 @@ export default function App() {
           <Route path="/" element={<Dashboard config={config} />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/evaluate" element={<EvaluatePage />} />
+          <Route path="/documents" element={<DocumentsPage />} />
         </Routes>
       </Layout>
     </BrowserRouter>

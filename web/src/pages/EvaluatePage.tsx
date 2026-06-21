@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { runEvaluation, listEvaluations, type Evaluation } from '../api';
 
 const GRADE_COLOR: Record<string, string> = {
@@ -50,6 +51,12 @@ function ResultCard({ ev }: { ev: Evaluation }) {
           <p className="text-sm text-slate-700">{ev.missingSkills.length ? ev.missingSkills.join(', ') : '—'}</p>
         </div>
       </div>
+      <Link
+        to={`/documents?eval=${ev.id}`}
+        className="inline-block px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium"
+      >
+        Tailor resume & cover letter →
+      </Link>
     </div>
   );
 }

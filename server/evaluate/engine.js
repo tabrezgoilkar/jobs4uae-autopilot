@@ -1,13 +1,8 @@
 import { extractJson } from '../lib/json.js';
 import { EVAL_SYSTEM, buildEvaluationPrompt } from './prompt.js';
+import { coerceGrade } from '../lib/grades.js';
 
-const GRADES = ['A', 'B', 'C', 'D', 'F'];
 const RECS = ['apply', 'maybe', 'skip'];
-
-function coerceGrade(g) {
-  const up = String(g || '').trim().toUpperCase();
-  return GRADES.includes(up) ? up : 'C';
-}
 
 function normalizeEvaluation(raw = {}) {
   const dimensions = Array.isArray(raw.dimensions)

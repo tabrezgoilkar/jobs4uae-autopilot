@@ -1,12 +1,6 @@
 import { extractJson } from '../lib/json.js';
 import { DOC_SYSTEM, buildDocumentsPrompt } from './prompt.js';
-
-const GRADES = ['A', 'B', 'C', 'D', 'F'];
-
-function coerceGrade(g) {
-  const up = String(g || '').trim().toUpperCase();
-  return GRADES.includes(up) ? up : 'C';
-}
+import { coerceGrade } from '../lib/grades.js';
 
 function normalizeDocuments(raw = {}) {
   return {

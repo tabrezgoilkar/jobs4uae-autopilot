@@ -1,0 +1,38 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build output
+dist/
+build/
+web/dist/
+
+# Local runtime data (private to each user — never commit)
+data/
+*.sqlite
+*.sqlite-journal
+output/
+uploads/
+reports/
+
+# Secrets / config with keys
+config/secrets.json
+config/local.json
+.env
+.env.*
+
+# Playwright
+/test-results/
+/playwright-report/
+/.cache/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Logs
+*.log
+npm-debug.log*

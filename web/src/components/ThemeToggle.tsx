@@ -15,6 +15,7 @@ export default function ThemeToggle() {
     <button
       onClick={toggle}
       aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+      className="j4u-focus"
       style={{
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         width: 34, height: 34, borderRadius: 8,

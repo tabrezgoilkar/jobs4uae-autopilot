@@ -22,14 +22,15 @@ export default function Sidebar({ engine }: { engine: string | null }) {
         </span>
       </div>
       <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', padding: '0 8px 8px' }}>Workspace</div>
-      <nav style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <nav aria-label="Main" style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
         {NAV.map(({ to, label, Icon }) => {
-          const active = to === '/' ? pathname === '/' : pathname.startsWith(to);
+          const active = to === '/' ? pathname === '/' : pathname === to || pathname.startsWith(to + '/');
           return (
             <Link
               key={to}
               to={to}
               className="j4u-nav"
+              aria-current={active ? 'page' : undefined}
               style={{
                 display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 8,
                 fontSize: 13.5, textDecoration: 'none',

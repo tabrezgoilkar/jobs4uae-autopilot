@@ -7,7 +7,7 @@ export default function Home({ config }: { config: AppConfig }) {
         <h1 className="text-2xl font-bold text-slate-800">You're all set! 🎉</h1>
         <p className="mt-3 text-slate-600">
           Jobs4UAE Autopilot is connected using{' '}
-          <span className="font-semibold">{config.engine}</span>.
+          <span className="font-semibold">{config.engine ?? 'unknown'}</span>.
         </p>
         <p className="mt-2 text-sm text-slate-400">
           More features arrive in the next phases (import CV, evaluate jobs, scan GCC boards).

@@ -23,19 +23,37 @@ export default function SetupWizard({
     return { engine, gemini: cfg.gemini, byok: cfg.byok, ollama: cfg.ollama };
   }
 
+  function selectEngine(id: EngineId) {
+    if (id !== engine) {
+      setEngine(id);
+      setStatus(null);
+    }
+  }
+
   async function onTest() {
     setBusy(true);
     setStatus(null);
-    const r = await testAI(engineBody());
-    setStatus(r);
-    setBusy(false);
+    try {
+      const r = await testAI(engineBody());
+      setStatus(r);
+    } catch {
+      setStatus({ ok: false, message: 'Could not reach the server. Check your connection and try again.' });
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function onSave() {
     setBusy(true);
-    const saved = await saveConfig({ ...engineBody(), setupComplete: true } as Partial<AppConfig>);
-    setBusy(false);
-    onComplete(saved);
+    try {
+      const saved = await saveConfig({ ...engineBody(), setupComplete: true } as Partial<AppConfig>);
+      if (!saved?.setupComplete) throw new Error('Save did not confirm completion');
+      onComplete(saved);
+    } catch {
+      setStatus({ ok: false, message: 'Failed to save settings. Please try again.' });
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -44,11 +62,13 @@ export default function SetupWizard({
         <h1 className="text-2xl font-bold text-slate-800">Welcome to Jobs4UAE Autopilot</h1>
         <p className="mt-2 text-slate-600">Choose how you want the AI to work. All options are free.</p>
 
-        <div className="mt-6 grid gap-3">
+        <div className="mt-6 grid gap-3" role="radiogroup" aria-label="AI engine">
           {ENGINES.map((e) => (
             <button
               key={e.id}
-              onClick={() => { setEngine(e.id); setStatus(null); }}
+              role="radio"
+              aria-checked={engine === e.id}
+              onClick={() => selectEngine(e.id)}
               className={`text-left p-4 rounded-xl border-2 transition ${
                 engine === e.id ? 'border-blue-600 bg-blue-50' : 'border-slate-200 hover:border-slate-300'
               }`}
@@ -64,6 +84,8 @@ export default function SetupWizard({
             <label className="block">
               <span className="text-sm font-medium text-slate-700">Gemini API key</span>
               <input
+                type="password"
+                autoComplete="off"
                 className="mt-1 w-full rounded-lg border border-slate-300 p-2"
                 value={cfg.gemini.apiKey}
                 onChange={(ev) => setCfg({ ...cfg, gemini: { ...cfg.gemini, apiKey: ev.target.value } })}
@@ -84,6 +106,8 @@ export default function SetupWizard({
               <label className="block">
                 <span className="text-sm font-medium text-slate-700">API key</span>
                 <input
+                  type="password"
+                  autoComplete="off"
                   className="mt-1 w-full rounded-lg border border-slate-300 p-2"
                   value={cfg.byok.apiKey}
                   onChange={(ev) => setCfg({ ...cfg, byok: { ...cfg.byok, apiKey: ev.target.value } })}

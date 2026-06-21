@@ -36,7 +36,7 @@ export function resumeHtml(profile, resumeMarkdown) {
       </section>`
     : '';
 
-  const bodyHtml = marked.parse(resumeMarkdown ?? '');
+  const bodyHtml = marked.parse(resumeMarkdown ?? '', { async: false });
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -140,7 +140,7 @@ export function coverLetterHtml(profile, coverLetterMarkdown) {
   const contactParts = [email, phone, location].filter(Boolean);
   const contactLine = contactParts.join(' · ');
 
-  const bodyHtml = marked.parse(coverLetterMarkdown ?? '');
+  const bodyHtml = marked.parse(coverLetterMarkdown ?? '', { async: false });
 
   return `<!DOCTYPE html>
 <html lang="en">

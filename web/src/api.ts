@@ -35,3 +35,44 @@ export async function testAI(body: Record<string, unknown>): Promise<{ ok: boole
   });
   return res.json().catch(() => ({ ok: false, message: `Server error ${res.status}` }));
 }
+
+export interface Experience { company: string; title: string; startDate: string; endDate: string; description: string; }
+export interface Education { institution: string; degree: string; field: string; year: string; }
+export interface Profile {
+  fullName: string;
+  email: string;
+  phone: string;
+  location: string;
+  headline: string;
+  summary: string;
+  skills: string[];
+  experience: Experience[];
+  education: Education[];
+  links: string[];
+  updatedAt: string | null;
+}
+
+export async function getProfile(): Promise<Profile> {
+  const res = await fetch('/api/profile').then(checkOk);
+  return res.json();
+}
+
+export async function saveProfile(profile: Profile): Promise<Profile> {
+  const res = await fetch('/api/profile', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(profile),
+  }).then(checkOk);
+  return res.json();
+}
+
+export async function importCv(file: File): Promise<Profile> {
+  const fd = new FormData();
+  fd.append('cv', file);
+  const res = await fetch('/api/profile/import', { method: 'POST', body: fd });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({ error: `Server error ${res.status}` }));
+    throw new Error(body.error || `Server error ${res.status}`);
+  }
+  return res.json();
+}

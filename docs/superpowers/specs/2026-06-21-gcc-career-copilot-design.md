@@ -1,4 +1,4 @@
-# GCC Career Copilot — Design Spec
+# Jobs4UAE Autopilot — Design Spec
 
 **Date:** 2026-06-21
 **Status:** Approved (shape) — pending spec review
@@ -8,7 +8,7 @@
 
 ## 1. Summary
 
-GCC Career Copilot is a **free, local, non-technical-friendly** job-search assistant for the **GCC region** (UAE, Qatar, Kuwait, Bahrain, Saudi Arabia, Oman).
+Jobs4UAE Autopilot is a **free, local, non-technical-friendly** job-search assistant for the **GCC region** (UAE, Qatar, Kuwait, Bahrain, Saudi Arabia, Oman).
 
 It is an adaptation of the open-source [`santifer/career-ops`](https://github.com/santifer/career-ops) tool. Career-Ops is powerful but built **for developers**: it runs as slash-commands inside a paid AI coding CLI (Claude Code / Gemini CLI), requires Node.js + git + hand-editing YAML config in a terminal, and assumes a paid AI subscription.
 
@@ -19,7 +19,7 @@ This project **keeps the brain** of Career-Ops (the A–F evaluation rubric, CV-
 - a **one-click Windows install** that needs no technical skill,
 - **GCC-tailored job-board scanning**.
 
-The intended users are **community members job-hunting in the GCC** — not developers.
+The intended users are **community members job-hunting in the GCC** — not developers. (The name reflects a UAE-first focus, but all six GCC countries are supported.)
 
 ## 2. Goals
 

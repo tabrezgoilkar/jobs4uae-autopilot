@@ -1,4 +1,4 @@
-# GCC Career Copilot
+# Jobs4UAE Autopilot
 
 A **free, private, local** job-search assistant for the **GCC region** (UAE, Qatar, Kuwait, Bahrain, Saudi Arabia, Oman) — built for non-technical job seekers.
 

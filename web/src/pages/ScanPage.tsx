@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   scan,
   evaluateListing,
+  listBoards,
   type Board,
   type Listing,
   type EvaluationResult,
@@ -28,7 +29,8 @@ interface RowState {
 }
 
 export default function ScanPage() {
-  const [boards] = useState<Board[]>(BOARDS_STATIC);
+  const [boards, setBoards] = useState<Board[]>(BOARDS_STATIC);
+  useEffect(() => { listBoards().then(setBoards).catch(() => {}); }, []);
   const [selectedBoard, setSelectedBoard] = useState(BOARDS_STATIC[0].id);
   const [keyword, setKeyword] = useState('');
   const [country, setCountry] = useState(GCC_COUNTRIES[0]);
@@ -60,8 +62,8 @@ export default function ScanPage() {
     try {
       const result = await scan({ board: selectedBoard, keyword: keyword.trim(), country, city: city.trim() || undefined });
       setListings(result.listings);
-      if (result.error) {
-        setScanError("Couldn't read this board right now — try again.");
+      if (result.error && result.listings.length === 0) {
+        setScanError(result.error);
       }
     } catch (e) {
       setScanError(e instanceof Error ? e.message : 'Scan failed. Please try again.');

@@ -70,16 +70,30 @@ const bayt = {
     const listings = [];
 
     // Primary selector: job cards are <li> elements with data-js-job attribute
-    const cards = $('li[data-js-job]');
+    // Fall back to div.has-pointer-d if the primary selector yields nothing
+    const primaryCards = $('li[data-js-job]');
+    const cards = primaryCards.length
+      ? primaryCards
+      : $('div.has-pointer-d');
 
     cards.each((_, el) => {
       const card = $(el);
 
+      // Helper: pick the first selector that matches at least one element
+      const pick = (sels) => {
+        for (const sel of sels) {
+          const el = card.find(sel).first();
+          if (el.length) return el;
+        }
+        return card.find(sels[sels.length - 1]).first(); // empty-but-safe
+      };
+
       // Title + URL — try multiple selectors
-      const titleEl =
-        card.find('h2.jb-title a').first() ||
-        card.find('[data-automation-id="job-title"] a').first() ||
-        card.find('h2 a').first();
+      const titleEl = pick([
+        'h2.jb-title a',
+        '[data-automation-id="job-title"] a',
+        'h2 a',
+      ]);
       const title = titleEl.text().trim();
       let url = titleEl.attr('href') ?? '';
 

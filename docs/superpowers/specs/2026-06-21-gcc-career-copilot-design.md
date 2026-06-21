@@ -154,7 +154,9 @@ Each phase ships a working, **tested** increment before the next begins. Each ha
 
 ### Phase 5 — PDF Export
 - Render tailored resume + cover letter to polished PDF via HTML templates + Playwright; one-click download.
-- **Acceptance:** Click download → valid PDF produced that visually matches the preview.
+- **UAE/GCC-style resume template as the default** — a clean, recruiter-friendly layout matching good UAE CV conventions: header with name + contact (optional photo), a **Personal Details** block (nationality, visa/iqama status, notice period, languages, driving licence — the fields GCC recruiters expect), then summary, experience, education, skills. Ship 1–2 alternative templates the user can pick from.
+- *Honesty note:* we cannot pixel-replicate an arbitrary uploaded PDF's layout from extracted text; instead we provide a high-quality UAE template modeled on the conventions of the user's preferred format. (Future option: if the original upload is a `.docx`, fill it as a template.)
+- **Acceptance:** Click download → valid PDF in the UAE template that visually matches the preview; user can switch template.
 
 ### Phase 6 — Application Tracker
 - SQLite-backed tracker: save jobs, set statuses (`saved`→`applied`→`interview`→`offer`→`rejected`), notes; board/list view.

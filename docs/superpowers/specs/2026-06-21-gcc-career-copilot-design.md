@@ -184,6 +184,10 @@ Vision: move beyond "AI assists, user submits" toward a more fully automated end
 
 1. **Auto-discover & auto-update OpenRouter free models.** When a user stores an OpenRouter API key, the app automatically queries OpenRouter's models endpoint (`GET https://openrouter.ai/api/v1/models`), filters for *currently free* models (zero pricing / `:free`), validates one with a quick test call, and sets it as the active model — no manual model typing. Because free models expire or get rate-limited (e.g. `nex-agi/nex-n2-pro:free` was free only until 2026-06-23), the app re-checks periodically and on failure auto-rotates to another working free model, so the user never has to hand-edit the model again. (Note: this is an onboarding/AI-engine UX win and could reasonably be pulled forward earlier than the rest of Phase 11.)
 
+2. **Auto-rotate on mid-use rate limits.** When any provider returns a 429 (rate-limited) during normal use — not just at setup — the AI adapter silently retries on the next available working free model instead of surfacing an error, keeping the experience uninterrupted for non-technical users.
+
+3. **Built-in provider presets.** First-class "Free (OpenRouter)", "Free (Groq)", and "OpenAI" presets in the setup wizard that pre-fill the base URL and a sensible model, so the user only pastes a key (or, with idea #1, pastes nothing beyond the key). Combined with the auto-discovery above, the OpenRouter path becomes "paste key → done", with no base-URL or model typing.
+
 ## 10. Risks & Mitigations
 
 - **Scraping breakage / ToS** → config-driven boards, graceful failures, assisted LinkedIn, polite rate limits, clear user messaging.

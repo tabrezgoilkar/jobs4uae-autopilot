@@ -13,13 +13,14 @@ const LABEL = 'text-sm font-medium text-slate-700';
 
 export default function ProfilePage() {
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [loadError, setLoadError] = useState(false);
   const [importing, setImporting] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    getProfile().then(setProfile).catch(() => setMessage({ ok: false, text: 'Could not load your profile.' }));
+    getProfile().then(setProfile).catch(() => setLoadError(true));
   }, []);
 
   function set<K extends keyof Profile>(key: K, value: Profile[K]) {
@@ -86,6 +87,14 @@ export default function ProfilePage() {
     set('education', profile.education.filter((_, idx) => idx !== i));
   }
 
+  if (loadError) {
+    return (
+      <div className="text-sm rounded-lg p-3 bg-red-50 text-red-700">
+        Could not load your profile. Make sure the server is running, then refresh this page.
+      </div>
+    );
+  }
+
   if (!profile) {
     return <div className="text-slate-400">Loading…</div>;
   }
@@ -98,15 +107,17 @@ export default function ProfilePage() {
       </div>
 
       <div className="bg-white rounded-2xl shadow p-6">
-        <label className={LABEL}>Import from a CV file (PDF, Word, or text)</label>
-        <input
-          ref={fileRef}
-          type="file"
-          accept=".pdf,.docx,.txt,.md"
-          onChange={onFile}
-          disabled={importing}
-          className="mt-2 block text-sm"
-        />
+        <label className="block">
+          <span className={LABEL}>Import from a CV file (PDF, Word, or text)</span>
+          <input
+            ref={fileRef}
+            type="file"
+            accept=".pdf,.docx,.txt,.md"
+            onChange={onFile}
+            disabled={importing}
+            className="mt-2 block text-sm"
+          />
+        </label>
         {importing && <p className="mt-2 text-sm text-blue-600">Reading your CV with AI… this can take a few seconds.</p>}
       </div>
 
@@ -143,13 +154,14 @@ export default function ProfilePage() {
           <button onClick={addExp} className="text-sm text-blue-600">+ Add</button>
         </div>
         <div className="mt-4 space-y-4">
+          {/* Index keys are acceptable here: inputs are controlled and the lists are short. */}
           {profile.experience.map((x, i) => (
             <div key={i} className="border border-slate-200 rounded-xl p-4 grid gap-3 sm:grid-cols-2">
-              <input className={FIELD} placeholder="Job title" value={x.title} onChange={(e) => updateExp(i, 'title', e.target.value)} />
-              <input className={FIELD} placeholder="Company" value={x.company} onChange={(e) => updateExp(i, 'company', e.target.value)} />
-              <input className={FIELD} placeholder="Start (e.g. 2021)" value={x.startDate} onChange={(e) => updateExp(i, 'startDate', e.target.value)} />
-              <input className={FIELD} placeholder="End (e.g. 2024 or Present)" value={x.endDate} onChange={(e) => updateExp(i, 'endDate', e.target.value)} />
-              <textarea className={`${FIELD} sm:col-span-2`} rows={2} placeholder="What you did" value={x.description} onChange={(e) => updateExp(i, 'description', e.target.value)} />
+              <input className={FIELD} aria-label="Job title" placeholder="Job title" value={x.title} onChange={(e) => updateExp(i, 'title', e.target.value)} />
+              <input className={FIELD} aria-label="Company" placeholder="Company" value={x.company} onChange={(e) => updateExp(i, 'company', e.target.value)} />
+              <input className={FIELD} aria-label="Start date" placeholder="Start (e.g. 2021)" value={x.startDate} onChange={(e) => updateExp(i, 'startDate', e.target.value)} />
+              <input className={FIELD} aria-label="End date" placeholder="End (e.g. 2024 or Present)" value={x.endDate} onChange={(e) => updateExp(i, 'endDate', e.target.value)} />
+              <textarea className={`${FIELD} sm:col-span-2`} rows={2} aria-label="What you did" placeholder="What you did" value={x.description} onChange={(e) => updateExp(i, 'description', e.target.value)} />
               <button onClick={() => removeExp(i)} className="text-sm text-red-600 justify-self-start">Remove</button>
             </div>
           ))}
@@ -165,10 +177,10 @@ export default function ProfilePage() {
         <div className="mt-4 space-y-4">
           {profile.education.map((x, i) => (
             <div key={i} className="border border-slate-200 rounded-xl p-4 grid gap-3 sm:grid-cols-2">
-              <input className={FIELD} placeholder="Institution" value={x.institution} onChange={(e) => updateEdu(i, 'institution', e.target.value)} />
-              <input className={FIELD} placeholder="Degree" value={x.degree} onChange={(e) => updateEdu(i, 'degree', e.target.value)} />
-              <input className={FIELD} placeholder="Field" value={x.field} onChange={(e) => updateEdu(i, 'field', e.target.value)} />
-              <input className={FIELD} placeholder="Year" value={x.year} onChange={(e) => updateEdu(i, 'year', e.target.value)} />
+              <input className={FIELD} aria-label="Institution" placeholder="Institution" value={x.institution} onChange={(e) => updateEdu(i, 'institution', e.target.value)} />
+              <input className={FIELD} aria-label="Degree" placeholder="Degree" value={x.degree} onChange={(e) => updateEdu(i, 'degree', e.target.value)} />
+              <input className={FIELD} aria-label="Field of study" placeholder="Field" value={x.field} onChange={(e) => updateEdu(i, 'field', e.target.value)} />
+              <input className={FIELD} aria-label="Year" placeholder="Year" value={x.year} onChange={(e) => updateEdu(i, 'year', e.target.value)} />
               <button onClick={() => removeEdu(i)} className="text-sm text-red-600 justify-self-start">Remove</button>
             </div>
           ))}
@@ -177,7 +189,7 @@ export default function ProfilePage() {
       </div>
 
       <div className="flex items-center gap-3">
-        <button onClick={onSave} disabled={saving} className="px-5 py-2 rounded-lg bg-blue-600 text-white font-medium disabled:opacity-50">
+        <button onClick={onSave} disabled={saving || importing} className="px-5 py-2 rounded-lg bg-blue-600 text-white font-medium disabled:opacity-50">
           {saving ? 'Saving…' : 'Save profile'}
         </button>
         {profile.updatedAt && <span className="text-xs text-slate-400">Last saved {new Date(profile.updatedAt).toLocaleString()}</span>}

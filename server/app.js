@@ -8,6 +8,7 @@ import { evaluateRouter } from './routes/evaluate.routes.js';
 import { documentsRouter } from './routes/documents.routes.js';
 import { pdfRouter } from './routes/pdf.routes.js';
 import { trackerRouter } from './routes/tracker.routes.js';
+import { scannerRouter } from './routes/scanner.routes.js';
 
 export function createApp() {
   const app = express();
@@ -37,6 +38,7 @@ export function createApp() {
   app.use('/api', documentsRouter());
   app.use('/api', pdfRouter());
   app.use('/api', trackerRouter());
+  app.use('/api', scannerRouter());
 
   // In production, serve the built web app if it exists.
   const webDist = path.resolve(process.cwd(), 'web/dist');

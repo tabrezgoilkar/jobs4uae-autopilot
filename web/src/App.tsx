@@ -10,6 +10,7 @@ import DocumentsPage from './pages/DocumentsPage';
 import TrackerPage from './pages/TrackerPage';
 import ScanPage from './pages/ScanPage';
 import AutoApplyPage from './pages/AutoApplyPage';
+import SettingsPage from './pages/SettingsPage';
 
 export default function App() {
   const [config, setConfig] = useState<AppConfig | null>(null);
@@ -46,6 +47,7 @@ export default function App() {
           <Route path="/tracker" element={<TrackerPage />} />
           <Route path="/scan" element={<ScanPage />} />
           <Route path="/auto-apply" element={<AutoApplyPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
         </Routes>
       </AppShell>
     </BrowserRouter>

@@ -1,6 +1,6 @@
 import type { ReactElement } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { IconHome, IconUser, IconDoc, IconBars, IconSearch, IconSend, IconSparkle } from './icons';
+import { IconHome, IconUser, IconDoc, IconBars, IconSearch, IconSend, IconSparkle, IconSettings } from './icons';
 
 const WORKSPACE = [
   { to: '/', label: 'Home', Icon: IconHome },
@@ -56,6 +56,8 @@ export default function Sidebar({ engine }: { engine: string | null }) {
         {FIND_APPLY.map(({ to, label, Icon }) => (
           <NavItem key={to} to={to} label={label} Icon={Icon} active={isActive(to)} />
         ))}
+        <div style={{ margin: '12px 10px 6px', fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>Workspace</div>
+        <NavItem to="/settings" label="Settings" Icon={IconSettings} active={isActive('/settings')} />
       </nav>
 
       <div style={{ marginTop: 'auto', borderTop: '1px solid var(--border-subtle)', paddingTop: 12, display: 'flex', alignItems: 'center', gap: 10, padding: '12px 4px 4px' }}>

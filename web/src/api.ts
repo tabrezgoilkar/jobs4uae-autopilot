@@ -46,6 +46,10 @@ export async function testAI(body: Record<string, unknown>): Promise<{ ok: boole
 
 export interface Experience { company: string; title: string; startDate: string; endDate: string; description: string; }
 export interface Education { institution: string; degree: string; field: string; year: string; }
+export interface Project { name: string; description: string; tech: string[]; url: string; }
+export interface Certification { name: string; issuer: string; year: string; url: string; }
+export interface Language { name: string; level: string; }
+export interface Award { title: string; issuer: string; year: string; description: string; }
 export interface Profile {
   fullName: string;
   email: string;
@@ -56,6 +60,10 @@ export interface Profile {
   skills: string[];
   experience: Experience[];
   education: Education[];
+  projects: Project[];
+  certifications: Certification[];
+  languages: Language[];
+  awards: Award[];
   links: string[];
   updatedAt: string | null;
 }

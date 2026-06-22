@@ -16,6 +16,10 @@ function buildPrompt(cvText) {
   "skills": string[],
   "experience": [ { "company": string, "title": string, "startDate": string, "endDate": string, "description": string } ],
   "education": [ { "institution": string, "degree": string, "field": string, "year": string } ],
+  "projects": [ { "name": string, "description": string, "tech": string[], "url": string } ],
+  "certifications": [ { "name": string, "issuer": string, "year": string, "url": string } ],
+  "languages": [ { "name": string, "level": string } ],
+  "awards": [ { "title": string, "issuer": string, "year": string, "description": string } ],
   "links": string[]
 }
 Use empty strings/arrays for anything not present. Do not invent information.

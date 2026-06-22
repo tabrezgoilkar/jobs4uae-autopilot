@@ -4,11 +4,14 @@ export interface Listing {
   location: string;
   url: string;
   source: string;
+  salary?: string;
+  posted?: string;
 }
 
 export interface Board {
   id: string;
   name: string;
+  status?: 'experimental' | 'verified' | 'production';
 }
 
 export interface ScanResult {

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { downloadPdf } from './pdfApi';
+import { Button } from '../../components/ui';
 
 interface Props {
   docId: string | null;
@@ -27,24 +28,14 @@ export default function DownloadButtons({ docId }: Props) {
 
   return (
     <span className="flex items-center gap-2 flex-wrap">
-      <button
-        onClick={() => handleDownload('resume')}
-        disabled={!docId || busyResume}
-        aria-label="Download resume as PDF"
-        className="px-5 py-2 rounded-lg bg-slate-700 text-white font-medium disabled:opacity-50"
-      >
+      <Button variant="secondary" onClick={() => handleDownload('resume')} disabled={!docId || busyResume} aria-label="Download resume as PDF">
         {busyResume ? 'Generating…' : 'Resume PDF'}
-      </button>
-      <button
-        onClick={() => handleDownload('cover')}
-        disabled={!docId || busyCover}
-        aria-label="Download cover letter as PDF"
-        className="px-5 py-2 rounded-lg bg-slate-700 text-white font-medium disabled:opacity-50"
-      >
+      </Button>
+      <Button variant="secondary" onClick={() => handleDownload('cover')} disabled={!docId || busyCover} aria-label="Download cover letter as PDF">
         {busyCover ? 'Generating…' : 'Cover Letter PDF'}
-      </button>
+      </Button>
       {error && (
-        <span className="text-sm text-red-600" role="alert">{error}</span>
+        <span className="text-sm text-danger-text" role="alert">{error}</span>
       )}
     </span>
   );

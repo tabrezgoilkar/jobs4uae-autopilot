@@ -7,9 +7,10 @@ import {
   type Experience,
   type Education,
 } from '../api';
+import { Card, PageHeader, Button } from '../components/ui';
 
-const FIELD = 'mt-1 w-full rounded-lg border border-slate-300 p-2 text-sm';
-const LABEL = 'text-sm font-medium text-slate-700';
+const FIELD = 'mt-1 w-full rounded-lg border border-hair bg-surface text-ink p-2 text-sm j4u-focus placeholder:text-ink-muted';
+const LABEL = 'text-sm font-medium text-ink-secondary';
 
 export default function ProfilePage() {
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -89,24 +90,21 @@ export default function ProfilePage() {
 
   if (loadError) {
     return (
-      <div className="text-sm rounded-lg p-3 bg-red-50 text-red-700">
+      <div role="alert" className="text-sm rounded-lg p-3 bg-danger-soft text-danger-text border border-danger-soft">
         Could not load your profile. Make sure the server is running, then refresh this page.
       </div>
     );
   }
 
   if (!profile) {
-    return <div className="text-slate-400">Loading…</div>;
+    return <div className="text-ink-muted text-sm">Loading…</div>;
   }
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-800">My Profile</h1>
-        <p className="mt-1 text-slate-600">Upload your CV to fill this in automatically, or type it yourself.</p>
-      </div>
+      <PageHeader title="My profile" subtitle="Upload your CV to fill this in automatically, or type it yourself." />
 
-      <div className="bg-white rounded-2xl shadow p-6">
+      <Card>
         <label className="block">
           <span className={LABEL}>Import from a CV file (PDF, Word, or text)</span>
           <input
@@ -115,84 +113,78 @@ export default function ProfilePage() {
             accept=".pdf,.docx,.txt,.md"
             onChange={onFile}
             disabled={importing}
-            className="mt-2 block text-sm"
+            className="mt-2 block text-sm text-ink-secondary"
           />
         </label>
-        {importing && <p className="mt-2 text-sm text-blue-600">Reading your CV with AI… this can take a few seconds.</p>}
-      </div>
+        {importing && <p className="mt-2 text-sm text-primary-700">Reading your CV with AI… this can take a few seconds.</p>}
+      </Card>
 
       {message && (
-        <div className={`text-sm rounded-lg p-3 ${message.ok ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+        <div role="status" className={`text-sm rounded-lg p-3 border ${message.ok ? 'bg-success-soft text-success-text border-success-soft' : 'bg-danger-soft text-danger-text border-danger-soft'}`}>
           {message.text}
         </div>
       )}
 
-      <div className="bg-white rounded-2xl shadow p-6 grid gap-4 sm:grid-cols-2">
-        <label className="block"><span className={LABEL}>Full name</span>
-          <input className={FIELD} value={profile.fullName} onChange={(e) => set('fullName', e.target.value)} /></label>
-        <label className="block"><span className={LABEL}>Headline / current title</span>
-          <input className={FIELD} value={profile.headline} onChange={(e) => set('headline', e.target.value)} /></label>
-        <label className="block"><span className={LABEL}>Email</span>
-          <input className={FIELD} value={profile.email} onChange={(e) => set('email', e.target.value)} /></label>
-        <label className="block"><span className={LABEL}>Phone</span>
-          <input className={FIELD} value={profile.phone} onChange={(e) => set('phone', e.target.value)} /></label>
-        <label className="block sm:col-span-2"><span className={LABEL}>Location</span>
-          <input className={FIELD} value={profile.location} onChange={(e) => set('location', e.target.value)} /></label>
-        <label className="block sm:col-span-2"><span className={LABEL}>Professional summary</span>
-          <textarea className={FIELD} rows={3} value={profile.summary} onChange={(e) => set('summary', e.target.value)} /></label>
-        <label className="block sm:col-span-2"><span className={LABEL}>Skills (comma separated)</span>
-          <input
-            className={FIELD}
-            value={profile.skills.join(', ')}
-            onChange={(e) => set('skills', e.target.value.split(',').map((s) => s.trim()).filter(Boolean))}
-          /></label>
-      </div>
-
-      <div className="bg-white rounded-2xl shadow p-6">
-        <div className="flex items-center justify-between">
-          <h2 className="font-semibold text-slate-800">Experience</h2>
-          <button onClick={addExp} className="text-sm text-blue-600">+ Add</button>
+      <Card>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <label className="block"><span className={LABEL}>Full name</span>
+            <input className={FIELD} value={profile.fullName} onChange={(e) => set('fullName', e.target.value)} /></label>
+          <label className="block"><span className={LABEL}>Headline / current title</span>
+            <input className={FIELD} value={profile.headline} onChange={(e) => set('headline', e.target.value)} /></label>
+          <label className="block"><span className={LABEL}>Email</span>
+            <input className={FIELD} value={profile.email} onChange={(e) => set('email', e.target.value)} /></label>
+          <label className="block"><span className={LABEL}>Phone</span>
+            <input className={FIELD} value={profile.phone} onChange={(e) => set('phone', e.target.value)} /></label>
+          <label className="block sm:col-span-2"><span className={LABEL}>Location</span>
+            <input className={FIELD} value={profile.location} onChange={(e) => set('location', e.target.value)} /></label>
+          <label className="block sm:col-span-2"><span className={LABEL}>Professional summary</span>
+            <textarea className={FIELD} rows={3} value={profile.summary} onChange={(e) => set('summary', e.target.value)} /></label>
+          <label className="block sm:col-span-2"><span className={LABEL}>Skills (comma separated)</span>
+            <input
+              className={FIELD}
+              value={profile.skills.join(', ')}
+              onChange={(e) => set('skills', e.target.value.split(',').map((s) => s.trim()).filter(Boolean))}
+            /></label>
         </div>
-        <div className="mt-4 space-y-4">
+      </Card>
+
+      <Card title="Experience" action={<button onClick={addExp} className="text-sm font-semibold text-primary-700 j4u-focus rounded">+ Add</button>}>
+        <div className="space-y-4">
           {/* Index keys are acceptable here: inputs are controlled and the lists are short. */}
           {profile.experience.map((x, i) => (
-            <div key={i} className="border border-slate-200 rounded-xl p-4 grid gap-3 sm:grid-cols-2">
+            <div key={i} className="border border-hair-subtle rounded-xl p-4 grid gap-3 sm:grid-cols-2">
               <input className={FIELD} aria-label="Job title" placeholder="Job title" value={x.title} onChange={(e) => updateExp(i, 'title', e.target.value)} />
               <input className={FIELD} aria-label="Company" placeholder="Company" value={x.company} onChange={(e) => updateExp(i, 'company', e.target.value)} />
               <input className={FIELD} aria-label="Start date" placeholder="Start (e.g. 2021)" value={x.startDate} onChange={(e) => updateExp(i, 'startDate', e.target.value)} />
               <input className={FIELD} aria-label="End date" placeholder="End (e.g. 2024 or Present)" value={x.endDate} onChange={(e) => updateExp(i, 'endDate', e.target.value)} />
               <textarea className={`${FIELD} sm:col-span-2`} rows={2} aria-label="What you did" placeholder="What you did" value={x.description} onChange={(e) => updateExp(i, 'description', e.target.value)} />
-              <button onClick={() => removeExp(i)} className="text-sm text-red-600 justify-self-start">Remove</button>
+              <button onClick={() => removeExp(i)} className="text-sm font-medium text-danger-text justify-self-start j4u-focus rounded">Remove</button>
             </div>
           ))}
-          {profile.experience.length === 0 && <p className="text-sm text-slate-400">No experience added yet.</p>}
+          {profile.experience.length === 0 && <p className="text-sm text-ink-muted">No experience added yet.</p>}
         </div>
-      </div>
+      </Card>
 
-      <div className="bg-white rounded-2xl shadow p-6">
-        <div className="flex items-center justify-between">
-          <h2 className="font-semibold text-slate-800">Education</h2>
-          <button onClick={addEdu} className="text-sm text-blue-600">+ Add</button>
-        </div>
-        <div className="mt-4 space-y-4">
+      <Card title="Education" action={<button onClick={addEdu} className="text-sm font-semibold text-primary-700 j4u-focus rounded">+ Add</button>}>
+        <div className="space-y-4">
           {profile.education.map((x, i) => (
-            <div key={i} className="border border-slate-200 rounded-xl p-4 grid gap-3 sm:grid-cols-2">
+            <div key={i} className="border border-hair-subtle rounded-xl p-4 grid gap-3 sm:grid-cols-2">
               <input className={FIELD} aria-label="Institution" placeholder="Institution" value={x.institution} onChange={(e) => updateEdu(i, 'institution', e.target.value)} />
               <input className={FIELD} aria-label="Degree" placeholder="Degree" value={x.degree} onChange={(e) => updateEdu(i, 'degree', e.target.value)} />
               <input className={FIELD} aria-label="Field of study" placeholder="Field" value={x.field} onChange={(e) => updateEdu(i, 'field', e.target.value)} />
               <input className={FIELD} aria-label="Year" placeholder="Year" value={x.year} onChange={(e) => updateEdu(i, 'year', e.target.value)} />
-              <button onClick={() => removeEdu(i)} className="text-sm text-red-600 justify-self-start">Remove</button>
+              <button onClick={() => removeEdu(i)} className="text-sm font-medium text-danger-text justify-self-start j4u-focus rounded">Remove</button>
             </div>
           ))}
-          {profile.education.length === 0 && <p className="text-sm text-slate-400">No education added yet.</p>}
+          {profile.education.length === 0 && <p className="text-sm text-ink-muted">No education added yet.</p>}
         </div>
-      </div>
+      </Card>
 
       <div className="flex items-center gap-3">
-        <button onClick={onSave} disabled={saving || importing} className="px-5 py-2 rounded-lg bg-blue-600 text-white font-medium disabled:opacity-50">
+        <Button onClick={onSave} disabled={saving || importing}>
           {saving ? 'Saving…' : 'Save profile'}
-        </button>
-        {profile.updatedAt && <span className="text-xs text-slate-400">Last saved {new Date(profile.updatedAt).toLocaleString()}</span>}
+        </Button>
+        {profile.updatedAt && <span className="text-xs text-ink-muted">Last saved {new Date(profile.updatedAt).toLocaleString()}</span>}
       </div>
     </div>
   );

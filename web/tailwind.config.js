@@ -4,6 +4,10 @@ export default {
   theme: {
     extend: {
       colors: {
+        canvas: 'var(--canvas)',
+        surface: { DEFAULT: 'var(--surface)', sunken: 'var(--surface-sunken)' },
+        ink: { strong: 'var(--text-strong)', DEFAULT: 'var(--text)', secondary: 'var(--text-secondary)', muted: 'var(--text-muted)' },
+        hair: { subtle: 'var(--border-subtle)', DEFAULT: 'var(--border)', strong: 'var(--border-strong)' },
         primary: { 50: 'var(--primary-50)', 100: 'var(--primary-100)', 500: 'var(--primary-500)', 600: 'var(--primary-600)', 700: 'var(--primary-700)', DEFAULT: 'var(--primary-600)' },
         ai: { 50: 'var(--ai-50)', soft: 'var(--ai-soft)', 500: 'var(--ai-500)', 600: 'var(--ai-600)', 700: 'var(--ai-700)', DEFAULT: 'var(--ai-600)' },
         success: { DEFAULT: 'var(--success)', soft: 'var(--success-soft)', text: 'var(--success-text)' },
@@ -15,7 +19,7 @@ export default {
         sans: ['IBM Plex Sans', 'system-ui', 'sans-serif'],
         mono: ['IBM Plex Mono', 'ui-monospace', 'monospace'],
       },
-      borderRadius: { lg: '10px', xl: '14px' },
+      borderRadius: { lg: '10px', xl: '14px', pill: '9999px' },
       boxShadow: { sm: 'var(--shadow-sm)', md: 'var(--shadow-md)', lg: 'var(--shadow-lg)' },
     },
   },

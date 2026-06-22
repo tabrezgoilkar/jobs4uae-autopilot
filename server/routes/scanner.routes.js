@@ -9,7 +9,7 @@ export function scannerRouter() {
    * Returns list of supported boards [{id, name}]
    */
   router.get('/scanner/boards', (req, res) => {
-    res.json(BOARDS.map(({ id, name }) => ({ id, name })));
+    res.json(BOARDS.map(({ id, name, status }) => ({ id, name, status: status ?? 'experimental' })));
   });
 
   /**

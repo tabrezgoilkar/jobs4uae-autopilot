@@ -18,8 +18,7 @@ const GCC_COUNTRIES = [
 ];
 
 const BOARDS_STATIC: Board[] = [
-  { id: 'bayt', name: 'Bayt.com' },
-  { id: 'naukrigulf', name: 'Naukrigulf' },
+  { id: 'indeed', name: 'Indeed', status: 'verified' },
 ];
 
 interface RowState {
@@ -95,7 +94,8 @@ export default function ScanPage() {
       <div>
         <h1 className="text-2xl font-bold text-slate-800">Find Jobs</h1>
         <p className="mt-1 text-slate-600">
-          Search Bayt.com and Naukrigulf for GCC roles and evaluate them instantly.
+          Search Indeed for GCC roles and evaluate them instantly. A browser
+          window opens briefly while we fetch listings — that's normal.
         </p>
       </div>
 
@@ -215,6 +215,11 @@ export default function ScanPage() {
                         <p className="text-xs text-slate-500 mt-0.5">
                           {[listing.company, listing.location].filter(Boolean).join(' · ')}
                         </p>
+                        {(listing.salary || listing.posted) && (
+                          <p className="text-xs text-slate-400 mt-0.5">
+                            {[listing.salary, listing.posted].filter(Boolean).join(' · ')}
+                          </p>
+                        )}
                         {listing.url && (
                           <a
                             href={listing.url}

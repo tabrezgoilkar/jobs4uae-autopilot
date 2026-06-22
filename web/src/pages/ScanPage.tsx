@@ -7,7 +7,15 @@ import {
   type Listing,
   type EvaluationResult,
 } from '../features/scanner/scannerApi';
-import { Card, PageHeader, Button, Badge, GradeBadge } from '../components/ui';
+import { Link } from 'react-router-dom';
+import { Card, PageHeader, Button, Badge, GradeBadge, type Tone } from '../components/ui';
+import { learningLinks } from '../lib/skills';
+
+const REC_TONE: Record<string, { label: string; tone: Tone }> = {
+  apply: { label: 'Apply', tone: 'success' },
+  maybe: { label: 'Maybe', tone: 'warning' },
+  skip: { label: 'Skip', tone: 'danger' },
+};
 
 const GCC_COUNTRIES = ['UAE', 'Saudi Arabia', 'Qatar', 'Kuwait', 'Bahrain', 'Oman'];
 
@@ -17,7 +25,7 @@ const FIELD = 'mt-1 w-full rounded-lg border border-hair bg-surface text-ink p-2
 
 interface RowState {
   busy: boolean;
-  grade: string | null;
+  result: EvaluationResult | null;
   error: string | null;
 }
 
@@ -39,7 +47,7 @@ export default function ScanPage() {
 
   function setRowState(url: string, patch: Partial<RowState>) {
     setRowStates((prev) => {
-      const existing = prev[url] ?? { busy: false, grade: null, error: null };
+      const existing = prev[url] ?? { busy: false, result: null, error: null };
       return { ...prev, [url]: { ...existing, ...patch } };
     });
   }
@@ -68,14 +76,14 @@ export default function ScanPage() {
 
   async function handleEvaluate(listing: Listing) {
     const key = listing.url;
-    setRowState(key, { busy: true, error: null, grade: null });
+    setRowState(key, { busy: true, error: null, result: null });
     try {
       const result: EvaluationResult = await evaluateListing(listing);
-      setRowState(key, { busy: false, grade: result.grade ?? 'N/A', error: null });
+      setRowState(key, { busy: false, result, error: null });
     } catch (e) {
       setRowState(key, {
         busy: false,
-        grade: null,
+        result: null,
         error: e instanceof Error ? e.message : 'Evaluation failed.',
       });
     }
@@ -159,37 +167,40 @@ export default function ScanPage() {
                   const rowKey = listing.url || String(idx);
                   const row = rowStates[rowKey] ?? { busy: false, grade: null, error: null };
                   return (
-                    <li key={rowKey} className="bg-surface rounded-xl shadow-sm border border-hair-subtle p-4 flex flex-col sm:flex-row sm:items-start gap-3">
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-ink-strong text-sm leading-snug">{listing.title}</p>
-                        <p className="text-xs text-ink-muted mt-0.5">
-                          {[listing.company, listing.location].filter(Boolean).join(' · ')}
-                        </p>
-                        {(listing.salary || listing.posted) && (
+                    <li key={rowKey} className="bg-surface rounded-xl shadow-sm border border-hair-subtle p-4">
+                      <div className="flex flex-col sm:flex-row sm:items-start gap-3">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-ink-strong text-sm leading-snug">{listing.title}</p>
                           <p className="text-xs text-ink-muted mt-0.5">
-                            {[listing.salary, listing.posted].filter(Boolean).join(' · ')}
+                            {[listing.company, listing.location].filter(Boolean).join(' · ')}
                           </p>
-                        )}
-                        {listing.url && (
-                          <a
-                            href={listing.url}
-                            target="_blank"
-                            rel="noreferrer"
-                            aria-label={`Open ${listing.title} on ${listing.source}`}
-                            className="mt-1 inline-block text-xs font-semibold text-primary-700 hover:underline"
-                          >
-                            Open listing ↗
-                          </a>
-                        )}
-                      </div>
+                          {(listing.salary || listing.posted) && (
+                            <p className="text-xs text-ink-muted mt-0.5">
+                              {[listing.salary, listing.posted].filter(Boolean).join(' · ')}
+                            </p>
+                          )}
+                          {listing.url && (
+                            <a
+                              href={listing.url}
+                              target="_blank"
+                              rel="noreferrer"
+                              aria-label={`Open ${listing.title} on ${listing.source}`}
+                              className="mt-1 inline-block text-xs font-semibold text-primary-700 hover:underline"
+                            >
+                              Open listing ↗
+                            </a>
+                          )}
+                        </div>
 
-                      <div className="flex items-center gap-3 shrink-0">
-                        {row.grade && <GradeBadge grade={row.grade} size="sm" />}
-                        {row.error && <span role="alert" className="text-xs text-danger-text">{row.error}</span>}
-                        <Button variant="secondary" size="sm" onClick={() => handleEvaluate(listing)} disabled={row.busy} aria-label={`Evaluate ${listing.title}`}>
-                          {row.busy ? 'Evaluating…' : row.grade ? 'Re-evaluate' : 'Evaluate'}
-                        </Button>
+                        <div className="flex items-center gap-3 shrink-0">
+                          {row.result && <GradeBadge grade={row.result.grade} size="sm" />}
+                          {row.error && <span role="alert" className="text-xs text-danger-text">{row.error}</span>}
+                          <Button variant="secondary" size="sm" onClick={() => handleEvaluate(listing)} disabled={row.busy} aria-label={`Evaluate ${listing.title}`}>
+                            {row.busy ? 'Evaluating…' : row.result ? 'Re-evaluate' : 'Evaluate'}
+                          </Button>
+                        </div>
                       </div>
+                      {row.result && <EvalPanel result={row.result} />}
                     </li>
                   );
                 })}
@@ -198,6 +209,49 @@ export default function ScanPage() {
           )}
         </section>
       )}
+    </div>
+  );
+}
+
+function EvalPanel({ result }: { result: EvaluationResult }) {
+  const rec = REC_TONE[result.recommendation] ?? { label: result.recommendation, tone: 'neutral' as Tone };
+  return (
+    <div className="mt-3 pt-3 border-t border-hair-subtle j4u-rise">
+      <div className="flex items-center gap-2 flex-wrap">
+        <Badge tone={rec.tone}>{rec.label}</Badge>
+        <span className="text-xs text-ink-muted">AI graded this <b className="text-ink-secondary">{result.grade}</b></span>
+      </div>
+      {result.summary && <p className="text-[13px] text-ink-secondary mt-2 leading-relaxed">{result.summary}</p>}
+
+      {result.dimensions?.length > 0 && (
+        <>
+          <div className="text-[10px] font-bold uppercase tracking-wide text-ink-muted mt-3 mb-2">Dimension by dimension</div>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {result.dimensions.map((d, i) => (
+              <div key={i} className="border border-hair-subtle rounded-lg p-2.5">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-medium text-ink-secondary">{d.name}</span>
+                  <GradeBadge grade={d.score} size="sm" />
+                </div>
+                {d.comment && <p className="text-[11px] text-ink-muted mt-1 leading-snug">{d.comment}</p>}
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      {result.missingSkills?.length > 0 && (
+        <>
+          <div className="text-[10px] font-bold uppercase tracking-wide text-warning-text mt-3 mb-1.5">Worth strengthening</div>
+          <div className="flex flex-wrap gap-1.5">
+            {result.missingSkills.slice(0, 6).map((s) => (
+              <a key={s} href={learningLinks(s)[0].url} target="_blank" rel="noreferrer" className="text-[11px] font-medium px-2.5 py-0.5 rounded-pill bg-warning-soft text-warning-text hover:underline">{s} ↗</a>
+            ))}
+          </div>
+        </>
+      )}
+
+      <Link to={`/documents?eval=${result.id}`} className="inline-flex items-center gap-1.5 mt-3 h-9 px-3 rounded-lg bg-ai-soft text-ai-700 text-xs font-semibold j4u-press">✨ Tailor CV for this job →</Link>
     </div>
   );
 }

@@ -19,11 +19,20 @@ export interface ScanResult {
   error?: string;
 }
 
+export interface EvalDimension {
+  name: string;
+  score: string;
+  comment: string;
+}
+
 export interface EvaluationResult {
   id: string;
   grade: string;
-  recommendation: string;
+  recommendation: 'apply' | 'maybe' | 'skip' | string;
   summary: string;
+  dimensions: EvalDimension[];
+  matchedSkills: string[];
+  missingSkills: string[];
   [key: string]: unknown;
 }
 

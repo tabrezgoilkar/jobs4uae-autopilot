@@ -22,7 +22,13 @@ function metaFor(pathname: string) {
   return hit ? META[hit] : { title: 'Jobs4UAE Autopilot', sub: '' };
 }
 
-export default function Topbar() {
+export default function Topbar({
+  onOpenPalette,
+  onToggleCopilot,
+}: {
+  onOpenPalette: () => void;
+  onToggleCopilot: () => void;
+}) {
   const { pathname } = useLocation();
   const { title, sub } = metaFor(pathname);
 
@@ -35,12 +41,12 @@ export default function Topbar() {
       {sub && <div className="text-xs text-ink-muted">{sub}</div>}
 
       <div className="ml-auto flex items-center gap-2.5">
-        {/* ⌘K command palette — visual only until Phase 16 */}
+        {/* ⌘K command palette — ask the UAE job market */}
         <button
           type="button"
-          title="Command palette — coming soon"
-          disabled
-          className="j4u-press hidden md:flex items-center gap-2 h-[34px] px-3 rounded-lg text-xs text-ai-700 border border-ai-soft bg-ai-soft disabled:opacity-70 cursor-default"
+          onClick={onOpenPalette}
+          title="Ask the UAE job market (⌘K)"
+          className="j4u-press hidden md:flex items-center gap-2 h-[34px] px-3 rounded-lg text-xs text-ai-700 border border-ai-soft bg-ai-soft"
           style={{ width: 300 }}
         >
           <IconSparkle size={13} color="var(--ai-600)" />
@@ -48,15 +54,16 @@ export default function Topbar() {
           <span className="ml-auto font-mono text-[10px] rounded border border-ai-soft px-1">⌘K</span>
         </button>
 
-        {/* Copilot — visual only until Phase 16 */}
+        {/* Copilot side panel */}
         <button
           type="button"
-          title="AI Copilot — coming soon"
-          disabled
-          className="j4u-press inline-flex items-center gap-1.5 h-[34px] px-3 rounded-lg text-xs font-semibold text-ai-700 border border-ai-soft bg-ai-soft disabled:opacity-70 cursor-default"
+          onClick={onToggleCopilot}
+          title="Career copilot (⌘J)"
+          className="j4u-press inline-flex items-center gap-1.5 h-[34px] px-3 rounded-lg text-xs font-semibold text-ai-700 border border-ai-soft bg-ai-soft"
         >
           <IconSparkle size={13} color="var(--ai-600)" />
           Copilot
+          <span className="font-mono text-[10px] opacity-70">⌘J</span>
         </button>
 
         <span className="w-px h-5 bg-hair-subtle mx-0.5" />

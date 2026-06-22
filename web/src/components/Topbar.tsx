@@ -11,6 +11,7 @@ const META: Record<string, { title: string; sub: string }> = {
   '/tracker': { title: 'Tracker', sub: 'Every application in one place' },
   '/scan': { title: 'Scan GCC boards', sub: 'Find roles across the Gulf' },
   '/auto-apply': { title: 'Auto-apply', sub: 'Assisted applications — you submit' },
+  '/settings': { title: 'Settings', sub: 'AI engine, details & privacy' },
 };
 
 function metaFor(pathname: string) {

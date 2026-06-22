@@ -1,10 +1,18 @@
 export type EngineId = 'gemini' | 'byok' | 'ollama';
 
+export interface ApplicationDetails {
+  nationality?: string;
+  visaStatus?: string;
+  noticePeriod?: string;
+  expectedSalary?: string;
+}
+
 export interface AppConfig {
   engine: EngineId | null;
   gemini: { apiKey: string; model: string };
   byok: { baseUrl: string; apiKey: string; model: string };
   ollama: { baseUrl: string; model: string };
+  applicationDetails?: ApplicationDetails;
   setupComplete: boolean;
 }
 

@@ -3,8 +3,13 @@
     "allow": [
       "mcp__plugin_playwright_playwright__browser_snapshot",
       "mcp__plugin_playwright_playwright__browser_console_messages",
+      "mcp__plugin_playwright_playwright__browser_navigate",
+      "mcp__plugin_playwright_playwright__browser_take_screenshot",
       "mcp__plugin_vercel_vercel__list_deployments",
-      "mcp__plugin_vercel_vercel__get_deployment_build_logs"
+      "mcp__plugin_vercel_vercel__get_deployment_build_logs",
+      "mcp__plugin_vercel_vercel__get_deployment",
+      "mcp__plugin_vercel_vercel__search_vercel_documentation",
+      "Bash(npm test)"
     ]
   }
 }

@@ -90,6 +90,20 @@ export default function ProfilePage() {
     set('education', profile.education.filter((_, idx) => idx !== i));
   }
 
+  type ListKey = 'projects' | 'certifications' | 'languages' | 'awards';
+  function listAdd(key: ListKey, blank: unknown) {
+    if (!profile) return;
+    set(key, [...(profile[key] as unknown[]), blank] as never);
+  }
+  function listUpd(key: ListKey, i: number, patch: Record<string, unknown>) {
+    if (!profile) return;
+    set(key, (profile[key] as unknown as Record<string, unknown>[]).map((x, idx) => (idx === i ? { ...x, ...patch } : x)) as never);
+  }
+  function listDel(key: ListKey, i: number) {
+    if (!profile) return;
+    set(key, (profile[key] as unknown[]).filter((_, idx) => idx !== i) as never);
+  }
+
   if (loadError) {
     return (
       <div role="alert" className="text-sm rounded-lg p-3 bg-danger-soft text-danger-text border border-danger-soft">
@@ -190,6 +204,68 @@ export default function ProfilePage() {
             </div>
           ))}
           {profile.education.length === 0 && <p className="text-sm text-ink-muted">No education added yet.</p>}
+        </div>
+      </Card>
+
+      {/* Projects */}
+      <Card title="Projects" action={<button onClick={() => listAdd('projects', { name: '', description: '', tech: [], url: '' })} className="text-sm font-semibold text-primary-700 j4u-focus rounded">+ Add</button>}>
+        <div className="space-y-4">
+          {profile.projects.map((x, i) => (
+            <div key={i} className="border border-hair-subtle rounded-xl p-4 grid gap-3 sm:grid-cols-2">
+              <input className={FIELD} aria-label="Project name" placeholder="Project name" value={x.name} onChange={(e) => listUpd('projects', i, { name: e.target.value })} />
+              <input className={FIELD} aria-label="Project link" placeholder="Link (optional)" value={x.url} onChange={(e) => listUpd('projects', i, { url: e.target.value })} />
+              <textarea className={`${FIELD} sm:col-span-2`} rows={2} aria-label="Project description" placeholder="What it is and your impact" value={x.description} onChange={(e) => listUpd('projects', i, { description: e.target.value })} />
+              <input className={`${FIELD} sm:col-span-2`} aria-label="Tech used" placeholder="Tech (comma separated, e.g. React, TypeScript)" value={x.tech.join(', ')} onChange={(e) => listUpd('projects', i, { tech: e.target.value.split(',').map((s) => s.trim()).filter(Boolean) })} />
+              <button onClick={() => listDel('projects', i)} className="text-sm font-medium text-danger-text justify-self-start j4u-focus rounded">Remove</button>
+            </div>
+          ))}
+          {profile.projects.length === 0 && <p className="text-sm text-ink-muted">No projects added yet.</p>}
+        </div>
+      </Card>
+
+      {/* Certifications */}
+      <Card title="Certifications" action={<button onClick={() => listAdd('certifications', { name: '', issuer: '', year: '', url: '' })} className="text-sm font-semibold text-primary-700 j4u-focus rounded">+ Add</button>}>
+        <div className="space-y-4">
+          {profile.certifications.map((x, i) => (
+            <div key={i} className="border border-hair-subtle rounded-xl p-4 grid gap-3 sm:grid-cols-2">
+              <input className={FIELD} aria-label="Certification name" placeholder="Certification" value={x.name} onChange={(e) => listUpd('certifications', i, { name: e.target.value })} />
+              <input className={FIELD} aria-label="Issuer" placeholder="Issuer (e.g. Coursera)" value={x.issuer} onChange={(e) => listUpd('certifications', i, { issuer: e.target.value })} />
+              <input className={FIELD} aria-label="Year" placeholder="Year" value={x.year} onChange={(e) => listUpd('certifications', i, { year: e.target.value })} />
+              <input className={FIELD} aria-label="Credential link" placeholder="Credential link (optional)" value={x.url} onChange={(e) => listUpd('certifications', i, { url: e.target.value })} />
+              <button onClick={() => listDel('certifications', i)} className="text-sm font-medium text-danger-text justify-self-start j4u-focus rounded">Remove</button>
+            </div>
+          ))}
+          {profile.certifications.length === 0 && <p className="text-sm text-ink-muted">No certifications added yet.</p>}
+        </div>
+      </Card>
+
+      {/* Languages */}
+      <Card title="Languages" action={<button onClick={() => listAdd('languages', { name: '', level: '' })} className="text-sm font-semibold text-primary-700 j4u-focus rounded">+ Add</button>}>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {profile.languages.map((x, i) => (
+            <div key={i} className="border border-hair-subtle rounded-xl p-3 flex items-center gap-2">
+              <input className={FIELD} aria-label="Language" placeholder="Language" value={x.name} onChange={(e) => listUpd('languages', i, { name: e.target.value })} />
+              <input className={FIELD} aria-label="Proficiency" placeholder="Level (e.g. Native, Fluent)" value={x.level} onChange={(e) => listUpd('languages', i, { level: e.target.value })} />
+              <button onClick={() => listDel('languages', i)} aria-label="Remove language" className="text-danger-text shrink-0 j4u-focus rounded px-1">✕</button>
+            </div>
+          ))}
+          {profile.languages.length === 0 && <p className="text-sm text-ink-muted sm:col-span-2">No languages added yet.</p>}
+        </div>
+      </Card>
+
+      {/* Awards & honors */}
+      <Card title="Awards & honors" action={<button onClick={() => listAdd('awards', { title: '', issuer: '', year: '', description: '' })} className="text-sm font-semibold text-primary-700 j4u-focus rounded">+ Add</button>}>
+        <div className="space-y-4">
+          {profile.awards.map((x, i) => (
+            <div key={i} className="border border-hair-subtle rounded-xl p-4 grid gap-3 sm:grid-cols-2">
+              <input className={FIELD} aria-label="Award title" placeholder="Award (e.g. 1st place)" value={x.title} onChange={(e) => listUpd('awards', i, { title: e.target.value })} />
+              <input className={FIELD} aria-label="Issuer or event" placeholder="Issuer / event" value={x.issuer} onChange={(e) => listUpd('awards', i, { issuer: e.target.value })} />
+              <input className={FIELD} aria-label="Year" placeholder="Year" value={x.year} onChange={(e) => listUpd('awards', i, { year: e.target.value })} />
+              <input className={FIELD} aria-label="Award description" placeholder="One line about it" value={x.description} onChange={(e) => listUpd('awards', i, { description: e.target.value })} />
+              <button onClick={() => listDel('awards', i)} className="text-sm font-medium text-danger-text justify-self-start j4u-focus rounded">Remove</button>
+            </div>
+          ))}
+          {profile.awards.length === 0 && <p className="text-sm text-ink-muted">No awards added yet.</p>}
         </div>
       </Card>
 

@@ -63,5 +63,17 @@ body {
 .t-mono { font-family: var(--font-mono); font-size: 13px; line-height: 20px; font-variant-numeric: tabular-nums; }
 .t-caption { font-weight: 500; font-size: 12px; line-height: 16px; color: var(--text-muted); }
 
+@keyframes j4u-rise { from { transform: translateY(7px); opacity: 0; } to { transform: none; opacity: 1; } }
+.j4u-rise { animation: j4u-rise 0.3s ease-out both; }
+
+/* AI gradient cards (briefing / copilot tip / interview prep) — faithful in light, dark-safe. */
+.j4u-grad-brief { background: linear-gradient(120deg, #EFF4FF, #F4EEFE); border: 1px solid #E0D5FB; }
+.j4u-grad-ai { background: linear-gradient(135deg, #F6F2FE, #EEF3FF); border: 1px solid #E0D5FB; }
+[data-theme="dark"] .j4u-grad-brief { background: linear-gradient(120deg, #16213E, #1E1638); border-color: var(--border-subtle); }
+[data-theme="dark"] .j4u-grad-ai { background: linear-gradient(135deg, #1E1638, #16213E); border-color: var(--border-subtle); }
+
 .j4u-nav:hover { background: var(--surface-sunken); }
+.j4u-press { transition: transform 0.08s, filter 0.12s, background 0.12s; }
+.j4u-press:hover { filter: brightness(0.98); }
+.j4u-press:active { transform: translateY(1px); }
 .j4u-nav:focus-visible, .j4u-focus:focus-visible { outline: none; box-shadow: var(--focus-ring); }

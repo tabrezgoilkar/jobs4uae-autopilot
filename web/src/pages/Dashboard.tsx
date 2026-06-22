@@ -12,6 +12,7 @@ import { listApplications, type Application, type ApplicationStatus } from '../f
 import { learningLinks } from '../lib/skills';
 import { Badge, GradeBadge, type Tone } from '../components/ui';
 import { IconSparkle } from '../components/icons';
+import { Donut, RadialGauge, Sparkline, useCountUp, type Segment } from '../components/charts';
 
 const GRADE_SCORE: Record<string, number> = { A: 92, B: 82, C: 68, D: 52, F: 35 };
 const REC: Record<Evaluation['recommendation'], { label: string; tone: Tone }> = {
@@ -39,11 +40,12 @@ function timeAgo(iso: string): string {
   return `${d}d ago`;
 }
 
-function statCard(value: string | number, label: string, color: string) {
+function LegendRow({ color, label, value }: { color: string; label: string; value: number }) {
   return (
-    <div className="bg-surface border border-hair-subtle rounded-xl px-4 py-3.5">
-      <div className="text-[28px] font-bold tabular-nums leading-none" style={{ color }}>{value}</div>
-      <div className="text-xs text-ink-muted mt-1.5">{label}</div>
+    <div className="flex items-center gap-2.5">
+      <span className="w-2.5 h-2.5 rounded-[3px] flex-none" style={{ background: color }} />
+      <span className="flex-1 text-[13px] text-ink-secondary">{label}</span>
+      <span className="text-[15px] font-bold text-ink-strong tabular-nums">{value}</span>
     </div>
   );
 }
@@ -78,6 +80,24 @@ export default function Dashboard({ config }: { config: AppConfig }) {
   );
   const waiting = apps.find((a) => a.status === 'interview') ?? apps.find((a) => a.status === 'applied');
   const inProgress = count('applied') + count('interview') + count('offer');
+
+  const fitTrend = useMemo(
+    () => [...evals]
+      .sort((a, b) => (a.createdAt || '').localeCompare(b.createdAt || ''))
+      .map((e) => GRADE_SCORE[(e.grade || '').toUpperCase()] ?? 60),
+    [evals],
+  );
+
+  const saved = count('saved'), applied = count('applied'), interview = count('interview'), offer = count('offer');
+  const pipelineTotal = saved + applied + interview + offer;
+  const animTotal = useCountUp(pipelineTotal);
+  const animFit = useCountUp(avgFit ?? 0);
+  const segs: Segment[] = [
+    { value: saved, color: 'var(--text-muted)', label: 'Saved' },
+    { value: applied, color: 'var(--primary-600)', label: 'Applied' },
+    { value: interview, color: 'var(--ai-600)', label: 'Interview' },
+    { value: offer, color: 'var(--success)', label: 'Offer' },
+  ];
 
   const skillGaps = useMemo(() => {
     const freq = new Map<string, number>();
@@ -132,13 +152,46 @@ export default function Dashboard({ config }: { config: AppConfig }) {
         </div>
       </div>
 
-      {/* pipeline stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-        {statCard(count('saved'), 'Saved', 'var(--text-strong)')}
-        {statCard(count('applied'), 'Applied', 'var(--primary-700)')}
-        {statCard(count('interview'), 'Interview', 'var(--ai-700)')}
-        {statCard(count('offer'), 'Offer', 'var(--success-text)')}
-        {statCard(avgFit === null ? '—' : `${avgFit}%`, 'Avg fit', 'var(--text-muted)')}
+      {/* pipeline + fit visualisation */}
+      <div className="grid lg:grid-cols-2 gap-[18px]">
+        <div className="bg-surface border border-hair-subtle rounded-[14px] p-5">
+          <div className="text-sm font-bold text-ink-strong mb-4">Your pipeline</div>
+          <div className="flex items-center gap-6">
+            <Donut segments={segs}>
+              <div className="text-[26px] font-bold text-ink-strong tabular-nums leading-none">{animTotal}</div>
+              <div className="text-[11px] text-ink-muted mt-0.5">in pipeline</div>
+            </Donut>
+            <div className="flex-1 space-y-2.5 min-w-0">
+              <LegendRow color="var(--text-muted)" label="Saved" value={saved} />
+              <LegendRow color="var(--primary-600)" label="Applied" value={applied} />
+              <LegendRow color="var(--ai-600)" label="Interview" value={interview} />
+              <LegendRow color="var(--success)" label="Offer" value={offer} />
+            </div>
+          </div>
+        </div>
+        <div className="bg-surface border border-hair-subtle rounded-[14px] p-5">
+          <div className="text-sm font-bold text-ink-strong mb-4">Average fit</div>
+          <div className="flex items-center gap-6">
+            <RadialGauge value={avgFit ?? 0} color="var(--ai-600)">
+              <div className="text-[22px] font-bold text-ink-strong tabular-nums leading-none">{avgFit === null ? '—' : `${animFit}%`}</div>
+              <div className="text-[11px] text-ink-muted mt-0.5">avg fit</div>
+            </RadialGauge>
+            <div className="flex-1 min-w-0">
+              <div className="text-xs text-ink-muted mb-1">Fit trend · {fitTrend.length} eval{fitTrend.length !== 1 ? 's' : ''}</div>
+              {fitTrend.length >= 2 ? (
+                <>
+                  <Sparkline data={fitTrend} color="var(--ai-600)" fill="var(--ai-soft)" id="fit" width={210} />
+                  {(() => {
+                    const d = fitTrend[fitTrend.length - 1] - fitTrend[0];
+                    return <div className={`text-xs font-semibold mt-1 ${d >= 0 ? 'text-success-text' : 'text-danger-text'}`}>{d >= 0 ? '▲' : '▼'} {Math.abs(d)} pts vs first</div>;
+                  })()}
+                </>
+              ) : (
+                <p className="text-xs text-ink-muted">Evaluate more jobs to see your fit trend.</p>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* review + side column */}

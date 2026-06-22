@@ -9,6 +9,7 @@ import {
 } from '../api';
 import { Card, PageHeader, Button } from '../components/ui';
 import { IconSparkle } from '../components/icons';
+import { RadialGauge } from '../components/charts';
 
 const FIELD = 'mt-1 w-full rounded-lg border border-hair bg-surface text-ink p-2 text-sm j4u-focus placeholder:text-ink-muted';
 const LABEL = 'text-sm font-medium text-ink-secondary';
@@ -235,20 +236,6 @@ function analyzeProfile(p: Profile) {
   return { score, suggestions };
 }
 
-function StrengthRing({ pct }: { pct: number }) {
-  const C = 151; // 2πr for r=24
-  const offset = C - (pct / 100) * C;
-  return (
-    <div className="relative w-14 h-14 flex-none">
-      <svg width="56" height="56" viewBox="0 0 56 56">
-        <circle cx="28" cy="28" r="24" fill="none" stroke="var(--surface-sunken)" strokeWidth="6" />
-        <circle cx="28" cy="28" r="24" fill="none" stroke="var(--ai-600)" strokeWidth="6" strokeLinecap="round" strokeDasharray={C} strokeDashoffset={offset} transform="rotate(-90 28 28)" />
-      </svg>
-      <div className="absolute inset-0 flex items-center justify-center text-sm font-bold text-ink-strong">{pct}%</div>
-    </div>
-  );
-}
-
 function ProfileRail({ profile }: { profile: Profile }) {
   const { score, suggestions } = useMemo(() => analyzeProfile(profile), [profile]);
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
@@ -266,7 +253,9 @@ function ProfileRail({ profile }: { profile: Profile }) {
       </div>
       <div className="p-4">
         <div className="flex items-center gap-3">
-          <StrengthRing pct={score} />
+          <RadialGauge value={score} size={56} stroke={6} color="var(--ai-600)">
+            <span className="text-sm font-bold text-ink-strong">{score}%</span>
+          </RadialGauge>
           <div>
             <div className="text-[13px] font-bold text-ink-strong">Profile strength</div>
             <div className="text-[11.5px] text-ink-secondary mt-0.5 leading-snug">{label}</div>

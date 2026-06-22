@@ -1,0 +1,67 @@
+import { useLocation } from 'react-router-dom';
+import ThemeToggle from './ThemeToggle';
+import { IconSparkle } from './icons';
+
+// Per-route topbar copy. Matches the page intent in the approved design.
+const META: Record<string, { title: string; sub: string }> = {
+  '/': { title: 'Home', sub: 'Your job-search copilot' },
+  '/profile': { title: 'My profile', sub: 'Your CV, skills and details' },
+  '/evaluate': { title: 'Evaluate a job', sub: 'Honest A–F fit score' },
+  '/documents': { title: 'Documents', sub: 'Tailored CVs & cover letters' },
+  '/tracker': { title: 'Tracker', sub: 'Every application in one place' },
+  '/scan': { title: 'Scan GCC boards', sub: 'Find roles across the Gulf' },
+  '/auto-apply': { title: 'Auto-apply', sub: 'Assisted applications — you submit' },
+};
+
+function metaFor(pathname: string) {
+  if (META[pathname]) return META[pathname];
+  // longest matching prefix
+  const hit = Object.keys(META)
+    .filter((p) => p !== '/' && pathname.startsWith(p))
+    .sort((a, b) => b.length - a.length)[0];
+  return hit ? META[hit] : { title: 'Jobs4UAE Autopilot', sub: '' };
+}
+
+export default function Topbar() {
+  const { pathname } = useLocation();
+  const { title, sub } = metaFor(pathname);
+
+  return (
+    <header
+      className="sticky top-0 z-10 flex items-center gap-3 px-7 py-3 border-b border-hair-subtle"
+      style={{ background: 'color-mix(in srgb, var(--surface) 85%, transparent)', backdropFilter: 'blur(8px)' }}
+    >
+      <div className="text-[15px] font-bold text-ink-strong">{title}</div>
+      {sub && <div className="text-xs text-ink-muted">{sub}</div>}
+
+      <div className="ml-auto flex items-center gap-2.5">
+        {/* ⌘K command palette — visual only until Phase 16 */}
+        <button
+          type="button"
+          title="Command palette — coming soon"
+          disabled
+          className="j4u-press hidden md:flex items-center gap-2 h-[34px] px-3 rounded-lg text-xs text-ai-700 border border-ai-soft bg-ai-soft disabled:opacity-70 cursor-default"
+          style={{ width: 300 }}
+        >
+          <IconSparkle size={13} color="var(--ai-600)" />
+          <span>Ask about the UAE job market…</span>
+          <span className="ml-auto font-mono text-[10px] rounded border border-ai-soft px-1">⌘K</span>
+        </button>
+
+        {/* Copilot — visual only until Phase 16 */}
+        <button
+          type="button"
+          title="AI Copilot — coming soon"
+          disabled
+          className="j4u-press inline-flex items-center gap-1.5 h-[34px] px-3 rounded-lg text-xs font-semibold text-ai-700 border border-ai-soft bg-ai-soft disabled:opacity-70 cursor-default"
+        >
+          <IconSparkle size={13} color="var(--ai-600)" />
+          Copilot
+        </button>
+
+        <span className="w-px h-5 bg-hair-subtle mx-0.5" />
+        <ThemeToggle />
+      </div>
+    </header>
+  );
+}

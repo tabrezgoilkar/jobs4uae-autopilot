@@ -1,44 +1,60 @@
-import { Link } from 'react-router-dom';
 import type { AppConfig } from '../api';
+import { Card, PageHeader, ButtonLink } from '../components/ui';
+
+const STEPS = [
+  {
+    n: 1,
+    title: 'Set up your profile',
+    body: "Upload your CV and we'll turn it into a profile we can use to score jobs and tailor resumes.",
+    to: '/profile',
+    cta: 'Go to My profile →',
+  },
+  {
+    n: 2,
+    title: 'Find & evaluate jobs',
+    body: 'Scan GCC boards for roles, or paste any job description to get an honest A–F fit score.',
+    to: '/scan',
+    cta: 'Scan GCC boards →',
+  },
+  {
+    n: 3,
+    title: 'Tailor your documents',
+    body: 'Generate a tailored resume and cover letter for any job, then download them as PDFs.',
+    to: '/documents',
+    cta: 'Resume & cover letter →',
+  },
+];
 
 export default function Dashboard({ config }: { config: AppConfig }) {
   return (
-    <div>
-      <h1 className="text-2xl font-bold text-slate-800">You're all set! 🎉</h1>
-      <p className="mt-2 text-slate-600">
-        AI is connected using <span className="font-semibold">{config.engine ?? 'unknown'}</span>.
-      </p>
+    <div className="space-y-6">
+      <PageHeader
+        title="You're all set 🎉"
+        subtitle={<>AI is connected using <span className="font-semibold text-ink">{config.engine ?? 'unknown'}</span>. Here's how to get started.</>}
+      />
 
-      <div className="mt-6 bg-white rounded-2xl shadow p-6">
-        <h2 className="font-semibold text-slate-800">Step 1: Set up your profile</h2>
-        <p className="mt-1 text-sm text-slate-500">
-          Upload your CV and we'll turn it into a profile we can use to score jobs and tailor resumes.
-        </p>
-        <Link
-          to="/profile"
-          className="inline-block mt-4 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium"
-        >
-          Go to My Profile →
-        </Link>
+      <div className="grid gap-4 sm:grid-cols-3">
+        {STEPS.map((s) => (
+          <Card key={s.n}>
+            <div className="flex items-center gap-2">
+              <span className="flex items-center justify-center w-6 h-6 rounded-md bg-primary-50 text-primary-700 text-xs font-bold tabular-nums">{s.n}</span>
+              <h2 className="font-semibold text-ink-strong text-sm">{s.title}</h2>
+            </div>
+            <p className="mt-2 text-sm text-ink-secondary leading-relaxed">{s.body}</p>
+            <ButtonLink to={s.to} size="sm" className="mt-4">{s.cta}</ButtonLink>
+          </Card>
+        ))}
       </div>
 
-      <div className="mt-4 bg-white rounded-2xl shadow p-6">
-        <h2 className="font-semibold text-slate-800">Step 2: Evaluate a job</h2>
-        <p className="mt-1 text-sm text-slate-500">Paste any job description to get an A–F fit score based on your profile.</p>
-        <Link to="/evaluate" className="inline-block mt-4 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium">
-          Evaluate a Job →
-        </Link>
-      </div>
-
-      <div className="mt-4 bg-white rounded-2xl shadow p-6">
-        <h2 className="font-semibold text-slate-800">Step 3: Tailor your resume</h2>
-        <p className="mt-1 text-sm text-slate-500">Generate a tailored resume and cover letter for any job.</p>
-        <Link to="/documents" className="inline-block mt-4 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium">
-          Resume & Cover Letter →
-        </Link>
-      </div>
-
-      <p className="mt-6 text-sm text-slate-400">Coming next: PDF download, and GCC job scanning.</p>
+      <Card>
+        <div className="flex items-start gap-3">
+          <span className="text-base">✨</span>
+          <p className="text-sm text-ink-secondary leading-relaxed">
+            A richer Home dashboard — live pipeline stats, a daily briefing and an AI career copilot — is on the way.
+            For now, jump in from the steps above or the sidebar.
+          </p>
+        </div>
+      </Card>
     </div>
   );
 }

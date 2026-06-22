@@ -7,19 +7,13 @@ import {
   type Listing,
   type EvaluationResult,
 } from '../features/scanner/scannerApi';
+import { Card, PageHeader, Button, Badge, GradeBadge } from '../components/ui';
 
-const GCC_COUNTRIES = [
-  'UAE',
-  'Saudi Arabia',
-  'Qatar',
-  'Kuwait',
-  'Bahrain',
-  'Oman',
-];
+const GCC_COUNTRIES = ['UAE', 'Saudi Arabia', 'Qatar', 'Kuwait', 'Bahrain', 'Oman'];
 
-const BOARDS_STATIC: Board[] = [
-  { id: 'indeed', name: 'Indeed', status: 'verified' },
-];
+const BOARDS_STATIC: Board[] = [{ id: 'indeed', name: 'Indeed', status: 'verified' }];
+
+const FIELD = 'mt-1 w-full rounded-lg border border-hair bg-surface text-ink p-2 text-sm j4u-focus placeholder:text-ink-muted disabled:opacity-60';
 
 interface RowState {
   busy: boolean;
@@ -88,104 +82,64 @@ export default function ScanPage() {
   }
 
   const canScan = keyword.trim().length > 0 && !scanning;
+  const activeBoard = boards.find((b) => b.id === selectedBoard);
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-800">Find Jobs</h1>
-        <p className="mt-1 text-slate-600">
-          Search Indeed for GCC roles and evaluate them instantly. A browser
-          window opens briefly while we fetch listings — that's normal.
-        </p>
-      </div>
+      <PageHeader
+        title="Scan GCC boards"
+        subtitle="Search Indeed for GCC roles and evaluate them instantly. A browser window opens briefly while we fetch listings — that's normal."
+      />
 
       {/* Search form */}
-      <form
-        onSubmit={handleScan}
-        className="bg-white rounded-2xl shadow p-6 space-y-4"
-        aria-label="Job search form"
-      >
-        <div className="grid gap-4 sm:grid-cols-2">
-          {/* Board */}
-          <label className="block">
-            <span className="text-sm font-medium text-slate-700">Job board</span>
-            <select
-              aria-label="Job board"
-              value={selectedBoard}
-              onChange={(e) => setSelectedBoard(e.target.value)}
-              disabled={scanning}
-              className="mt-1 w-full rounded-lg border border-slate-300 p-2 text-sm disabled:bg-slate-50"
-            >
-              {boards.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.name}
-                </option>
-              ))}
-            </select>
-          </label>
+      <Card>
+        <form onSubmit={handleScan} className="space-y-4" aria-label="Job search form">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="block">
+              <span className="text-sm font-medium text-ink-secondary">Job board</span>
+              <select aria-label="Job board" value={selectedBoard} onChange={(e) => setSelectedBoard(e.target.value)} disabled={scanning} className={FIELD}>
+                {boards.map((b) => (
+                  <option key={b.id} value={b.id}>{b.name}</option>
+                ))}
+              </select>
+              {activeBoard?.status && (
+                <span className="mt-1.5 inline-block">
+                  <Badge tone={activeBoard.status === 'experimental' ? 'warning' : 'success'}>
+                    {activeBoard.status}
+                  </Badge>
+                </span>
+              )}
+            </label>
 
-          {/* Keyword */}
-          <label className="block">
-            <span className="text-sm font-medium text-slate-700">
-              Keyword <span aria-hidden="true">*</span>
-            </span>
-            <input
-              aria-label="Search keyword"
-              required
-              type="text"
-              value={keyword}
-              onChange={(e) => setKeyword(e.target.value)}
-              disabled={scanning}
-              placeholder="e.g. Accountant"
-              className="mt-1 w-full rounded-lg border border-slate-300 p-2 text-sm disabled:bg-slate-50"
-            />
-          </label>
+            <label className="block">
+              <span className="text-sm font-medium text-ink-secondary">Keyword <span aria-hidden="true">*</span></span>
+              <input aria-label="Search keyword" required type="text" value={keyword} onChange={(e) => setKeyword(e.target.value)} disabled={scanning} placeholder="e.g. Accountant" className={FIELD} />
+            </label>
 
-          {/* Country */}
-          <label className="block">
-            <span className="text-sm font-medium text-slate-700">Country</span>
-            <select
-              aria-label="GCC country"
-              value={country}
-              onChange={(e) => setCountry(e.target.value)}
-              disabled={scanning}
-              className="mt-1 w-full rounded-lg border border-slate-300 p-2 text-sm disabled:bg-slate-50"
-            >
-              {GCC_COUNTRIES.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
-          </label>
+            <label className="block">
+              <span className="text-sm font-medium text-ink-secondary">Country</span>
+              <select aria-label="GCC country" value={country} onChange={(e) => setCountry(e.target.value)} disabled={scanning} className={FIELD}>
+                {GCC_COUNTRIES.map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+            </label>
 
-          {/* City (optional) */}
-          <label className="block">
-            <span className="text-sm font-medium text-slate-700">City (optional)</span>
-            <input
-              aria-label="City (optional)"
-              type="text"
-              value={city}
-              onChange={(e) => setCity(e.target.value)}
-              disabled={scanning}
-              placeholder="e.g. Dubai"
-              className="mt-1 w-full rounded-lg border border-slate-300 p-2 text-sm disabled:bg-slate-50"
-            />
-          </label>
-        </div>
+            <label className="block">
+              <span className="text-sm font-medium text-ink-secondary">City (optional)</span>
+              <input aria-label="City (optional)" type="text" value={city} onChange={(e) => setCity(e.target.value)} disabled={scanning} placeholder="e.g. Dubai" className={FIELD} />
+            </label>
+          </div>
 
-        <button
-          type="submit"
-          disabled={!canScan}
-          className="px-6 py-2 rounded-lg bg-blue-600 text-white font-medium disabled:opacity-50"
-        >
-          {scanning ? 'Scanning…' : 'Scan'}
-        </button>
-      </form>
+          <Button type="submit" disabled={!canScan}>
+            {scanning ? 'Scanning…' : 'Scan'}
+          </Button>
+        </form>
+      </Card>
 
       {/* Board-level error (graceful degradation) */}
       {scanError && (
-        <div role="alert" className="rounded-2xl bg-amber-50 border border-amber-200 p-4 text-amber-800 text-sm">
+        <div role="alert" className="rounded-xl bg-warning-soft border border-warning-soft p-4 text-warning-text text-sm">
           {scanError}
         </div>
       )}
@@ -194,29 +148,25 @@ export default function ScanPage() {
       {hasScanned && !scanning && (
         <section aria-label="Search results">
           {listings.length === 0 && !scanError && (
-            <p className="text-slate-500 text-sm">No listings found. Try a different keyword or country.</p>
+            <p className="text-ink-muted text-sm">No listings found. Try a different keyword or country.</p>
           )}
 
           {listings.length > 0 && (
             <div className="space-y-3">
-              <p className="text-sm text-slate-500">{listings.length} listing{listings.length !== 1 ? 's' : ''} found</p>
+              <p className="text-sm text-ink-muted">{listings.length} listing{listings.length !== 1 ? 's' : ''} found</p>
               <ul className="space-y-2" aria-label="Job listings">
                 {listings.map((listing, idx) => {
                   const rowKey = listing.url || String(idx);
                   const row = rowStates[rowKey] ?? { busy: false, grade: null, error: null };
                   return (
-                    <li
-                      key={rowKey}
-                      className="bg-white rounded-xl shadow-sm border border-slate-100 p-4 flex flex-col sm:flex-row sm:items-start gap-3"
-                    >
-                      {/* Listing details */}
+                    <li key={rowKey} className="bg-surface rounded-xl shadow-sm border border-hair-subtle p-4 flex flex-col sm:flex-row sm:items-start gap-3">
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-slate-800 text-sm leading-snug">{listing.title}</p>
-                        <p className="text-xs text-slate-500 mt-0.5">
+                        <p className="font-medium text-ink-strong text-sm leading-snug">{listing.title}</p>
+                        <p className="text-xs text-ink-muted mt-0.5">
                           {[listing.company, listing.location].filter(Boolean).join(' · ')}
                         </p>
                         {(listing.salary || listing.posted) && (
-                          <p className="text-xs text-slate-400 mt-0.5">
+                          <p className="text-xs text-ink-muted mt-0.5">
                             {[listing.salary, listing.posted].filter(Boolean).join(' · ')}
                           </p>
                         )}
@@ -226,33 +176,19 @@ export default function ScanPage() {
                             target="_blank"
                             rel="noreferrer"
                             aria-label={`Open ${listing.title} on ${listing.source}`}
-                            className="mt-1 inline-block text-xs text-blue-600 hover:underline"
+                            className="mt-1 inline-block text-xs font-semibold text-primary-700 hover:underline"
                           >
-                            Open listing
+                            Open listing ↗
                           </a>
                         )}
                       </div>
 
-                      {/* Evaluate */}
                       <div className="flex items-center gap-3 shrink-0">
-                        {row.grade && (
-                          <span className="text-sm font-semibold text-green-700 bg-green-50 px-2 py-0.5 rounded">
-                            Graded: {row.grade}
-                          </span>
-                        )}
-                        {row.error && (
-                          <span role="alert" className="text-xs text-red-600">
-                            {row.error}
-                          </span>
-                        )}
-                        <button
-                          onClick={() => handleEvaluate(listing)}
-                          disabled={row.busy}
-                          aria-label={`Evaluate ${listing.title}`}
-                          className="px-3 py-1.5 rounded-lg bg-slate-800 text-white text-xs font-medium disabled:opacity-50 hover:bg-slate-700"
-                        >
+                        {row.grade && <GradeBadge grade={row.grade} size="sm" />}
+                        {row.error && <span role="alert" className="text-xs text-danger-text">{row.error}</span>}
+                        <Button variant="secondary" size="sm" onClick={() => handleEvaluate(listing)} disabled={row.busy} aria-label={`Evaluate ${listing.title}`}>
                           {row.busy ? 'Evaluating…' : row.grade ? 'Re-evaluate' : 'Evaluate'}
-                        </button>
+                        </Button>
                       </div>
                     </li>
                   );

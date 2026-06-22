@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { marked } from 'marked';
+import DOMPurify from 'dompurify';
 import {
   generateDocuments,
   listDocuments,
@@ -12,8 +14,16 @@ import {
 import { gradeToStars, learningLinks } from '../lib/skills';
 import DownloadButtons from '../features/pdf/DownloadButtons';
 import { Card, PageHeader, Button } from '../components/ui';
+import { RadialGauge } from '../components/charts';
 
 const FIELD = 'mt-1 w-full rounded-lg border border-hair bg-surface text-ink p-2 text-sm j4u-focus placeholder:text-ink-muted';
+const GRADE_PCT: Record<string, number> = { A: 92, B: 82, C: 68, D: 52, F: 35 };
+
+function renderMd(md: string): string {
+  // The CV/cover markdown is AI-generated, so sanitize before rendering.
+  const html = marked.parse(md || '', { async: false }) as string;
+  return DOMPurify.sanitize(html);
+}
 
 export default function DocumentsPage() {
   const [params] = useSearchParams();
@@ -31,13 +41,15 @@ export default function DocumentsPage() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [recent, setRecent] = useState<DocumentRecord[]>([]);
+  const [tab, setTab] = useState<'resume' | 'cover'>('resume');
+  const [editing, setEditing] = useState(false);
 
   useEffect(() => {
     listEvaluations().then(setEvals).catch(() => {});
     listDocuments().then(setRecent).catch(() => {});
   }, []);
 
-  const hasContent = resume.trim() || cover.trim();
+  const hasContent = !!(resume.trim() || cover.trim());
 
   async function onGenerate() {
     setBusy(true);
@@ -52,7 +64,9 @@ export default function DocumentsPage() {
       setFitScore(draft.fitScore);
       setMissingSkills(draft.missingSkills ?? []);
       setDocId(null);
-      setMessage({ ok: true, text: 'Documents generated! Edit below, then Save.' });
+      setEditing(false);
+      setTab('resume');
+      setMessage({ ok: true, text: 'Documents generated! Review them, edit if needed, then Save.' });
     } catch (e) {
       setMessage({ ok: false, text: e instanceof Error ? e.message : 'Generation failed.' });
     } finally {
@@ -75,7 +89,6 @@ export default function DocumentsPage() {
     } finally {
       setSaving(false);
     }
-    // List refresh is non-critical; a failure here must not look like a save failure.
     listDocuments().then(setRecent).catch(() => {});
   }
 
@@ -88,13 +101,21 @@ export default function DocumentsPage() {
     setCover(d.coverLetterMarkdown);
     setFitScore(d.fitScore ?? '');
     setMissingSkills(d.missingSkills ?? []);
+    setEditing(false);
+    setTab('resume');
     setMessage(null);
   }
 
+  const activeValue = tab === 'resume' ? resume : cover;
+  const setActiveValue = tab === 'resume' ? setResume : setCover;
+  const fitPct = GRADE_PCT[(fitScore || '').toUpperCase()] ?? 0;
+  const stars = gradeToStars(fitScore || 'C');
+
   return (
     <div className="space-y-6">
-      <PageHeader title="Documents" subtitle="Generate a tailored resume and cover letter, edit them, and save." />
+      <PageHeader title="Documents" subtitle="Generate a tailored resume and cover letter, fine-tune them, and download as PDF." />
 
+      {/* Generator */}
       <Card>
         <div className="space-y-3">
           {evals.length > 0 && (
@@ -103,37 +124,19 @@ export default function DocumentsPage() {
               <select className={FIELD} value={evalId} onChange={(e) => setEvalId(e.target.value)}>
                 <option value="">— Paste a job instead —</option>
                 {evals.map((ev) => (
-                  <option key={ev.id} value={ev.id}>
-                    {(ev.jobTitle || 'Job')}{ev.company ? ` · ${ev.company}` : ''} ({ev.grade})
-                  </option>
+                  <option key={ev.id} value={ev.id}>{(ev.jobTitle || 'Job')}{ev.company ? ` · ${ev.company}` : ''} ({ev.grade})</option>
                 ))}
               </select>
             </label>
           )}
-
-          {evals.length === 0 && evalId && (
-            <p className="text-sm text-warning-text bg-warning-soft border border-warning-soft rounded-lg p-2">
-              Using a pre-selected job evaluation.
-              <button className="ml-2 underline" onClick={() => setEvalId('')}>Clear and paste a job instead</button>
-            </p>
-          )}
-
           {!evalId && (
             <label className="block">
               <span className="text-sm font-medium text-ink-secondary">Or paste a job description</span>
-              <textarea
-                className="mt-1 w-full rounded-lg border border-hair bg-surface text-ink p-3 text-sm j4u-focus placeholder:text-ink-muted"
-                rows={5}
-                value={jobText}
-                disabled={busy}
-                onChange={(e) => setJobText(e.target.value)}
-                placeholder="Paste the job posting here…"
-              />
+              <textarea className="mt-1 w-full rounded-lg border border-hair bg-surface text-ink p-3 text-sm j4u-focus placeholder:text-ink-muted" rows={4} value={jobText} disabled={busy} onChange={(e) => setJobText(e.target.value)} placeholder="Paste the job posting here…" />
             </label>
           )}
-
           <Button onClick={onGenerate} disabled={busy || (!evalId && !jobText.trim())}>
-            {busy ? 'Writing…' : 'Generate'}
+            {busy ? 'Writing…' : hasContent ? 'Regenerate' : 'Generate'}
           </Button>
         </div>
       </Card>
@@ -144,81 +147,81 @@ export default function DocumentsPage() {
         </div>
       )}
 
-      {hasContent && fitScore && (
-        <Card>
-          <div className="flex items-center gap-3">
-            <h2 className="font-semibold text-ink-strong">Fit for this job</h2>
-            <span className="text-warning text-lg" aria-label={`${gradeToStars(fitScore)} out of 5`}>
-              {'★'.repeat(gradeToStars(fitScore))}
-              {'☆'.repeat(5 - gradeToStars(fitScore))}
-            </span>
-            <span className="text-sm text-ink-muted">({fitScore})</span>
-          </div>
-          {missingSkills.length > 0 ? (
-            <div className="mt-3">
-              <p className="text-sm font-medium text-ink-secondary">Skills to add — and where to learn them free:</p>
-              <ul className="mt-2 space-y-2">
-                {missingSkills.map((s) => (
-                  <li key={s} className="text-sm">
-                    <span className="font-medium text-ink-strong">{s}</span>
-                    <span className="ml-2 inline-flex flex-wrap gap-2 align-middle">
-                      {learningLinks(s).map((l) => (
-                        <a
-                          key={l.url}
-                          href={l.url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center gap-1 text-xs font-semibold text-primary-700 bg-primary-50 border border-primary-100 rounded-pill px-2.5 py-0.5 j4u-press"
-                        >
-                          {l.label} ↗
-                        </a>
-                      ))}
-                    </span>
-                  </li>
+      {hasContent && (
+        <div className="grid lg:grid-cols-[1fr_300px] gap-[18px] items-start">
+          {/* Document preview / editor */}
+          <Card padding={false}>
+            <div className="flex items-center gap-2 p-3 border-b border-hair-subtle">
+              <div className="flex gap-1 bg-surface-sunken p-1 rounded-[9px]">
+                {(['resume', 'cover'] as const).map((t) => (
+                  <button key={t} onClick={() => setTab(t)} className={`text-[12.5px] font-semibold px-3.5 py-1.5 rounded-[7px] j4u-press ${tab === t ? 'bg-surface text-ink-strong shadow-sm' : 'text-ink-muted'}`}>
+                    {t === 'resume' ? 'Tailored CV' : 'Cover letter'}
+                  </button>
                 ))}
-              </ul>
+              </div>
+              <div className="ml-auto flex gap-1 bg-surface-sunken p-1 rounded-[9px]">
+                <button onClick={() => setEditing(false)} className={`text-[11.5px] font-semibold px-3 py-1.5 rounded-[7px] j4u-press ${!editing ? 'bg-surface text-ink-strong shadow-sm' : 'text-ink-muted'}`}>Preview</button>
+                <button onClick={() => setEditing(true)} className={`text-[11.5px] font-semibold px-3 py-1.5 rounded-[7px] j4u-press ${editing ? 'bg-surface text-ink-strong shadow-sm' : 'text-ink-muted'}`}>Edit</button>
+              </div>
             </div>
-          ) : (
-            <p className="mt-2 text-sm text-success-text">No major skill gaps — strong match! 🎯</p>
-          )}
-        </Card>
-      )}
-
-      {hasContent && (
-        <div className="grid gap-6 lg:grid-cols-2">
-          <Card>
-            <label htmlFor="doc-resume" className="font-semibold text-ink-strong">Resume (Markdown)</label>
-            <textarea
-              id="doc-resume"
-              aria-label="Resume content in Markdown"
-              className="mt-2 w-full rounded-lg border border-hair bg-surface text-ink p-3 text-sm font-mono j4u-focus disabled:opacity-60"
-              rows={20}
-              value={resume}
-              disabled={saving}
-              onChange={(e) => setResume(e.target.value)}
-            />
+            {editing ? (
+              <textarea
+                aria-label={tab === 'resume' ? 'Resume content in Markdown' : 'Cover letter content in Markdown'}
+                className="w-full border-0 bg-surface text-ink p-5 text-sm font-mono j4u-focus resize-none"
+                rows={26}
+                value={activeValue}
+                disabled={saving}
+                onChange={(e) => setActiveValue(e.target.value)}
+              />
+            ) : (
+              <div className="px-7 py-6 j4u-doc" dangerouslySetInnerHTML={{ __html: renderMd(activeValue) }} />
+            )}
           </Card>
-          <Card>
-            <label htmlFor="doc-cover" className="font-semibold text-ink-strong">Cover letter (Markdown)</label>
-            <textarea
-              id="doc-cover"
-              aria-label="Cover letter content in Markdown"
-              className="mt-2 w-full rounded-lg border border-hair bg-surface text-ink p-3 text-sm font-mono j4u-focus disabled:opacity-60"
-              rows={20}
-              value={cover}
-              disabled={saving}
-              onChange={(e) => setCover(e.target.value)}
-            />
-          </Card>
-        </div>
-      )}
 
-      {hasContent && (
-        <div className="flex items-center gap-3 flex-wrap">
-          <Button onClick={onSave} disabled={saving}>
-            {saving ? 'Saving…' : docId ? 'Update saved documents' : 'Save documents'}
-          </Button>
-          <DownloadButtons docId={docId} />
+          {/* Right rail */}
+          <div className="flex flex-col gap-3.5">
+            {fitScore && (
+              <Card>
+                <div className="text-[11px] font-bold tracking-wide uppercase text-ink-muted mb-2">Fit after tailoring</div>
+                <div className="flex items-center gap-3.5">
+                  <RadialGauge value={fitPct} size={64} stroke={7} color="var(--ai-600)">
+                    <span className="text-[13px] font-bold text-ink-strong">{fitScore}</span>
+                  </RadialGauge>
+                  <div>
+                    <div className="text-warning text-lg leading-none" aria-label={`${stars} out of 5`}>
+                      {'★'.repeat(stars)}<span className="text-hair">{'★'.repeat(5 - stars)}</span>
+                    </div>
+                    <div className="text-[11.5px] text-ink-secondary mt-1">{stars >= 4 ? 'Strong match for this role' : 'Decent — keep refining'}</div>
+                  </div>
+                </div>
+              </Card>
+            )}
+
+            <Card>
+              <div className="text-[11px] font-bold tracking-wide uppercase text-warning-text mb-2.5">Still worth adding</div>
+              {missingSkills.length === 0 ? (
+                <p className="text-[12.5px] text-success-text">No major gaps — nicely tailored! 🎯</p>
+              ) : (
+                <>
+                  <div className="flex flex-wrap gap-1.5">
+                    {missingSkills.map((s) => (
+                      <span key={s} className="text-xs px-2.5 py-0.5 rounded-pill bg-warning-soft text-warning-text font-medium">{s}</span>
+                    ))}
+                  </div>
+                  <div className="mt-3 flex flex-col gap-1.5">
+                    {missingSkills.slice(0, 3).map((s) => (
+                      <a key={s} href={learningLinks(s)[0].url} target="_blank" rel="noreferrer" className="text-[12px] font-semibold text-primary-700 hover:underline">Learn {s} free ↗</a>
+                    ))}
+                  </div>
+                </>
+              )}
+            </Card>
+
+            <Button onClick={onSave} disabled={saving}>{saving ? 'Saving…' : docId ? 'Update saved' : 'Save documents'}</Button>
+            <DownloadButtons docId={docId} />
+            <Button variant="ai" onClick={onGenerate} disabled={busy}>✨ Regenerate with copilot</Button>
+            {!docId && <p className="text-[11px] text-ink-muted text-center">Save first to enable PDF download.</p>}
+          </div>
         </div>
       )}
 

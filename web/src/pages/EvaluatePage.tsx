@@ -28,7 +28,7 @@ function ResultCard({ ev }: { ev: Evaluation }) {
         {ev.dimensions.length > 0 && (
           <div className="grid gap-2 sm:grid-cols-2">
             {ev.dimensions.map((d, i) => (
-              <div key={i} className="border border-hair-subtle rounded-lg p-3">
+              <div key={i} className="border border-hair-subtle rounded-md p-3">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium text-ink-secondary">{d.name}</span>
                   <GradeBadge grade={d.score} size="sm" />
@@ -51,7 +51,7 @@ function ResultCard({ ev }: { ev: Evaluation }) {
         </div>
         <Link
           to={`/documents?eval=${ev.id}`}
-          className="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-primary-600 text-white text-sm font-semibold j4u-press"
+          className="inline-flex items-center gap-2 h-10 px-4 rounded-md bg-primary-600 text-white text-sm font-semibold j4u-press"
         >
           Tailor resume &amp; cover letter →
         </Link>
@@ -94,7 +94,7 @@ export default function EvaluatePage() {
         <label className="block">
           <span className="text-sm font-medium text-ink-secondary">Job description</span>
           <textarea
-            className="mt-1 w-full rounded-lg border border-hair bg-surface text-ink p-3 text-sm j4u-focus placeholder:text-ink-muted disabled:opacity-60"
+            className="mt-1 w-full rounded-md border border-hair bg-surface text-ink p-3 text-sm j4u-focus placeholder:text-ink-muted disabled:opacity-60"
             rows={8}
             value={jobText}
             disabled={busy}
@@ -105,7 +105,7 @@ export default function EvaluatePage() {
         <Button onClick={onEvaluate} disabled={busy || !jobText.trim()} className="mt-3">
           {busy ? 'Evaluating…' : 'Evaluate'}
         </Button>
-        {error && <div role="alert" className="mt-3 text-sm rounded-lg p-3 bg-danger-soft text-danger-text border border-danger-soft">{error}</div>}
+        {error && <div role="alert" className="mt-3 text-sm rounded-md p-3 bg-danger-soft text-danger-text border border-danger-soft">{error}</div>}
       </Card>
 
       {result && <ResultCard ev={result} />}

@@ -19,7 +19,8 @@ export default {
         sans: ['IBM Plex Sans', 'system-ui', 'sans-serif'],
         mono: ['IBM Plex Mono', 'ui-monospace', 'monospace'],
       },
-      borderRadius: { lg: '10px', xl: '14px', pill: '9999px' },
+      // Lumzi design-system radius scale (colors_and_type.css §4.5) — md (6px) is the default card/control.
+      borderRadius: { sm: '4px', DEFAULT: '6px', md: '6px', lg: '10px', xl: '14px', pill: '9999px' },
       boxShadow: { sm: 'var(--shadow-sm)', md: 'var(--shadow-md)', lg: 'var(--shadow-lg)' },
     },
   },

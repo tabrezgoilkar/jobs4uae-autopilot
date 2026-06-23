@@ -95,7 +95,7 @@ export default function CopilotPanel({ open, onClose }: { open: boolean; onClose
             aria-label="Message the copilot"
             className="flex-1 bg-transparent text-[13px] text-ink placeholder:text-ink-muted outline-none"
           />
-          <button type="submit" disabled={busy || !input.trim()} aria-label="Send" className="w-[30px] h-[30px] flex-none rounded-[7px] bg-ai-600 flex items-center justify-center disabled:opacity-50 j4u-press">
+          <button type="submit" disabled={busy || !input.trim()} aria-label="Send" className="w-[30px] h-[30px] flex-none rounded-sm bg-ai-600 flex items-center justify-center disabled:opacity-50 j4u-press">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 2L11 13" /><path d="M22 2l-7 20-4-9-9-4z" /></svg>
           </button>
         </form>

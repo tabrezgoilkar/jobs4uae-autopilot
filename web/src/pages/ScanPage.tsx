@@ -1,13 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import {
   scan,
   evaluateListing,
+  evaluateJobText,
   listBoards,
   type Board,
   type Listing,
-  type EvaluationResult,
 } from '../features/scanner/scannerApi';
+import { loadScanState, saveScanState, defaultScanState, type RowState } from '../features/scanner/scanStore';
 import { PageHeader, Button, Badge, GradeBadge, type Tone } from '../components/ui';
 import { RadialGauge } from '../components/charts';
 import { learningLinks } from '../lib/skills';
@@ -16,29 +17,44 @@ import { IconSparkle } from '../components/icons';
 const GCC_COUNTRIES = ['UAE', 'Saudi Arabia', 'Qatar', 'Kuwait', 'Bahrain', 'Oman'];
 const BOARDS_STATIC: Board[] = [{ id: 'indeed', name: 'Indeed', status: 'verified' }];
 const GRADE_PCT: Record<string, number> = { A: 92, B: 82, C: 68, D: 52, F: 35 };
-const FIELD = 'mt-1 w-full rounded-lg border border-hair bg-surface text-ink p-2 text-sm j4u-focus placeholder:text-ink-muted disabled:opacity-60';
+const FIELD = 'mt-1 w-full rounded-md border border-hair bg-surface text-ink p-2 text-sm j4u-focus placeholder:text-ink-muted disabled:opacity-60';
 const REC_TONE: Record<string, { label: string; tone: Tone }> = {
   apply: { label: 'Apply', tone: 'success' },
   maybe: { label: 'Maybe', tone: 'warning' },
   skip: { label: 'Skip', tone: 'danger' },
 };
 
-interface RowState { busy: boolean; result: EvaluationResult | null; error: string | null; }
-
 export default function ScanPage() {
+  // Restore the last scan (listings + evaluations + selection) so it survives navigation.
+  const initial = useMemo(() => loadScanState(defaultScanState(BOARDS_STATIC[0].id, GCC_COUNTRIES[0])), []);
+
   const [boards, setBoards] = useState<Board[]>(BOARDS_STATIC);
   useEffect(() => { listBoards().then(setBoards).catch(() => {}); }, []);
-  const [selectedBoard, setSelectedBoard] = useState(BOARDS_STATIC[0].id);
-  const [keyword, setKeyword] = useState('');
-  const [country, setCountry] = useState(GCC_COUNTRIES[0]);
-  const [city, setCity] = useState('');
+  const [selectedBoard, setSelectedBoard] = useState(initial.board);
+  const [keyword, setKeyword] = useState(initial.keyword);
+  const [country, setCountry] = useState(initial.country);
+  const [city, setCity] = useState(initial.city);
 
   const [scanning, setScanning] = useState(false);
-  const [listings, setListings] = useState<Listing[]>([]);
+  const [listings, setListings] = useState<Listing[]>(initial.listings);
   const [scanError, setScanError] = useState<string | null>(null);
-  const [hasScanned, setHasScanned] = useState(false);
-  const [rows, setRows] = useState<Record<string, RowState>>({});
-  const [selected, setSelected] = useState<string | null>(null);
+  const [hasScanned, setHasScanned] = useState(initial.hasScanned);
+  const [rows, setRows] = useState<Record<string, RowState>>(initial.rows);
+  const [selected, setSelected] = useState<string | null>(initial.selected);
+
+  // Manual "paste a job" flow (Evaluate merged into the Scan hub).
+  const [mode, setMode] = useState<'search' | 'paste'>('search');
+  const [pasteText, setPasteText] = useState('');
+  const [pasteBusy, setPasteBusy] = useState(false);
+
+  // Multi-select + batch scoring.
+  const [picked, setPicked] = useState<Set<string>>(new Set());
+  const [batch, setBatch] = useState<{ busy: boolean; done: number; total: number }>({ busy: false, done: 0, total: 0 });
+
+  // Persist across navigation / reload (within the tab session).
+  useEffect(() => {
+    saveScanState({ board: selectedBoard, keyword, country, city, listings, rows, selected, hasScanned });
+  }, [selectedBoard, keyword, country, city, listings, rows, selected, hasScanned]);
 
   const activeBoard = boards.find((b) => b.id === selectedBoard);
 
@@ -62,9 +78,37 @@ export default function ScanPage() {
     }
   }
 
-  async function evaluate(listing: Listing) {
+  async function handlePasteEvaluate(e: React.FormEvent) {
+    e.preventDefault();
+    const text = pasteText.trim();
+    if (!text || pasteBusy) return;
+    setPasteBusy(true);
+    setScanError(null);
+    try {
+      const result = await evaluateJobText(text);
+      const r = result as Record<string, unknown>;
+      const url = `pasted:${Date.now()}`;
+      const listing: Listing = {
+        title: (typeof r.jobTitle === 'string' && r.jobTitle) || 'Pasted job',
+        company: typeof r.company === 'string' ? r.company : '',
+        location: typeof r.location === 'string' ? r.location : '',
+        url,
+        source: 'pasted',
+      };
+      setListings((prev) => [listing, ...prev]);
+      setRows((prev) => ({ ...prev, [url]: { busy: false, result, error: null } }));
+      setSelected(url);
+      setHasScanned(true);
+      setPasteText('');
+    } catch (err) {
+      setScanError(err instanceof Error ? err.message : 'Could not evaluate the pasted job. Please try again.');
+    } finally {
+      setPasteBusy(false);
+    }
+  }
+
+  async function evalCore(listing: Listing) {
     const key = listing.url;
-    setSelected(key);
     setRow(key, { busy: true, error: null, result: null });
     try {
       const result = await evaluateListing(listing);
@@ -72,6 +116,33 @@ export default function ScanPage() {
     } catch (e) {
       setRow(key, { busy: false, result: null, error: e instanceof Error ? e.message : 'Evaluation failed.' });
     }
+  }
+
+  async function evaluate(listing: Listing) {
+    setSelected(listing.url);
+    await evalCore(listing);
+  }
+
+  function togglePick(url: string) {
+    setPicked((prev) => {
+      const next = new Set(prev);
+      if (next.has(url)) next.delete(url); else next.add(url);
+      return next;
+    });
+  }
+
+  // Evaluate every picked job that isn't already scored, sequentially (gentle on the AI).
+  async function handleBatchEvaluate() {
+    if (batch.busy) return;
+    const targets = listings.filter((j) => picked.has(j.url) && !rows[j.url]?.result);
+    if (targets.length === 0) return;
+    setBatch({ busy: true, done: 0, total: targets.length });
+    for (let i = 0; i < targets.length; i++) {
+      await evalCore(targets[i]);
+      setBatch((b) => ({ ...b, done: i + 1 }));
+    }
+    setBatch({ busy: false, done: 0, total: 0 });
+    setPicked(new Set());
   }
 
   // Ranked: evaluated jobs first (by fit), then the rest in scan order.
@@ -94,13 +165,28 @@ export default function ScanPage() {
         {/* LEFT: search + listing */}
         <div className="min-w-0 space-y-4">
           {/* search card */}
-          <div className="bg-surface border border-hair-subtle rounded-[14px] p-4 shadow-sm">
+          <div className="bg-surface border border-hair-subtle rounded-md p-4 shadow-sm">
+            <div className="mb-3 inline-flex gap-1 bg-surface-sunken p-1 rounded-md" role="tablist" aria-label="Scan mode">
+              {(['search', 'paste'] as const).map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  role="tab"
+                  aria-selected={mode === m}
+                  onClick={() => setMode(m)}
+                  className={`text-[12.5px] font-semibold px-3.5 py-1.5 rounded-sm j4u-press j4u-focus transition-colors ${mode === m ? 'bg-surface text-ink-strong shadow-sm' : 'text-ink-muted hover:text-ink-secondary'}`}
+                >
+                  {m === 'search' ? 'Search a board' : 'Paste a job'}
+                </button>
+              ))}
+            </div>
+            {mode === 'search' ? (
             <form onSubmit={handleScan} aria-label="Job search form" className="space-y-3">
               <div className="grid gap-3 sm:grid-cols-2">
                 <label className="block">
                   <span className="text-xs font-medium text-ink-secondary">Job board</span>
                   <div className="mt-1 flex items-center gap-2">
-                    <select aria-label="Job board" value={selectedBoard} onChange={(e) => setSelectedBoard(e.target.value)} disabled={scanning} className="flex-1 rounded-lg border border-hair bg-surface text-ink p-2 text-sm j4u-focus disabled:opacity-60">
+                    <select aria-label="Job board" value={selectedBoard} onChange={(e) => setSelectedBoard(e.target.value)} disabled={scanning} className="flex-1 rounded-md border border-hair bg-surface text-ink p-2 text-sm j4u-focus disabled:opacity-60">
                       {boards.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
                     </select>
                     {activeBoard?.status && <Badge tone={activeBoard.status === 'experimental' ? 'warning' : 'success'}>{activeBoard.status}</Badge>}
@@ -127,6 +213,27 @@ export default function ScanPage() {
                 ) : 'Scan now'}
               </Button>
             </form>
+            ) : (
+            <form onSubmit={handlePasteEvaluate} aria-label="Paste a job" className="space-y-3">
+              <label className="block">
+                <span className="text-xs font-medium text-ink-secondary">Paste a job description</span>
+                <textarea
+                  aria-label="Job description"
+                  value={pasteText}
+                  onChange={(e) => setPasteText(e.target.value)}
+                  disabled={pasteBusy}
+                  rows={6}
+                  placeholder="Paste the full job posting here — I'll score your fit and let you tailor your CV for it."
+                  className="mt-1 w-full rounded-md border border-hair bg-surface text-ink p-3 text-sm j4u-focus placeholder:text-ink-muted disabled:opacity-60 resize-y"
+                />
+              </label>
+              <Button type="submit" disabled={!pasteText.trim() || pasteBusy} className="w-full sm:w-auto">
+                {pasteBusy ? (
+                  <><span className="inline-block w-3.5 h-3.5 rounded-full border-2 border-white border-t-transparent animate-spin" /> Evaluating…</>
+                ) : 'Evaluate pasted job'}
+              </Button>
+            </form>
+            )}
           </div>
 
           {scanError && (
@@ -143,30 +250,67 @@ export default function ScanPage() {
                 <span className="text-[13px] font-bold text-ink-strong">{listings.length} job{listings.length !== 1 ? 's' : ''} found</span>
                 <span className="text-[11.5px] text-ink-muted">evaluated jobs ranked by fit</span>
               </div>
+              {/* Batch bar — appears when ≥1 job is checked */}
+              {picked.size > 0 && (
+                <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-hair-subtle bg-surface px-3.5 py-2.5 shadow-sm">
+                  <span className="text-[12.5px] font-semibold text-ink-strong">{picked.size} selected</span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setPicked(new Set())}
+                      disabled={batch.busy}
+                      className="text-[12px] font-semibold text-ink-muted hover:text-ink-secondary disabled:opacity-50 j4u-focus rounded-sm px-1.5 py-1 transition-colors"
+                    >
+                      Clear
+                    </button>
+                    <Button onClick={handleBatchEvaluate} disabled={batch.busy}>
+                      {batch.busy ? (
+                        <><span className="inline-block w-3.5 h-3.5 rounded-full border-2 border-white border-t-transparent animate-spin" /> Scoring {batch.done}/{batch.total}…</>
+                      ) : `Evaluate selected (${picked.size})`}
+                    </Button>
+                  </div>
+                </div>
+              )}
+
               <div className="flex flex-col gap-2.5">
                 {ranked.map((job) => {
                   const r = rows[job.url];
                   const isSel = selected === job.url;
+                  const isPicked = picked.has(job.url);
                   const rec = r?.result ? (REC_TONE[r.result.recommendation] ?? { label: r.result.recommendation, tone: 'neutral' as Tone }) : null;
                   return (
-                    <button
+                    <div
                       key={job.url}
-                      onClick={() => setSelected(job.url)}
-                      className={`text-left cursor-pointer flex items-center gap-3 rounded-[12px] border px-3.5 py-3 j4u-press ${isSel ? 'border-primary-600 bg-primary-50' : 'border-hair-subtle bg-surface'}`}
+                      className={`flex items-center gap-2.5 rounded-md border px-3 py-3 transition-colors ${isSel ? 'border-primary-600 bg-primary-50' : 'border-hair-subtle bg-surface hover:border-border-strong'}`}
                     >
-                      {r?.result ? <GradeBadge grade={r.result.grade} /> : (
-                        <span className="w-[46px] h-[46px] flex-none rounded-xl bg-surface-sunken flex items-center justify-center text-ink-muted text-lg">·</span>
-                      )}
-                      <span className="flex-1 min-w-0">
-                        <span className="block text-[13.5px] font-semibold text-ink-strong truncate">{job.title}</span>
-                        <span className="block text-xs text-ink-muted truncate">
-                          {[job.company, job.location].filter(Boolean).join(' · ')} · <span className="font-mono text-[11px]">{job.source}</span>{job.posted ? ` · ${job.posted}` : ''}
+                      <input
+                        type="checkbox"
+                        checked={isPicked}
+                        onChange={() => togglePick(job.url)}
+                        aria-label={`Select ${job.title} for batch scoring`}
+                        className="flex-none w-4 h-4 accent-primary-600 cursor-pointer j4u-focus rounded-sm"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setSelected(job.url)}
+                        className="text-left cursor-pointer flex items-center gap-3 flex-1 min-w-0 j4u-press"
+                      >
+                        {r?.result ? <GradeBadge grade={r.result.grade} /> : (
+                          <span className="w-[46px] h-[46px] flex-none rounded-md bg-surface-sunken flex items-center justify-center text-ink-muted">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg>
+                          </span>
+                        )}
+                        <span className="flex-1 min-w-0">
+                          <span className="block text-[13.5px] font-semibold text-ink-strong truncate">{job.title}</span>
+                          <span className="block text-xs text-ink-muted truncate">
+                            {[job.company, job.location].filter(Boolean).join(' · ')} · <span className="font-mono text-[11px]">{job.source}</span>{job.posted ? ` · ${job.posted}` : ''}
+                          </span>
                         </span>
-                      </span>
-                      {rec ? <Badge tone={rec.tone}>{rec.label}</Badge> : (
-                        <span className="text-[11.5px] font-semibold text-primary-700 shrink-0">{r?.busy ? '…' : 'Evaluate →'}</span>
-                      )}
-                    </button>
+                        {rec ? <Badge tone={rec.tone}>{rec.label}</Badge> : (
+                          <span className="text-[11.5px] font-semibold text-primary-700 shrink-0">{r?.busy ? '…' : 'Evaluate →'}</span>
+                        )}
+                      </button>
+                    </div>
                   );
                 })}
               </div>
@@ -179,7 +323,7 @@ export default function ScanPage() {
         </div>
 
         {/* RIGHT: copilot fit & tailor */}
-        <aside className="lg:sticky lg:top-0 bg-surface border border-ai-soft rounded-[14px] overflow-hidden shadow-md">
+        <aside className="lg:sticky lg:top-0 bg-surface border border-ai-soft rounded-md overflow-hidden shadow-md">
           <div className="flex items-center gap-2.5 px-4 py-3 j4u-grad-ai border-b border-ai-soft">
             <IconSparkle size={16} color="var(--ai-600)" />
             <span className="text-[13.5px] font-bold text-ink-strong">Copilot · fit &amp; tailor</span>
@@ -229,7 +373,7 @@ function ScanCopilot({ sel, onEvaluate }: { sel: { listing?: Listing; row?: RowS
               <div className="text-[10px] font-bold uppercase tracking-wide text-ink-muted mt-4 mb-2">Dimension by dimension</div>
               <div className="flex flex-col gap-1.5">
                 {result.dimensions.map((d, i) => (
-                  <div key={i} className="flex items-center justify-between gap-2 border border-hair-subtle rounded-lg px-2.5 py-1.5">
+                  <div key={i} className="flex items-center justify-between gap-2 border border-hair-subtle rounded-md px-2.5 py-1.5">
                     <span className="text-xs text-ink-secondary truncate">{d.name}</span>
                     <GradeBadge grade={d.score} size="sm" />
                   </div>
@@ -250,8 +394,8 @@ function ScanCopilot({ sel, onEvaluate }: { sel: { listing?: Listing; row?: RowS
           )}
 
           <div className="flex flex-col gap-2 mt-4">
-            <Link to={`/documents?eval=${result.id}`} className="inline-flex items-center justify-center gap-1.5 h-10 rounded-lg bg-ai-600 text-white text-[13px] font-semibold j4u-press">✨ Tailor my CV for this job</Link>
-            {listing.url && <a href={listing.url} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center h-9 rounded-lg border border-hair text-ink-strong text-xs font-semibold j4u-press">Open the listing ↗</a>}
+            <Link to={`/documents?eval=${result.id}`} className="inline-flex items-center justify-center gap-1.5 h-10 rounded-md bg-ai-600 text-white text-[13px] font-semibold j4u-press hover:bg-ai-700 transition-colors"><IconSparkle size={15} color="#fff" />Tailor my CV for this job</Link>
+            {listing.url && <a href={listing.url} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center h-9 rounded-md border border-hair text-ink-strong text-xs font-semibold j4u-press">Open the listing ↗</a>}
           </div>
         </div>
       )}

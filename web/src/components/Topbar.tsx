@@ -47,7 +47,7 @@ export default function Topbar({
           type="button"
           onClick={onOpenPalette}
           title="Ask the UAE job market (⌘K)"
-          className="j4u-press hidden md:flex items-center gap-2 h-[34px] px-3 rounded-lg text-xs text-ai-700 border border-ai-soft bg-ai-soft"
+          className="j4u-press hidden md:flex items-center gap-2 h-[34px] px-3 rounded-md text-xs text-ai-700 border border-ai-soft bg-ai-soft"
           style={{ width: 300 }}
         >
           <IconSparkle size={13} color="var(--ai-600)" />
@@ -60,7 +60,7 @@ export default function Topbar({
           type="button"
           onClick={onToggleCopilot}
           title="Career copilot (⌘J)"
-          className="j4u-press inline-flex items-center gap-1.5 h-[34px] px-3 rounded-lg text-xs font-semibold text-ai-700 border border-ai-soft bg-ai-soft"
+          className="j4u-press inline-flex items-center gap-1.5 h-[34px] px-3 rounded-md text-xs font-semibold text-ai-700 border border-ai-soft bg-ai-soft"
         >
           <IconSparkle size={13} color="var(--ai-600)" />
           Copilot

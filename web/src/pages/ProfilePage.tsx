@@ -10,8 +10,9 @@ import {
 import { Card, PageHeader, Button } from '../components/ui';
 import { IconSparkle } from '../components/icons';
 import { RadialGauge } from '../components/charts';
+import { analyzeProfile } from '../lib/profileStrength';
 
-const FIELD = 'mt-1 w-full rounded-lg border border-hair bg-surface text-ink p-2 text-sm j4u-focus placeholder:text-ink-muted';
+const FIELD = 'mt-1 w-full rounded-md border border-hair bg-surface text-ink p-2 text-sm j4u-focus placeholder:text-ink-muted';
 const LABEL = 'text-sm font-medium text-ink-secondary';
 
 export default function ProfilePage() {
@@ -106,7 +107,7 @@ export default function ProfilePage() {
 
   if (loadError) {
     return (
-      <div role="alert" className="text-sm rounded-lg p-3 bg-danger-soft text-danger-text border border-danger-soft">
+      <div role="alert" className="text-sm rounded-md p-3 bg-danger-soft text-danger-text border border-danger-soft">
         Could not load your profile. Make sure the server is running, then refresh this page.
       </div>
     );
@@ -138,7 +139,7 @@ export default function ProfilePage() {
         {importing && <p className="mt-2 text-sm text-primary-700">Reading your CV with AI… this can take a few seconds.</p>}
         <div className="mt-3 pt-3 border-t border-hair-subtle flex items-center gap-3 flex-wrap">
           <span className="text-xs text-ink-muted">Or:</span>
-          <button type="button" title="LinkedIn sync — coming soon" disabled className="inline-flex items-center gap-2 h-9 px-3 rounded-lg border border-hair text-ink-secondary text-xs font-semibold opacity-60 cursor-default">
+          <button type="button" title="LinkedIn sync — coming soon" disabled className="inline-flex items-center gap-2 h-9 px-3 rounded-md border border-hair text-ink-secondary text-xs font-semibold opacity-60 cursor-default">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M4.98 3.5A2.5 2.5 0 1 0 5 8.5a2.5 2.5 0 0 0-.02-5zM3 9h4v12H3zM9 9h3.8v1.7h.05c.53-1 1.84-2.05 3.8-2.05 4.06 0 4.8 2.67 4.8 6.14V21h-4v-5.3c0-1.26-.02-2.9-1.77-2.9-1.77 0-2.04 1.38-2.04 2.8V21H9z" /></svg>
             Sync from LinkedIn
             <span className="font-mono text-[10px] opacity-70">soon</span>
@@ -147,7 +148,7 @@ export default function ProfilePage() {
       </Card>
 
       {message && (
-        <div role="status" className={`text-sm rounded-lg p-3 border ${message.ok ? 'bg-success-soft text-success-text border-success-soft' : 'bg-danger-soft text-danger-text border-danger-soft'}`}>
+        <div role="status" className={`text-sm rounded-md p-3 border ${message.ok ? 'bg-success-soft text-success-text border-success-soft' : 'bg-danger-soft text-danger-text border-danger-soft'}`}>
           {message.text}
         </div>
       )}
@@ -179,7 +180,7 @@ export default function ProfilePage() {
         <div className="space-y-4">
           {/* Index keys are acceptable here: inputs are controlled and the lists are short. */}
           {profile.experience.map((x, i) => (
-            <div key={i} className="border border-hair-subtle rounded-xl p-4 grid gap-3 sm:grid-cols-2">
+            <div key={i} className="border border-hair-subtle rounded-md p-4 grid gap-3 sm:grid-cols-2">
               <input className={FIELD} aria-label="Job title" placeholder="Job title" value={x.title} onChange={(e) => updateExp(i, 'title', e.target.value)} />
               <input className={FIELD} aria-label="Company" placeholder="Company" value={x.company} onChange={(e) => updateExp(i, 'company', e.target.value)} />
               <input className={FIELD} aria-label="Start date" placeholder="Start (e.g. 2021)" value={x.startDate} onChange={(e) => updateExp(i, 'startDate', e.target.value)} />
@@ -195,7 +196,7 @@ export default function ProfilePage() {
       <Card title="Education" action={<button onClick={addEdu} className="text-sm font-semibold text-primary-700 j4u-focus rounded">+ Add</button>}>
         <div className="space-y-4">
           {profile.education.map((x, i) => (
-            <div key={i} className="border border-hair-subtle rounded-xl p-4 grid gap-3 sm:grid-cols-2">
+            <div key={i} className="border border-hair-subtle rounded-md p-4 grid gap-3 sm:grid-cols-2">
               <input className={FIELD} aria-label="Institution" placeholder="Institution" value={x.institution} onChange={(e) => updateEdu(i, 'institution', e.target.value)} />
               <input className={FIELD} aria-label="Degree" placeholder="Degree" value={x.degree} onChange={(e) => updateEdu(i, 'degree', e.target.value)} />
               <input className={FIELD} aria-label="Field of study" placeholder="Field" value={x.field} onChange={(e) => updateEdu(i, 'field', e.target.value)} />
@@ -211,7 +212,7 @@ export default function ProfilePage() {
       <Card title="Projects" action={<button onClick={() => listAdd('projects', { name: '', description: '', tech: [], url: '' })} className="text-sm font-semibold text-primary-700 j4u-focus rounded">+ Add</button>}>
         <div className="space-y-4">
           {profile.projects.map((x, i) => (
-            <div key={i} className="border border-hair-subtle rounded-xl p-4 grid gap-3 sm:grid-cols-2">
+            <div key={i} className="border border-hair-subtle rounded-md p-4 grid gap-3 sm:grid-cols-2">
               <input className={FIELD} aria-label="Project name" placeholder="Project name" value={x.name} onChange={(e) => listUpd('projects', i, { name: e.target.value })} />
               <input className={FIELD} aria-label="Project link" placeholder="Link (optional)" value={x.url} onChange={(e) => listUpd('projects', i, { url: e.target.value })} />
               <textarea className={`${FIELD} sm:col-span-2`} rows={2} aria-label="Project description" placeholder="What it is and your impact" value={x.description} onChange={(e) => listUpd('projects', i, { description: e.target.value })} />
@@ -227,7 +228,7 @@ export default function ProfilePage() {
       <Card title="Certifications" action={<button onClick={() => listAdd('certifications', { name: '', issuer: '', year: '', url: '' })} className="text-sm font-semibold text-primary-700 j4u-focus rounded">+ Add</button>}>
         <div className="space-y-4">
           {profile.certifications.map((x, i) => (
-            <div key={i} className="border border-hair-subtle rounded-xl p-4 grid gap-3 sm:grid-cols-2">
+            <div key={i} className="border border-hair-subtle rounded-md p-4 grid gap-3 sm:grid-cols-2">
               <input className={FIELD} aria-label="Certification name" placeholder="Certification" value={x.name} onChange={(e) => listUpd('certifications', i, { name: e.target.value })} />
               <input className={FIELD} aria-label="Issuer" placeholder="Issuer (e.g. Coursera)" value={x.issuer} onChange={(e) => listUpd('certifications', i, { issuer: e.target.value })} />
               <input className={FIELD} aria-label="Year" placeholder="Year" value={x.year} onChange={(e) => listUpd('certifications', i, { year: e.target.value })} />
@@ -243,7 +244,7 @@ export default function ProfilePage() {
       <Card title="Languages" action={<button onClick={() => listAdd('languages', { name: '', level: '' })} className="text-sm font-semibold text-primary-700 j4u-focus rounded">+ Add</button>}>
         <div className="grid gap-3 sm:grid-cols-2">
           {profile.languages.map((x, i) => (
-            <div key={i} className="border border-hair-subtle rounded-xl p-3 flex items-center gap-2">
+            <div key={i} className="border border-hair-subtle rounded-md p-3 flex items-center gap-2">
               <input className={FIELD} aria-label="Language" placeholder="Language" value={x.name} onChange={(e) => listUpd('languages', i, { name: e.target.value })} />
               <input className={FIELD} aria-label="Proficiency" placeholder="Level (e.g. Native, Fluent)" value={x.level} onChange={(e) => listUpd('languages', i, { level: e.target.value })} />
               <button onClick={() => listDel('languages', i)} aria-label="Remove language" className="text-danger-text shrink-0 j4u-focus rounded px-1">✕</button>
@@ -257,7 +258,7 @@ export default function ProfilePage() {
       <Card title="Awards & honors" action={<button onClick={() => listAdd('awards', { title: '', issuer: '', year: '', description: '' })} className="text-sm font-semibold text-primary-700 j4u-focus rounded">+ Add</button>}>
         <div className="space-y-4">
           {profile.awards.map((x, i) => (
-            <div key={i} className="border border-hair-subtle rounded-xl p-4 grid gap-3 sm:grid-cols-2">
+            <div key={i} className="border border-hair-subtle rounded-md p-4 grid gap-3 sm:grid-cols-2">
               <input className={FIELD} aria-label="Award title" placeholder="Award (e.g. 1st place)" value={x.title} onChange={(e) => listUpd('awards', i, { title: e.target.value })} />
               <input className={FIELD} aria-label="Issuer or event" placeholder="Issuer / event" value={x.issuer} onChange={(e) => listUpd('awards', i, { issuer: e.target.value })} />
               <input className={FIELD} aria-label="Year" placeholder="Year" value={x.year} onChange={(e) => listUpd('awards', i, { year: e.target.value })} />
@@ -287,31 +288,6 @@ function openCopilot() {
   window.dispatchEvent(new KeyboardEvent('keydown', { key: 'j', ctrlKey: true, bubbles: true }));
 }
 
-// Deterministic profile-strength score + concrete suggestions (no AI needed).
-function analyzeProfile(p: Profile) {
-  let score = 0;
-  const add = (cond: boolean, pts: number) => { if (cond) score += pts; };
-  add(!!p.fullName?.trim(), 10);
-  add(!!p.headline?.trim(), 10);
-  add(!!p.email?.trim(), 10);
-  add(!!p.phone?.trim(), 8);
-  add(!!p.location?.trim(), 8);
-  score += Math.min(18, Math.round((p.summary?.trim().length ?? 0) / 180 * 18));
-  score += Math.min(16, (p.skills?.length ?? 0) * 3);
-  add((p.experience?.length ?? 0) >= 1, 12);
-  add((p.education?.length ?? 0) >= 1, 8);
-  score = Math.max(0, Math.min(100, score));
-
-  const suggestions: { title: string; detail: string }[] = [];
-  if (!p.headline?.trim()) suggestions.push({ title: 'Add a headline', detail: 'A current title (e.g. "Senior Accountant") helps employers place you instantly.' });
-  if ((p.summary?.trim().length ?? 0) < 120) suggestions.push({ title: 'Strengthen your summary', detail: 'Aim for 2–3 sentences covering your strongest, most relevant experience.' });
-  if ((p.skills?.length ?? 0) < 5) suggestions.push({ title: 'Add more skills', detail: 'List at least 5 relevant skills — they drive your job-match score.' });
-  if (p.experience?.some((x) => !x.description?.trim())) suggestions.push({ title: 'Add results to your roles', detail: 'Numbers beat adjectives — e.g. "cut checkout drop-off 18%".' });
-  if (!p.phone?.trim()) suggestions.push({ title: 'Add a phone number', detail: 'So employers can reach you quickly.' });
-  if (!p.location?.trim()) suggestions.push({ title: 'Add your location', detail: 'City and country (e.g. "Dubai, UAE").' });
-  return { score, suggestions };
-}
-
 function ProfileRail({ profile }: { profile: Profile }) {
   const { score, suggestions } = useMemo(() => analyzeProfile(profile), [profile]);
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
@@ -322,7 +298,7 @@ function ProfileRail({ profile }: { profile: Profile }) {
     : 'Just started — add the basics so we can match you well.';
 
   return (
-    <aside className="lg:sticky lg:top-[18px] bg-surface border border-ai-soft rounded-[14px] overflow-hidden shadow-sm">
+    <aside className="lg:sticky lg:top-[18px] bg-surface border border-ai-soft rounded-md overflow-hidden shadow-sm">
       <div className="flex items-center gap-2.5 px-4 py-3.5 j4u-grad-ai border-b border-ai-soft">
         <IconSparkle size={16} color="var(--ai-600)" />
         <span className="text-[13.5px] font-bold text-ink-strong">Profile copilot</span>

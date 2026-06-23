@@ -9,7 +9,7 @@ const ENGINES: { id: EngineId; title: string; blurb: string }[] = [
   { id: 'ollama', title: 'Local AI (offline)', blurb: '100% private & offline. Needs a decent PC.' },
 ];
 
-const FIELD = 'mt-1 w-full rounded-lg border border-hair bg-surface text-ink p-2 text-sm j4u-focus placeholder:text-ink-muted';
+const FIELD = 'mt-1 w-full rounded-md border border-hair bg-surface text-ink p-2 text-sm j4u-focus placeholder:text-ink-muted';
 const LABEL = 'text-sm font-medium text-ink-secondary';
 
 export default function SetupWizard({
@@ -85,7 +85,7 @@ export default function SetupWizard({
                   role="radio"
                   aria-checked={sel}
                   onClick={() => selectEngine(e.id)}
-                  className={`text-left p-4 rounded-xl border transition j4u-focus ${
+                  className={`text-left p-4 rounded-md border transition j4u-focus ${
                     sel ? 'border-primary-600 bg-primary-50' : 'border-hair hover:border-hair-strong bg-surface'
                   }`}
                 >
@@ -138,7 +138,7 @@ export default function SetupWizard({
           </div>
 
           {status && (
-            <div role="status" className={`mt-4 text-sm rounded-lg p-3 border ${status.ok ? 'bg-success-soft text-success-text border-success-soft' : 'bg-danger-soft text-danger-text border-danger-soft'}`}>
+            <div role="status" className={`mt-4 text-sm rounded-md p-3 border ${status.ok ? 'bg-success-soft text-success-text border-success-soft' : 'bg-danger-soft text-danger-text border-danger-soft'}`}>
               {status.message}
             </div>
           )}

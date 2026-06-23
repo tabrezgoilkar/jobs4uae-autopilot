@@ -73,6 +73,16 @@ export async function scan({
   return apiJson<ScanResult>(res);
 }
 
+/** Evaluate raw job-description text. Used by both listing and manual-paste flows. */
+export async function evaluateJobText(jobText: string): Promise<EvaluationResult> {
+  const res = await fetch('/api/evaluate', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ jobText }),
+  });
+  return apiJson<EvaluationResult>(res);
+}
+
 /**
  * Evaluate a listing by composing job text from listing fields
  * and posting to /api/evaluate.
@@ -88,10 +98,5 @@ export async function evaluateListing(listing: Listing): Promise<EvaluationResul
     .filter(Boolean)
     .join('\n');
 
-  const res = await fetch('/api/evaluate', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ jobText }),
-  });
-  return apiJson<EvaluationResult>(res);
+  return evaluateJobText(jobText);
 }

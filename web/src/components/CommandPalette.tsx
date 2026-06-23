@@ -83,7 +83,7 @@ export default function CommandPalette({ open, onClose }: { open: boolean; onClo
                   key={q}
                   type="button"
                   onClick={() => submit(q)}
-                  className="j4u-press flex items-center gap-2.5 px-3 py-2.5 border border-hair-subtle rounded-[10px] text-left"
+                  className="j4u-press flex items-center gap-2.5 px-3 py-2.5 border border-hair-subtle rounded-md text-left"
                 >
                   <span className="flex-1 text-[13px] text-ink">{q}</span>
                   <span className="text-ink-muted">→</span>

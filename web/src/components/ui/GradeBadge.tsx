@@ -22,7 +22,7 @@ export default function GradeBadge({ grade, size = 'md' }: { grade: string; size
     );
   }
   return (
-    <div className={`flex flex-col items-center justify-center rounded-xl font-bold ${tint}`} style={{ width: 46, height: 46 }}>
+    <div className={`flex flex-col items-center justify-center rounded-md font-bold ${tint}`} style={{ width: 46, height: 46 }}>
       <span className="text-lg leading-none">{g}</span>
     </div>
   );

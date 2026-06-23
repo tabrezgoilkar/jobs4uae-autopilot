@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
@@ -12,11 +12,66 @@ import {
   type Evaluation,
 } from '../api';
 import { gradeToStars, learningLinks } from '../lib/skills';
+import { diffLines, type DiffLine } from '../lib/diff';
 import DownloadButtons from '../features/pdf/DownloadButtons';
 import { Card, PageHeader, Button } from '../components/ui';
 import { RadialGauge } from '../components/charts';
 
-const FIELD = 'mt-1 w-full rounded-lg border border-hair bg-surface text-ink p-2 text-sm j4u-focus placeholder:text-ink-muted';
+type CvView = 'preview' | 'edit' | 'diff';
+
+/** Renders the line-level diff between the profile baseline and the tailored CV. */
+function DiffView({ diff, added, removed }: { diff: DiffLine[]; added: number; removed: number }) {
+  return (
+    <div>
+      <div className="flex flex-wrap items-center gap-3 px-5 py-3 border-b border-hair-subtle text-[12px]">
+        <span className="text-ink-muted">Compared to your profile CV — what tailoring changed:</span>
+        <span className="inline-flex items-center gap-1.5 font-semibold text-success-text">
+          <span className="w-2.5 h-2.5 rounded-[3px] bg-success-soft border border-success-text/30" />
+          {added} added
+        </span>
+        <span className="inline-flex items-center gap-1.5 font-semibold text-danger-text">
+          <span className="w-2.5 h-2.5 rounded-[3px] bg-danger-soft border border-danger-text/30" />
+          {removed} removed
+        </span>
+      </div>
+      {added === 0 && removed === 0 ? (
+        <p className="px-5 py-8 text-center text-sm text-ink-muted">
+          The tailored CV matches your profile CV line-for-line — no changes to show.
+        </p>
+      ) : (
+        <div className="px-3 py-3 font-mono text-[12.5px] leading-relaxed overflow-x-auto">
+          {diff.map((line, i) => {
+            const base = 'flex gap-2 px-2 py-0.5 rounded-[4px] whitespace-pre-wrap break-words';
+            if (line.type === 'add') {
+              return (
+                <div key={i} className={`${base} bg-success-soft text-success-text`}>
+                  <span aria-hidden="true" className="select-none opacity-60">+</span>
+                  <span className="flex-1">{line.text || ' '}</span>
+                </div>
+              );
+            }
+            if (line.type === 'remove') {
+              return (
+                <div key={i} className={`${base} bg-danger-soft text-danger-text`}>
+                  <span aria-hidden="true" className="select-none opacity-60">−</span>
+                  <span className="flex-1 line-through decoration-danger-text/40">{line.text || ' '}</span>
+                </div>
+              );
+            }
+            return (
+              <div key={i} className={`${base} text-ink-muted`}>
+                <span aria-hidden="true" className="select-none opacity-30">&nbsp;</span>
+                <span className="flex-1">{line.text || ' '}</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+const FIELD = 'mt-1 w-full rounded-md border border-hair bg-surface text-ink p-2 text-sm j4u-focus placeholder:text-ink-muted';
 const GRADE_PCT: Record<string, number> = { A: 92, B: 82, C: 68, D: 52, F: 35 };
 
 function renderMd(md: string): string {
@@ -34,6 +89,7 @@ export default function DocumentsPage() {
   const [company, setCompany] = useState('');
   const [resume, setResume] = useState('');
   const [cover, setCover] = useState('');
+  const [baseResume, setBaseResume] = useState('');
   const [docId, setDocId] = useState<string | null>(null);
   const [fitScore, setFitScore] = useState('');
   const [missingSkills, setMissingSkills] = useState<string[]>([]);
@@ -42,11 +98,23 @@ export default function DocumentsPage() {
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [recent, setRecent] = useState<DocumentRecord[]>([]);
   const [tab, setTab] = useState<'resume' | 'cover'>('resume');
-  const [editing, setEditing] = useState(false);
+  const [view, setView] = useState<CvView>('preview');
 
   useEffect(() => {
     listEvaluations().then(setEvals).catch(() => {});
     listDocuments().then(setRecent).catch(() => {});
+  }, []);
+
+  // Arriving from "Tailor my CV for this job" (?eval=…) should immediately tailor,
+  // not drop the user on the picker. Auto-run generation once on mount.
+  const autoRan = useRef(false);
+  useEffect(() => {
+    if (autoRan.current) return;
+    if (params.get('eval')) {
+      autoRan.current = true;
+      onGenerate();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const hasContent = !!(resume.trim() || cover.trim());
@@ -59,12 +127,13 @@ export default function DocumentsPage() {
       const draft = await generateDocuments(body);
       setResume(draft.resumeMarkdown);
       setCover(draft.coverLetterMarkdown);
+      setBaseResume(draft.baseResumeMarkdown ?? '');
       setJobTitle(draft.jobTitle);
       setCompany(draft.company);
       setFitScore(draft.fitScore);
       setMissingSkills(draft.missingSkills ?? []);
       setDocId(null);
-      setEditing(false);
+      setView('preview');
       setTab('resume');
       setMessage({ ok: true, text: 'Documents generated! Review them, edit if needed, then Save.' });
     } catch (e) {
@@ -78,7 +147,7 @@ export default function DocumentsPage() {
     setSaving(true);
     setMessage(null);
     try {
-      const payload = { jobTitle, company, evaluationId: evalId || null, resumeMarkdown: resume, coverLetterMarkdown: cover, fitScore, missingSkills };
+      const payload = { jobTitle, company, evaluationId: evalId || null, resumeMarkdown: resume, coverLetterMarkdown: cover, baseResumeMarkdown: baseResume, fitScore, missingSkills };
       const saved = docId ? await updateDocument(docId, payload) : await saveDocument(payload);
       setDocId(saved.id);
       setMessage({ ok: true, text: 'Saved.' });
@@ -99,9 +168,10 @@ export default function DocumentsPage() {
     setEvalId(d.evaluationId ?? '');
     setResume(d.resumeMarkdown);
     setCover(d.coverLetterMarkdown);
+    setBaseResume(d.baseResumeMarkdown ?? '');
     setFitScore(d.fitScore ?? '');
     setMissingSkills(d.missingSkills ?? []);
-    setEditing(false);
+    setView('preview');
     setTab('resume');
     setMessage(null);
   }
@@ -110,6 +180,14 @@ export default function DocumentsPage() {
   const setActiveValue = tab === 'resume' ? setResume : setCover;
   const fitPct = GRADE_PCT[(fitScore || '').toUpperCase()] ?? 0;
   const stars = gradeToStars(fitScore || 'C');
+
+  // "What changed" diff — only meaningful on the CV tab when we have a baseline.
+  const canDiff = tab === 'resume' && !!baseResume.trim();
+  const diff = useMemo(() => (canDiff ? diffLines(baseResume, resume) : []), [canDiff, baseResume, resume]);
+  const added = diff.filter((l) => l.type === 'add').length;
+  const removed = diff.filter((l) => l.type === 'remove').length;
+  // Guard: if we land on the cover tab while the diff view is active, show preview instead.
+  const effectiveView: CvView = view === 'diff' && !canDiff ? 'preview' : view;
 
   return (
     <div className="space-y-6">
@@ -132,7 +210,7 @@ export default function DocumentsPage() {
           {!evalId && (
             <label className="block">
               <span className="text-sm font-medium text-ink-secondary">Or paste a job description</span>
-              <textarea className="mt-1 w-full rounded-lg border border-hair bg-surface text-ink p-3 text-sm j4u-focus placeholder:text-ink-muted" rows={4} value={jobText} disabled={busy} onChange={(e) => setJobText(e.target.value)} placeholder="Paste the job posting here…" />
+              <textarea className="mt-1 w-full rounded-md border border-hair bg-surface text-ink p-3 text-sm j4u-focus placeholder:text-ink-muted" rows={4} value={jobText} disabled={busy} onChange={(e) => setJobText(e.target.value)} placeholder="Paste the job posting here…" />
             </label>
           )}
           <Button onClick={onGenerate} disabled={busy || (!evalId && !jobText.trim())}>
@@ -142,7 +220,7 @@ export default function DocumentsPage() {
       </Card>
 
       {message && (
-        <div role="status" className={`text-sm rounded-lg p-3 border ${message.ok ? 'bg-success-soft text-success-text border-success-soft' : 'bg-danger-soft text-danger-text border-danger-soft'}`}>
+        <div role="status" className={`text-sm rounded-md p-3 border ${message.ok ? 'bg-success-soft text-success-text border-success-soft' : 'bg-danger-soft text-danger-text border-danger-soft'}`}>
           {message.text}
         </div>
       )}
@@ -152,19 +230,22 @@ export default function DocumentsPage() {
           {/* Document preview / editor */}
           <Card padding={false}>
             <div className="flex items-center gap-2 p-3 border-b border-hair-subtle">
-              <div className="flex gap-1 bg-surface-sunken p-1 rounded-[9px]">
+              <div className="flex gap-1 bg-surface-sunken p-1 rounded-md">
                 {(['resume', 'cover'] as const).map((t) => (
-                  <button key={t} onClick={() => setTab(t)} className={`text-[12.5px] font-semibold px-3.5 py-1.5 rounded-[7px] j4u-press ${tab === t ? 'bg-surface text-ink-strong shadow-sm' : 'text-ink-muted'}`}>
+                  <button key={t} onClick={() => { setTab(t); if (t === 'cover' && view === 'diff') setView('preview'); }} className={`text-[12.5px] font-semibold px-3.5 py-1.5 rounded-sm j4u-press ${tab === t ? 'bg-surface text-ink-strong shadow-sm' : 'text-ink-muted'}`}>
                     {t === 'resume' ? 'Tailored CV' : 'Cover letter'}
                   </button>
                 ))}
               </div>
-              <div className="ml-auto flex gap-1 bg-surface-sunken p-1 rounded-[9px]">
-                <button onClick={() => setEditing(false)} className={`text-[11.5px] font-semibold px-3 py-1.5 rounded-[7px] j4u-press ${!editing ? 'bg-surface text-ink-strong shadow-sm' : 'text-ink-muted'}`}>Preview</button>
-                <button onClick={() => setEditing(true)} className={`text-[11.5px] font-semibold px-3 py-1.5 rounded-[7px] j4u-press ${editing ? 'bg-surface text-ink-strong shadow-sm' : 'text-ink-muted'}`}>Edit</button>
+              <div className="ml-auto flex gap-1 bg-surface-sunken p-1 rounded-md">
+                <button onClick={() => setView('preview')} className={`text-[11.5px] font-semibold px-3 py-1.5 rounded-sm j4u-press ${effectiveView === 'preview' ? 'bg-surface text-ink-strong shadow-sm' : 'text-ink-muted'}`}>Preview</button>
+                {canDiff && (
+                  <button onClick={() => setView('diff')} className={`text-[11.5px] font-semibold px-3 py-1.5 rounded-sm j4u-press ${effectiveView === 'diff' ? 'bg-surface text-ink-strong shadow-sm' : 'text-ink-muted'}`}>What changed</button>
+                )}
+                <button onClick={() => setView('edit')} className={`text-[11.5px] font-semibold px-3 py-1.5 rounded-sm j4u-press ${effectiveView === 'edit' ? 'bg-surface text-ink-strong shadow-sm' : 'text-ink-muted'}`}>Edit</button>
               </div>
             </div>
-            {editing ? (
+            {effectiveView === 'edit' ? (
               <textarea
                 aria-label={tab === 'resume' ? 'Resume content in Markdown' : 'Cover letter content in Markdown'}
                 className="w-full border-0 bg-surface text-ink p-5 text-sm font-mono j4u-focus resize-none"
@@ -173,6 +254,8 @@ export default function DocumentsPage() {
                 disabled={saving}
                 onChange={(e) => setActiveValue(e.target.value)}
               />
+            ) : effectiveView === 'diff' ? (
+              <DiffView diff={diff} added={added} removed={removed} />
             ) : (
               <div className="px-7 py-6 j4u-doc" dangerouslySetInnerHTML={{ __html: renderMd(activeValue) }} />
             )}

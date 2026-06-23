@@ -27,16 +27,27 @@ Runs entirely on the user's PC — Node/Express server (port 5123) + Vite/React 
 - **Settings page** — change AI engine/model/key in-app, application-details memory, privacy, GitHub feedback links.
 - Bespoke, zero-dependency, token-themed SVG **chart primitives** (RadialGauge / Donut / Sparkline) + eased count-ups.
 
-**Quality:** 141 server tests passing; web builds clean.
+**Quality:** 167 tests passing (server + web utils); web builds clean.
+
+## 2026-06-23 — product-quality + design-fidelity pass (on `main`)
+- **Design system locked to spec:** every block re-aligned to the Lumzi **6px (`md`) radius** ("enterprise-precise, not rounded-toy") app-wide — cards/controls 6px, hairline borders, sparing elevation. Tracker rebuilt to parity then corrected to the canonical block treatment.
+- **Documents — "what changed" diff:** deterministic profile→CV baseline + line-diff view (added/removed) on the tailored CV.
+- **Scan hub upgrades:** results now **persist across navigation** (session store) incl. the copilot's prior evaluation; **manual "paste a job"** mode (Evaluate merged into Scan); **multi-select + batch scoring** with progress.
+- **Documents:** "Tailor my CV" now **auto-runs** tailoring (no dropdown).
+- **Profile strength** now honest — counts all sections (projects/certs/languages/awards), with gap suggestions.
+- **Auto-apply page** built to design — **Indeed live + Connect**, others **coming soon**, safety posture, how-it-works, application-details panel.
+- **Salary benchmark engine** server-side (`POST /api/scanner/salary`, honest AI estimate) — Scan UI wiring pending.
+- Component work follows the owner's 5 visual rules (states, alignment, overflow, SVG icons, responsive).
 
 ## Remaining
 
 - **Phase 8** — more boards: ATS (Greenhouse/Lever — reliable, testable anywhere), then Bayt/Naukrigulf/GulfTalent via headed browser; per-board verification gating. (Bayt/Naukrigulf scrapers were removed from the active build — Cloudflare-blocked; see plan below.)
-- **Phase 11** — Assisted Auto-Apply (spec written): connect a board once → autofill → **user clicks Submit**; optional email-apply for hidden jobs.
+- **Phase 11 — Assisted Auto-Apply backend** (page UI done): the live flow behind the Auto-apply page — persistent per-board browser session (connect/login), open job → **autofill** fields + CV PDF + cover letter + known answers → user clicks Submit; accumulating Q&A memory; optional email-apply. Needs the user's machine to test real board logins.
 - **Phase 9** — LinkedIn assisted + real profile sync + batch apply.
 - **Phase 10** — one-click Windows installer + auto-install Ollama.
 - **Phase 18** — mock interview.
-- Smaller design-parity items: Documents "what changed" diff (needs a stored pre-tailor baseline), Scan salary benchmark + multi-board chips (need Phase 8 data), Tracker visual polish.
+- Smaller items: wire the **salary benchmark** estimate into the Scan copilot UI; **multi-board chips** (needs Phase 8 boards).
+- **Lint debt (pre-existing):** 4 advisory eslint errors (`react-refresh/only-export-components` in charts; `react-hooks/set-state-in-effect` for fetch-on-mount / modal-reset / count-up). Build + tests are green; clean these up via a charts file-split + scoped justifications.
 
 ## Key docs
 - Product/design spec: `docs/superpowers/specs/2026-06-21-gcc-career-copilot-design.md`

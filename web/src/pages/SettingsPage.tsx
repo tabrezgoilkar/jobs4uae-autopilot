@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { getConfig, saveConfig, testAI, type AppConfig, type EngineId, type ApplicationDetails } from '../api';
 import { Card, PageHeader, Button } from '../components/ui';
 
-const FIELD = 'mt-1 w-full rounded-lg border border-hair bg-surface text-ink p-2 text-sm j4u-focus placeholder:text-ink-muted';
+const FIELD = 'mt-1 w-full rounded-md border border-hair bg-surface text-ink p-2 text-sm j4u-focus placeholder:text-ink-muted';
 const LABEL = 'text-xs font-medium text-ink-secondary';
 
 // The three friendly engine choices in the design.
@@ -149,7 +149,7 @@ export default function SettingsPage() {
         </div>
 
         {status && (
-          <div role="status" className={`mt-3 text-sm rounded-lg p-3 border ${status.ok ? 'bg-success-soft text-success-text border-success-soft' : 'bg-danger-soft text-danger-text border-danger-soft'}`}>
+          <div role="status" className={`mt-3 text-sm rounded-md p-3 border ${status.ok ? 'bg-success-soft text-success-text border-success-soft' : 'bg-danger-soft text-danger-text border-danger-soft'}`}>
             {status.message}
           </div>
         )}
@@ -206,13 +206,13 @@ export default function SettingsPage() {
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <a href="https://github.com/tabrezgoilkar/jobs4uae-autopilot/issues/new?labels=enhancement&title=Feature%20request:%20" target="_blank" rel="noopener" className="j4u-press flex gap-3 items-start border border-hair-subtle rounded-[11px] p-3.5 no-underline">
-            <span className="w-9 h-9 flex-none rounded-[9px] bg-ai-soft flex items-center justify-center">
+            <span className="w-9 h-9 flex-none rounded-md bg-ai-soft flex items-center justify-center">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ai-600)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.1h6c0-.8.4-1.6 1-2.1A7 7 0 0 0 12 2z" /></svg>
             </span>
             <span><span className="block text-[13.5px] font-bold text-ink-strong">Request a feature</span><span className="block text-[11.5px] text-ink-muted mt-0.5">Opens a GitHub issue tagged enhancement</span></span>
           </a>
           <a href="https://github.com/tabrezgoilkar/jobs4uae-autopilot/issues/new?labels=bug&title=Issue:%20" target="_blank" rel="noopener" className="j4u-press flex gap-3 items-start border border-hair-subtle rounded-[11px] p-3.5 no-underline">
-            <span className="w-9 h-9 flex-none rounded-[9px] bg-danger-soft flex items-center justify-center">
+            <span className="w-9 h-9 flex-none rounded-md bg-danger-soft flex items-center justify-center">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><rect x="8" y="6" width="8" height="12" rx="4" /><path d="M19 7l-2 2M5 7l2 2M3 13h3M18 13h3M19 18l-2-2M5 18l2-2" /></svg>
             </span>
             <span><span className="block text-[13.5px] font-bold text-ink-strong">Report an issue</span><span className="block text-[11.5px] text-ink-muted mt-0.5">Opens a GitHub issue tagged bug</span></span>

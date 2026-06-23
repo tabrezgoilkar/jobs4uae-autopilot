@@ -70,6 +70,23 @@ describe('documents API', () => {
     expect(res.body.evaluationId).toBe(ev.body.id);
   });
 
+  it('POST /api/documents/generate includes a baseResumeMarkdown built from the profile, not the AI output', async () => {
+    writeConfig();
+    fs.writeFileSync(
+      path.join(tmpDir, 'profile.json'),
+      JSON.stringify({ fullName: 'Base Candidate', headline: 'Engineer', summary: 'My real summary', skills: ['X'] }),
+    );
+    stubGemini(JSON.stringify({ resumeMarkdown: '# Tailored Jane', coverLetterMarkdown: 'Dear', fitScore: 'A', missingSkills: [] }));
+    const { createApp } = await import('../app.js');
+    const res = await request(createApp()).post('/api/documents/generate').send({ jobText: 'Engineer role' });
+    expect(res.status).toBe(200);
+    expect(typeof res.body.baseResumeMarkdown).toBe('string');
+    expect(res.body.baseResumeMarkdown).toContain('Base Candidate'); // from the profile
+    expect(res.body.baseResumeMarkdown).toContain('My real summary');
+    expect(res.body.baseResumeMarkdown).not.toContain('Tailored Jane'); // NOT the AI output
+    expect(res.body.resumeMarkdown).toContain('Tailored Jane'); // tailored CV still returned
+  });
+
   it('saves, lists, gets, and updates a document', async () => {
     const { createApp } = await import('../app.js');
     const app = createApp();

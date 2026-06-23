@@ -12,7 +12,8 @@ import { listApplications, type Application, type ApplicationStatus } from '../f
 import { learningLinks } from '../lib/skills';
 import { Badge, GradeBadge, type Tone } from '../components/ui';
 import { IconSparkle } from '../components/icons';
-import { Donut, RadialGauge, Sparkline, useCountUp, type Segment } from '../components/charts';
+import { Donut, RadialGauge, Sparkline, type Segment } from '../components/charts';
+import { useCountUp } from '../components/charts/useCountUp';
 
 const GRADE_SCORE: Record<string, number> = { A: 92, B: 82, C: 68, D: 52, F: 35 };
 const REC: Record<Evaluation['recommendation'], { label: string; tone: Tone }> = {

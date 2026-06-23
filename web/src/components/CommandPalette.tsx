@@ -19,6 +19,8 @@ export default function CommandPalette({ open, onClose }: { open: boolean; onClo
 
   useEffect(() => {
     if (open) {
+      // Reset the palette's form each time it opens — intentional one-shot sync.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setQuery(''); setAsked(null); setAnswer(''); setError(null); setBusy(false);
       setTimeout(() => inputRef.current?.focus(), 30);
     }

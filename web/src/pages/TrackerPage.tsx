@@ -8,7 +8,8 @@ import {
   type ApplicationStatus,
 } from '../features/tracker/trackerApi';
 import { Card, PageHeader, Button } from '../components/ui';
-import { Donut, useCountUp, type Segment } from '../components/charts';
+import { Donut, type Segment } from '../components/charts';
+import { useCountUp } from '../components/charts/useCountUp';
 
 const STATUSES: ApplicationStatus[] = ['saved', 'applied', 'interview', 'offer', 'rejected'];
 
@@ -110,6 +111,8 @@ export default function TrackerPage() {
   }
 
   useEffect(() => {
+    // Fetch-on-mount: load() flips loading state then fetches — intentional, runs once.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
   }, []);
 

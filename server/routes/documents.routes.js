@@ -4,6 +4,7 @@ import { createEngine } from '../ai/index.js';
 import { loadProfile } from '../profile/store.js';
 import { getEvaluation } from '../evaluate/store.js';
 import { generateDocuments } from '../documents/engine.js';
+import { renderProfileToMarkdown } from '../documents/baseline.js';
 import { listDocuments, addDocument, getDocument, updateDocument } from '../documents/store.js';
 
 export function documentsRouter() {
@@ -37,7 +38,10 @@ export function documentsRouter() {
       const engine = createEngine(config);
       const profile = loadProfile();
       const docs = await generateDocuments(profile, jobText, engine);
-      res.json({ ...docs, jobTitle, company, evaluationId });
+      // The honest "before tailoring" CV — a deterministic render of the profile,
+      // so the UI can show what tailoring actually changed.
+      const baseResumeMarkdown = renderProfileToMarkdown(profile);
+      res.json({ ...docs, baseResumeMarkdown, jobTitle, company, evaluationId });
     } catch (e) {
       res.status(500).json({ error: e.message });
     }

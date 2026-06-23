@@ -129,6 +129,8 @@ export async function listEvaluations(): Promise<Evaluation[]> {
 export interface DocumentDraft {
   resumeMarkdown: string;
   coverLetterMarkdown: string;
+  /** Deterministic CV rendered from the profile (the "before tailoring" baseline). */
+  baseResumeMarkdown?: string;
   jobTitle: string;
   company: string;
   evaluationId: string | null;

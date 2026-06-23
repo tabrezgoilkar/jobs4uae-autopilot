@@ -5,6 +5,7 @@ import { createEngine } from '../ai/index.js';
 import { estimateSalary } from '../scanner/salary.js';
 import { fetchHtml } from '../lib/browser.js';
 import { htmlToJobText } from '../scanner/extract.js';
+import { assertFetchableUrl } from '../lib/ssrf.js';
 
 export function scannerRouter() {
   const router = Router();
@@ -73,6 +74,12 @@ export function scannerRouter() {
     const url = (req.body?.url ?? '').toString().trim();
     if (!/^https?:\/\/\S+$/i.test(url)) {
       return res.status(400).json({ error: 'Please paste a valid job link (starting with http).' });
+    }
+    // SSRF guard: only fetch public hosts — never loopback/private/link-local/metadata.
+    try {
+      await assertFetchableUrl(url);
+    } catch {
+      return res.status(400).json({ error: "That link points to a private or internal address and can't be fetched. Paste a public job URL." });
     }
     try {
       const html = await fetchHtml(url);

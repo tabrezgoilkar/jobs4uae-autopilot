@@ -139,7 +139,7 @@ export default function TrackerPage() {
 
       {/* Pipeline summary — animated donut + per-status stats (matches Dashboard) */}
       {!loading && !loadError && apps.length > 0 && (
-        <div className="bg-surface border border-hair-subtle rounded-[14px] p-5">
+        <div className="bg-surface border border-hair-subtle rounded-xl shadow-sm p-5">
           <div className="text-sm font-bold text-ink-strong mb-4">Your pipeline</div>
           <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:gap-7">
             <Donut segments={segments}>
@@ -208,7 +208,7 @@ export default function TrackerPage() {
 
       {/* Empty state */}
       {!loading && !loadError && apps.length === 0 && (
-        <div className="bg-surface border border-hair-subtle rounded-[14px] px-6 py-12 text-center">
+        <div className="bg-surface border border-hair-subtle rounded-xl shadow-sm px-6 py-12 text-center">
           <p className="text-sm font-semibold text-ink-strong">No applications yet</p>
           <p className="mt-1 text-sm text-ink-muted">Add one above, or save a role from Scan — it'll show up on your board here.</p>
         </div>
@@ -230,10 +230,7 @@ export default function TrackerPage() {
                     {column.length}
                   </span>
                 </div>
-                <div
-                  className="flex flex-col gap-2.5 rounded-[12px] p-2 min-h-[64px]"
-                  style={{ background: 'var(--surface-sunken)' }}
-                >
+                <div className="flex flex-col gap-2.5 min-h-[40px]">
                   {column.length === 0 && (
                     <p className="text-xs text-ink-muted italic px-1 py-3 text-center">Nothing here</p>
                   )}
@@ -243,8 +240,7 @@ export default function TrackerPage() {
                       <article
                         key={app.id}
                         aria-label={`${app.jobTitle}${app.company ? ` at ${app.company}` : ''}`}
-                        className="group bg-surface rounded-[10px] border border-hair-subtle p-3 space-y-2.5 transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-[0_6px_18px_rgba(15,23,42,0.08)]"
-                        style={{ borderLeft: `3px solid ${STATUS_COLOR[status]}` }}
+                        className="bg-surface rounded-xl shadow-sm border border-hair-subtle p-3 space-y-2.5"
                       >
                         <div>
                           <p className="font-semibold text-[13.5px] text-ink-strong leading-tight">{app.jobTitle || 'Untitled'}</p>

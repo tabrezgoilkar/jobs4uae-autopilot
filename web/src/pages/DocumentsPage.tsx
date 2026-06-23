@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
@@ -103,6 +103,18 @@ export default function DocumentsPage() {
   useEffect(() => {
     listEvaluations().then(setEvals).catch(() => {});
     listDocuments().then(setRecent).catch(() => {});
+  }, []);
+
+  // Arriving from "Tailor my CV for this job" (?eval=…) should immediately tailor,
+  // not drop the user on the picker. Auto-run generation once on mount.
+  const autoRan = useRef(false);
+  useEffect(() => {
+    if (autoRan.current) return;
+    if (params.get('eval')) {
+      autoRan.current = true;
+      onGenerate();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const hasContent = !!(resume.trim() || cover.trim());

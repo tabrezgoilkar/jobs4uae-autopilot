@@ -10,6 +10,7 @@ import {
 import { Card, PageHeader, Button } from '../components/ui';
 import { IconSparkle } from '../components/icons';
 import { RadialGauge } from '../components/charts';
+import { analyzeProfile } from '../lib/profileStrength';
 
 const FIELD = 'mt-1 w-full rounded-md border border-hair bg-surface text-ink p-2 text-sm j4u-focus placeholder:text-ink-muted';
 const LABEL = 'text-sm font-medium text-ink-secondary';
@@ -285,31 +286,6 @@ export default function ProfilePage() {
 
 function openCopilot() {
   window.dispatchEvent(new KeyboardEvent('keydown', { key: 'j', ctrlKey: true, bubbles: true }));
-}
-
-// Deterministic profile-strength score + concrete suggestions (no AI needed).
-function analyzeProfile(p: Profile) {
-  let score = 0;
-  const add = (cond: boolean, pts: number) => { if (cond) score += pts; };
-  add(!!p.fullName?.trim(), 10);
-  add(!!p.headline?.trim(), 10);
-  add(!!p.email?.trim(), 10);
-  add(!!p.phone?.trim(), 8);
-  add(!!p.location?.trim(), 8);
-  score += Math.min(18, Math.round((p.summary?.trim().length ?? 0) / 180 * 18));
-  score += Math.min(16, (p.skills?.length ?? 0) * 3);
-  add((p.experience?.length ?? 0) >= 1, 12);
-  add((p.education?.length ?? 0) >= 1, 8);
-  score = Math.max(0, Math.min(100, score));
-
-  const suggestions: { title: string; detail: string }[] = [];
-  if (!p.headline?.trim()) suggestions.push({ title: 'Add a headline', detail: 'A current title (e.g. "Senior Accountant") helps employers place you instantly.' });
-  if ((p.summary?.trim().length ?? 0) < 120) suggestions.push({ title: 'Strengthen your summary', detail: 'Aim for 2–3 sentences covering your strongest, most relevant experience.' });
-  if ((p.skills?.length ?? 0) < 5) suggestions.push({ title: 'Add more skills', detail: 'List at least 5 relevant skills — they drive your job-match score.' });
-  if (p.experience?.some((x) => !x.description?.trim())) suggestions.push({ title: 'Add results to your roles', detail: 'Numbers beat adjectives — e.g. "cut checkout drop-off 18%".' });
-  if (!p.phone?.trim()) suggestions.push({ title: 'Add a phone number', detail: 'So employers can reach you quickly.' });
-  if (!p.location?.trim()) suggestions.push({ title: 'Add your location', detail: 'City and country (e.g. "Dubai, UAE").' });
-  return { score, suggestions };
 }
 
 function ProfileRail({ profile }: { profile: Profile }) {

@@ -46,8 +46,9 @@ Runs entirely on the user's PC — Node/Express server (port 5123) + Vite/React 
 - **Phase 9** — LinkedIn assisted + real profile sync + batch apply.
 - **Phase 10** — one-click Windows installer + auto-install Ollama.
 - **Phase 18** — mock interview.
-- Smaller items: wire the **salary benchmark** estimate into the Scan copilot UI; **multi-board chips** (needs Phase 8 boards).
-- **Lint debt (pre-existing):** 4 advisory eslint errors (`react-refresh/only-export-components` in charts; `react-hooks/set-state-in-effect` for fetch-on-mount / modal-reset / count-up). Build + tests are green; clean these up via a charts file-split + scoped justifications.
+- Smaller items: wire the **salary benchmark** estimate into the Scan copilot UI; **multi-board chips** (needs Phase 8 boards); rebuild Scan "paste a job **link**" (paste a URL → fetch + score) to match the design.
+
+**Lint:** clean — `eslint` passes (charts `useCountUp` split to its own file; the few intentional `set-state-in-effect` sites carry scoped justifications).
 
 ## Key docs
 - Product/design spec: `docs/superpowers/specs/2026-06-21-gcc-career-copilot-design.md`

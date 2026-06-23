@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import {
   scan,
@@ -6,8 +6,8 @@ import {
   listBoards,
   type Board,
   type Listing,
-  type EvaluationResult,
 } from '../features/scanner/scannerApi';
+import { loadScanState, saveScanState, defaultScanState, type RowState } from '../features/scanner/scanStore';
 import { PageHeader, Button, Badge, GradeBadge, type Tone } from '../components/ui';
 import { RadialGauge } from '../components/charts';
 import { learningLinks } from '../lib/skills';
@@ -23,22 +23,28 @@ const REC_TONE: Record<string, { label: string; tone: Tone }> = {
   skip: { label: 'Skip', tone: 'danger' },
 };
 
-interface RowState { busy: boolean; result: EvaluationResult | null; error: string | null; }
-
 export default function ScanPage() {
+  // Restore the last scan (listings + evaluations + selection) so it survives navigation.
+  const initial = useMemo(() => loadScanState(defaultScanState(BOARDS_STATIC[0].id, GCC_COUNTRIES[0])), []);
+
   const [boards, setBoards] = useState<Board[]>(BOARDS_STATIC);
   useEffect(() => { listBoards().then(setBoards).catch(() => {}); }, []);
-  const [selectedBoard, setSelectedBoard] = useState(BOARDS_STATIC[0].id);
-  const [keyword, setKeyword] = useState('');
-  const [country, setCountry] = useState(GCC_COUNTRIES[0]);
-  const [city, setCity] = useState('');
+  const [selectedBoard, setSelectedBoard] = useState(initial.board);
+  const [keyword, setKeyword] = useState(initial.keyword);
+  const [country, setCountry] = useState(initial.country);
+  const [city, setCity] = useState(initial.city);
 
   const [scanning, setScanning] = useState(false);
-  const [listings, setListings] = useState<Listing[]>([]);
+  const [listings, setListings] = useState<Listing[]>(initial.listings);
   const [scanError, setScanError] = useState<string | null>(null);
-  const [hasScanned, setHasScanned] = useState(false);
-  const [rows, setRows] = useState<Record<string, RowState>>({});
-  const [selected, setSelected] = useState<string | null>(null);
+  const [hasScanned, setHasScanned] = useState(initial.hasScanned);
+  const [rows, setRows] = useState<Record<string, RowState>>(initial.rows);
+  const [selected, setSelected] = useState<string | null>(initial.selected);
+
+  // Persist across navigation / reload (within the tab session).
+  useEffect(() => {
+    saveScanState({ board: selectedBoard, keyword, country, city, listings, rows, selected, hasScanned });
+  }, [selectedBoard, keyword, country, city, listings, rows, selected, hasScanned]);
 
   const activeBoard = boards.find((b) => b.id === selectedBoard);
 

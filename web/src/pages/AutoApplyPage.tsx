@@ -12,7 +12,7 @@ export default function AutoApplyPage() {
           Assisted Auto-Apply is on the way. You'll connect your job-board accounts once, then the app will open a
           job, fill the application, and stop at the Submit button for you to review and send.
         </p>
-        <div className="mt-4 flex items-center gap-2 text-xs rounded-lg px-3 py-2.5 text-ai-700 bg-ai-soft border border-ai-soft">
+        <div className="mt-4 flex items-center gap-2 text-xs rounded-md px-3 py-2.5 text-ai-700 bg-ai-soft border border-ai-soft">
           It never applies on your behalf — you always click Submit. No passwords are stored.
         </div>
       </Card>

@@ -71,7 +71,7 @@ function DiffView({ diff, added, removed }: { diff: DiffLine[]; added: number; r
   );
 }
 
-const FIELD = 'mt-1 w-full rounded-lg border border-hair bg-surface text-ink p-2 text-sm j4u-focus placeholder:text-ink-muted';
+const FIELD = 'mt-1 w-full rounded-md border border-hair bg-surface text-ink p-2 text-sm j4u-focus placeholder:text-ink-muted';
 const GRADE_PCT: Record<string, number> = { A: 92, B: 82, C: 68, D: 52, F: 35 };
 
 function renderMd(md: string): string {
@@ -198,7 +198,7 @@ export default function DocumentsPage() {
           {!evalId && (
             <label className="block">
               <span className="text-sm font-medium text-ink-secondary">Or paste a job description</span>
-              <textarea className="mt-1 w-full rounded-lg border border-hair bg-surface text-ink p-3 text-sm j4u-focus placeholder:text-ink-muted" rows={4} value={jobText} disabled={busy} onChange={(e) => setJobText(e.target.value)} placeholder="Paste the job posting here…" />
+              <textarea className="mt-1 w-full rounded-md border border-hair bg-surface text-ink p-3 text-sm j4u-focus placeholder:text-ink-muted" rows={4} value={jobText} disabled={busy} onChange={(e) => setJobText(e.target.value)} placeholder="Paste the job posting here…" />
             </label>
           )}
           <Button onClick={onGenerate} disabled={busy || (!evalId && !jobText.trim())}>
@@ -208,7 +208,7 @@ export default function DocumentsPage() {
       </Card>
 
       {message && (
-        <div role="status" className={`text-sm rounded-lg p-3 border ${message.ok ? 'bg-success-soft text-success-text border-success-soft' : 'bg-danger-soft text-danger-text border-danger-soft'}`}>
+        <div role="status" className={`text-sm rounded-md p-3 border ${message.ok ? 'bg-success-soft text-success-text border-success-soft' : 'bg-danger-soft text-danger-text border-danger-soft'}`}>
           {message.text}
         </div>
       )}
@@ -218,19 +218,19 @@ export default function DocumentsPage() {
           {/* Document preview / editor */}
           <Card padding={false}>
             <div className="flex items-center gap-2 p-3 border-b border-hair-subtle">
-              <div className="flex gap-1 bg-surface-sunken p-1 rounded-[9px]">
+              <div className="flex gap-1 bg-surface-sunken p-1 rounded-md">
                 {(['resume', 'cover'] as const).map((t) => (
-                  <button key={t} onClick={() => { setTab(t); if (t === 'cover' && view === 'diff') setView('preview'); }} className={`text-[12.5px] font-semibold px-3.5 py-1.5 rounded-[7px] j4u-press ${tab === t ? 'bg-surface text-ink-strong shadow-sm' : 'text-ink-muted'}`}>
+                  <button key={t} onClick={() => { setTab(t); if (t === 'cover' && view === 'diff') setView('preview'); }} className={`text-[12.5px] font-semibold px-3.5 py-1.5 rounded-sm j4u-press ${tab === t ? 'bg-surface text-ink-strong shadow-sm' : 'text-ink-muted'}`}>
                     {t === 'resume' ? 'Tailored CV' : 'Cover letter'}
                   </button>
                 ))}
               </div>
-              <div className="ml-auto flex gap-1 bg-surface-sunken p-1 rounded-[9px]">
-                <button onClick={() => setView('preview')} className={`text-[11.5px] font-semibold px-3 py-1.5 rounded-[7px] j4u-press ${effectiveView === 'preview' ? 'bg-surface text-ink-strong shadow-sm' : 'text-ink-muted'}`}>Preview</button>
+              <div className="ml-auto flex gap-1 bg-surface-sunken p-1 rounded-md">
+                <button onClick={() => setView('preview')} className={`text-[11.5px] font-semibold px-3 py-1.5 rounded-sm j4u-press ${effectiveView === 'preview' ? 'bg-surface text-ink-strong shadow-sm' : 'text-ink-muted'}`}>Preview</button>
                 {canDiff && (
-                  <button onClick={() => setView('diff')} className={`text-[11.5px] font-semibold px-3 py-1.5 rounded-[7px] j4u-press ${effectiveView === 'diff' ? 'bg-surface text-ink-strong shadow-sm' : 'text-ink-muted'}`}>What changed</button>
+                  <button onClick={() => setView('diff')} className={`text-[11.5px] font-semibold px-3 py-1.5 rounded-sm j4u-press ${effectiveView === 'diff' ? 'bg-surface text-ink-strong shadow-sm' : 'text-ink-muted'}`}>What changed</button>
                 )}
-                <button onClick={() => setView('edit')} className={`text-[11.5px] font-semibold px-3 py-1.5 rounded-[7px] j4u-press ${effectiveView === 'edit' ? 'bg-surface text-ink-strong shadow-sm' : 'text-ink-muted'}`}>Edit</button>
+                <button onClick={() => setView('edit')} className={`text-[11.5px] font-semibold px-3 py-1.5 rounded-sm j4u-press ${effectiveView === 'edit' ? 'bg-surface text-ink-strong shadow-sm' : 'text-ink-muted'}`}>Edit</button>
               </div>
             </div>
             {effectiveView === 'edit' ? (

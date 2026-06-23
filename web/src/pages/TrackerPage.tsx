@@ -29,7 +29,7 @@ const STATUS_COLOR: Record<ApplicationStatus, string> = {
   rejected: 'var(--danger)',
 };
 
-const FIELD = 'mt-1 w-full rounded-lg border border-hair bg-surface text-ink p-2 text-sm j4u-focus placeholder:text-ink-muted disabled:opacity-60';
+const FIELD = 'mt-1 w-full rounded-md border border-hair bg-surface text-ink p-2 text-sm j4u-focus placeholder:text-ink-muted disabled:opacity-60';
 
 export default function TrackerPage() {
   const [apps, setApps] = useState<Application[]>([]);
@@ -139,7 +139,7 @@ export default function TrackerPage() {
 
       {/* Pipeline summary — animated donut + per-status stats (matches Dashboard) */}
       {!loading && !loadError && apps.length > 0 && (
-        <div className="bg-surface border border-hair-subtle rounded-xl shadow-sm p-5">
+        <div className="bg-surface border border-hair-subtle rounded-md shadow-sm p-5">
           <div className="text-sm font-bold text-ink-strong mb-4">Your pipeline</div>
           <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:gap-7">
             <Donut segments={segments}>
@@ -181,7 +181,7 @@ export default function TrackerPage() {
             </label>
           </div>
           {addError && (
-            <p role="alert" className="text-sm text-danger-text bg-danger-soft border border-danger-soft rounded-lg p-2">{addError}</p>
+            <p role="alert" className="text-sm text-danger-text bg-danger-soft border border-danger-soft rounded-md p-2">{addError}</p>
           )}
           <Button type="submit" disabled={adding || !jobTitle.trim()}>
             {adding ? 'Adding…' : 'Add application'}
@@ -190,12 +190,12 @@ export default function TrackerPage() {
       </Card>
 
       {actionError && (
-        <p role="alert" className="text-sm rounded-lg p-3 bg-danger-soft text-danger-text border border-danger-soft">{actionError}</p>
+        <p role="alert" className="text-sm rounded-md p-3 bg-danger-soft text-danger-text border border-danger-soft">{actionError}</p>
       )}
 
       {/* Load error fallback */}
       {loadError && (
-        <div className="bg-danger-soft border border-danger-soft rounded-xl p-6 text-danger-text space-y-2">
+        <div className="bg-danger-soft border border-danger-soft rounded-md p-6 text-danger-text space-y-2">
           <p className="font-medium">Could not load applications</p>
           <p className="text-sm">{loadError}</p>
           <button onClick={load} className="text-sm underline">Try again</button>
@@ -208,7 +208,7 @@ export default function TrackerPage() {
 
       {/* Empty state */}
       {!loading && !loadError && apps.length === 0 && (
-        <div className="bg-surface border border-hair-subtle rounded-xl shadow-sm px-6 py-12 text-center">
+        <div className="bg-surface border border-hair-subtle rounded-md shadow-sm px-6 py-12 text-center">
           <p className="text-sm font-semibold text-ink-strong">No applications yet</p>
           <p className="mt-1 text-sm text-ink-muted">Add one above, or save a role from Scan — it'll show up on your board here.</p>
         </div>
@@ -240,7 +240,7 @@ export default function TrackerPage() {
                       <article
                         key={app.id}
                         aria-label={`${app.jobTitle}${app.company ? ` at ${app.company}` : ''}`}
-                        className="bg-surface rounded-xl shadow-sm border border-hair-subtle p-3 space-y-2.5"
+                        className="bg-surface rounded-md shadow-sm border border-hair-subtle p-3 space-y-2.5"
                       >
                         <div>
                           <p className="font-semibold text-[13.5px] text-ink-strong leading-tight">{app.jobTitle || 'Untitled'}</p>
@@ -259,7 +259,7 @@ export default function TrackerPage() {
                             value={app.status}
                             disabled={busy}
                             onChange={(e) => handleStatusChange(app, e.target.value as ApplicationStatus)}
-                            className="flex-1 rounded-lg border border-hair bg-surface text-ink text-xs px-2 py-1.5 disabled:opacity-50 j4u-focus cursor-pointer"
+                            className="flex-1 rounded-md border border-hair bg-surface text-ink text-xs px-2 py-1.5 disabled:opacity-50 j4u-focus cursor-pointer"
                           >
                             {STATUSES.map((s) => (
                               <option key={s} value={s}>{STATUS_LABELS[s]}</option>
@@ -270,7 +270,7 @@ export default function TrackerPage() {
                             disabled={busy}
                             aria-label={`Delete application for ${app.jobTitle || 'this job'}${app.company ? ` at ${app.company}` : ''}`}
                             title="Delete"
-                            className="flex-none grid place-items-center w-7 h-7 rounded-lg text-ink-muted hover:text-danger-text hover:bg-danger-soft disabled:opacity-40 transition-colors j4u-focus"
+                            className="flex-none grid place-items-center w-7 h-7 rounded-md text-ink-muted hover:text-danger-text hover:bg-danger-soft disabled:opacity-40 transition-colors j4u-focus"
                           >
                             {busy ? (
                               <span className="text-[10px]">…</span>

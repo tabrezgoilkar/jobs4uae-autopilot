@@ -16,7 +16,7 @@ import { IconSparkle } from '../components/icons';
 const GCC_COUNTRIES = ['UAE', 'Saudi Arabia', 'Qatar', 'Kuwait', 'Bahrain', 'Oman'];
 const BOARDS_STATIC: Board[] = [{ id: 'indeed', name: 'Indeed', status: 'verified' }];
 const GRADE_PCT: Record<string, number> = { A: 92, B: 82, C: 68, D: 52, F: 35 };
-const FIELD = 'mt-1 w-full rounded-lg border border-hair bg-surface text-ink p-2 text-sm j4u-focus placeholder:text-ink-muted disabled:opacity-60';
+const FIELD = 'mt-1 w-full rounded-md border border-hair bg-surface text-ink p-2 text-sm j4u-focus placeholder:text-ink-muted disabled:opacity-60';
 const REC_TONE: Record<string, { label: string; tone: Tone }> = {
   apply: { label: 'Apply', tone: 'success' },
   maybe: { label: 'Maybe', tone: 'warning' },
@@ -94,13 +94,13 @@ export default function ScanPage() {
         {/* LEFT: search + listing */}
         <div className="min-w-0 space-y-4">
           {/* search card */}
-          <div className="bg-surface border border-hair-subtle rounded-[14px] p-4 shadow-sm">
+          <div className="bg-surface border border-hair-subtle rounded-md p-4 shadow-sm">
             <form onSubmit={handleScan} aria-label="Job search form" className="space-y-3">
               <div className="grid gap-3 sm:grid-cols-2">
                 <label className="block">
                   <span className="text-xs font-medium text-ink-secondary">Job board</span>
                   <div className="mt-1 flex items-center gap-2">
-                    <select aria-label="Job board" value={selectedBoard} onChange={(e) => setSelectedBoard(e.target.value)} disabled={scanning} className="flex-1 rounded-lg border border-hair bg-surface text-ink p-2 text-sm j4u-focus disabled:opacity-60">
+                    <select aria-label="Job board" value={selectedBoard} onChange={(e) => setSelectedBoard(e.target.value)} disabled={scanning} className="flex-1 rounded-md border border-hair bg-surface text-ink p-2 text-sm j4u-focus disabled:opacity-60">
                       {boards.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
                     </select>
                     {activeBoard?.status && <Badge tone={activeBoard.status === 'experimental' ? 'warning' : 'success'}>{activeBoard.status}</Badge>}
@@ -152,10 +152,10 @@ export default function ScanPage() {
                     <button
                       key={job.url}
                       onClick={() => setSelected(job.url)}
-                      className={`text-left cursor-pointer flex items-center gap-3 rounded-[12px] border px-3.5 py-3 j4u-press ${isSel ? 'border-primary-600 bg-primary-50' : 'border-hair-subtle bg-surface'}`}
+                      className={`text-left cursor-pointer flex items-center gap-3 rounded-md border px-3.5 py-3 j4u-press ${isSel ? 'border-primary-600 bg-primary-50' : 'border-hair-subtle bg-surface'}`}
                     >
                       {r?.result ? <GradeBadge grade={r.result.grade} /> : (
-                        <span className="w-[46px] h-[46px] flex-none rounded-xl bg-surface-sunken flex items-center justify-center text-ink-muted text-lg">·</span>
+                        <span className="w-[46px] h-[46px] flex-none rounded-md bg-surface-sunken flex items-center justify-center text-ink-muted text-lg">·</span>
                       )}
                       <span className="flex-1 min-w-0">
                         <span className="block text-[13.5px] font-semibold text-ink-strong truncate">{job.title}</span>
@@ -179,7 +179,7 @@ export default function ScanPage() {
         </div>
 
         {/* RIGHT: copilot fit & tailor */}
-        <aside className="lg:sticky lg:top-0 bg-surface border border-ai-soft rounded-[14px] overflow-hidden shadow-md">
+        <aside className="lg:sticky lg:top-0 bg-surface border border-ai-soft rounded-md overflow-hidden shadow-md">
           <div className="flex items-center gap-2.5 px-4 py-3 j4u-grad-ai border-b border-ai-soft">
             <IconSparkle size={16} color="var(--ai-600)" />
             <span className="text-[13.5px] font-bold text-ink-strong">Copilot · fit &amp; tailor</span>
@@ -229,7 +229,7 @@ function ScanCopilot({ sel, onEvaluate }: { sel: { listing?: Listing; row?: RowS
               <div className="text-[10px] font-bold uppercase tracking-wide text-ink-muted mt-4 mb-2">Dimension by dimension</div>
               <div className="flex flex-col gap-1.5">
                 {result.dimensions.map((d, i) => (
-                  <div key={i} className="flex items-center justify-between gap-2 border border-hair-subtle rounded-lg px-2.5 py-1.5">
+                  <div key={i} className="flex items-center justify-between gap-2 border border-hair-subtle rounded-md px-2.5 py-1.5">
                     <span className="text-xs text-ink-secondary truncate">{d.name}</span>
                     <GradeBadge grade={d.score} size="sm" />
                   </div>
@@ -250,8 +250,8 @@ function ScanCopilot({ sel, onEvaluate }: { sel: { listing?: Listing; row?: RowS
           )}
 
           <div className="flex flex-col gap-2 mt-4">
-            <Link to={`/documents?eval=${result.id}`} className="inline-flex items-center justify-center gap-1.5 h-10 rounded-lg bg-ai-600 text-white text-[13px] font-semibold j4u-press">✨ Tailor my CV for this job</Link>
-            {listing.url && <a href={listing.url} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center h-9 rounded-lg border border-hair text-ink-strong text-xs font-semibold j4u-press">Open the listing ↗</a>}
+            <Link to={`/documents?eval=${result.id}`} className="inline-flex items-center justify-center gap-1.5 h-10 rounded-md bg-ai-600 text-white text-[13px] font-semibold j4u-press">✨ Tailor my CV for this job</Link>
+            {listing.url && <a href={listing.url} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center h-9 rounded-md border border-hair text-ink-strong text-xs font-semibold j4u-press">Open the listing ↗</a>}
           </div>
         </div>
       )}

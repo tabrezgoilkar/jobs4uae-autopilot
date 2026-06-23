@@ -15,7 +15,7 @@ const SIZE: Record<Size, string> = {
 };
 
 function classes(variant: Variant, size: Size, extra: string) {
-  return `inline-flex items-center justify-center gap-2 rounded-lg font-semibold j4u-press disabled:opacity-50 disabled:pointer-events-none ${VARIANT[variant]} ${SIZE[size]} ${extra}`;
+  return `inline-flex items-center justify-center gap-2 rounded-md font-semibold j4u-press disabled:opacity-50 disabled:pointer-events-none ${VARIANT[variant]} ${SIZE[size]} ${extra}`;
 }
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {

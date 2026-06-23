@@ -18,7 +18,7 @@ export default function Card({
   className?: string;
 }) {
   return (
-    <div className={`bg-surface border border-hair-subtle rounded-xl shadow-sm overflow-hidden ${className}`}>
+    <div className={`bg-surface border border-hair-subtle rounded-md shadow-sm overflow-hidden ${className}`}>
       {title !== undefined && (
         <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-hair-subtle">
           <div className="text-sm font-semibold text-ink-strong">{title}</div>

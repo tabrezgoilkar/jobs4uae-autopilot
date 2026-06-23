@@ -129,15 +129,15 @@ export default function Dashboard({ config }: { config: AppConfig }) {
             {' '}and <b className="text-ink">{inProgress} application{inProgress !== 1 ? 's' : ''} in progress</b>.
           </div>
         </div>
-        <Link to="/scan" className="inline-flex items-center gap-2 h-[42px] px-[18px] rounded-lg bg-primary-600 text-white text-sm font-semibold j4u-press">
+        <Link to="/scan" className="inline-flex items-center gap-2 h-[42px] px-[18px] rounded-md bg-primary-600 text-white text-sm font-semibold j4u-press">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
           Scan &amp; evaluate jobs
         </Link>
       </div>
 
       {/* briefing */}
-      <div className="j4u-grad-brief rounded-[14px] px-5 py-4 flex items-start gap-3">
-        <span className="w-9 h-9 flex-none rounded-[10px] bg-surface flex items-center justify-center"><IconSparkle size={17} color="var(--ai-600)" /></span>
+      <div className="j4u-grad-brief rounded-md px-5 py-4 flex items-start gap-3">
+        <span className="w-9 h-9 flex-none rounded-md bg-surface flex items-center justify-center"><IconSparkle size={17} color="var(--ai-600)" /></span>
         <div className="flex-1">
           <div className="text-[11px] font-bold tracking-wider uppercase text-ai-700 font-mono">Your briefing</div>
           <p className="mt-1 text-[13.5px] leading-relaxed text-ink">
@@ -146,15 +146,15 @@ export default function Dashboard({ config }: { config: AppConfig }) {
               : <>You've evaluated <b>{evals.length} job{evals.length !== 1 ? 's' : ''}</b>{avgFit !== null && <> with an average fit of <b>{avgFit}%</b></>}{topEval && <>. Your strongest match is <b>{topEval.jobTitle || 'a role'}</b> ({topEval.grade})</>}{inProgress > 0 && <>, and you have <b>{inProgress}</b> application{inProgress !== 1 ? 's' : ''} in progress</>}.</>}
           </p>
           <div className="flex gap-2 mt-3">
-            <Link to="/scan" className="h-[34px] px-3.5 inline-flex items-center rounded-lg bg-ai-600 text-white text-[12.5px] font-semibold j4u-press">Scan more jobs →</Link>
-            {topEval && <Link to={`/documents?eval=${topEval.id}`} className="h-[34px] px-3.5 inline-flex items-center rounded-lg bg-surface border border-ai-soft text-ai-700 text-[12.5px] font-semibold j4u-press">Tailor your top match</Link>}
+            <Link to="/scan" className="h-[34px] px-3.5 inline-flex items-center rounded-md bg-ai-600 text-white text-[12.5px] font-semibold j4u-press">Scan more jobs →</Link>
+            {topEval && <Link to={`/documents?eval=${topEval.id}`} className="h-[34px] px-3.5 inline-flex items-center rounded-md bg-surface border border-ai-soft text-ai-700 text-[12.5px] font-semibold j4u-press">Tailor your top match</Link>}
           </div>
         </div>
       </div>
 
       {/* pipeline + fit visualisation */}
       <div className="grid lg:grid-cols-2 gap-[18px]">
-        <div className="bg-surface border border-hair-subtle rounded-[14px] p-5">
+        <div className="bg-surface border border-hair-subtle rounded-md p-5">
           <div className="text-sm font-bold text-ink-strong mb-4">Your pipeline</div>
           <div className="flex items-center gap-6">
             <Donut segments={segs}>
@@ -169,7 +169,7 @@ export default function Dashboard({ config }: { config: AppConfig }) {
             </div>
           </div>
         </div>
-        <div className="bg-surface border border-hair-subtle rounded-[14px] p-5">
+        <div className="bg-surface border border-hair-subtle rounded-md p-5">
           <div className="text-sm font-bold text-ink-strong mb-4">Average fit</div>
           <div className="flex items-center gap-6">
             <RadialGauge value={avgFit ?? 0} color="var(--ai-600)">
@@ -197,7 +197,7 @@ export default function Dashboard({ config }: { config: AppConfig }) {
       {/* review + side column */}
       <div className="grid lg:grid-cols-[1.55fr_1fr] gap-[18px]">
         {/* ready to review */}
-        <div className="bg-surface border border-hair-subtle rounded-[14px] overflow-hidden">
+        <div className="bg-surface border border-hair-subtle rounded-md overflow-hidden">
           <div className="flex items-center justify-between px-[18px] py-[15px] border-b border-hair-subtle">
             <div className="text-sm font-bold text-ink-strong">Ready for you to review</div>
             <Link to="/scan" className="text-xs font-semibold text-primary-700">Scan more →</Link>
@@ -229,22 +229,22 @@ export default function Dashboard({ config }: { config: AppConfig }) {
         {/* side column */}
         <div className="flex flex-col gap-3.5">
           {/* copilot tip */}
-          <div className="j4u-grad-ai rounded-[14px] p-[17px]">
+          <div className="j4u-grad-ai rounded-md p-[17px]">
             <div className="flex items-center gap-2"><IconSparkle size={15} color="var(--ai-600)" /><span className="text-[13px] font-bold text-ink-strong">Copilot tip</span></div>
             <p className="mt-2.5 text-[13px] leading-relaxed text-ink">
               {topEval
                 ? <>Your <b>{topEval.jobTitle || 'top'}</b> role scored an <b>{topEval.grade}</b>. Want me to tailor your CV and draft a cover letter for it?</>
                 : <>Evaluate a job and I'll suggest exactly how to tailor your CV to match it.</>}
             </p>
-            <Link to={topEval ? `/documents?eval=${topEval.id}` : '/documents'} className="mt-3 inline-flex h-[34px] px-3.5 items-center rounded-lg bg-ai-600 text-white text-[12.5px] font-semibold j4u-press">Tailor it →</Link>
+            <Link to={topEval ? `/documents?eval=${topEval.id}` : '/documents'} className="mt-3 inline-flex h-[34px] px-3.5 items-center rounded-md bg-ai-600 text-white text-[12.5px] font-semibold j4u-press">Tailor it →</Link>
           </div>
 
           {/* waiting on you */}
-          <div className="bg-surface border border-hair-subtle rounded-[14px] p-[17px]">
+          <div className="bg-surface border border-hair-subtle rounded-md p-[17px]">
             <div className="text-[13px] font-bold text-ink-strong mb-2.5">Waiting on you</div>
             {waiting ? (
               <div className="flex items-center gap-2.5">
-                <span className="w-[34px] h-[34px] flex-none rounded-[9px] bg-warning-soft flex items-center justify-center">
+                <span className="w-[34px] h-[34px] flex-none rounded-md bg-warning-soft flex items-center justify-center">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--warning)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9" /><path d="M12 8v4l3 2" /></svg>
                 </span>
                 <div className="min-w-0">
@@ -262,7 +262,7 @@ export default function Dashboard({ config }: { config: AppConfig }) {
       {/* insights: learning + interview prep */}
       <div className="grid lg:grid-cols-[1.45fr_1fr] gap-[18px] items-start">
         {/* learning */}
-        <div className="bg-surface border border-hair-subtle rounded-[14px] p-[18px]">
+        <div className="bg-surface border border-hair-subtle rounded-md p-[18px]">
           <div className="flex items-center gap-2">
             <div className="text-sm font-bold text-ink-strong">Level up to match more jobs</div>
             <Badge tone="ai"><IconSparkle size={9} color="var(--ai-600)" />AI</Badge>
@@ -276,7 +276,7 @@ export default function Dashboard({ config }: { config: AppConfig }) {
           {skillGaps.map(([skill, n]) => (
             <div key={skill} className="border-t border-hair-subtle pt-3.5 mt-3">
               <div className="flex items-center gap-2.5">
-                <span className="w-[34px] h-[34px] flex-none rounded-[9px] bg-primary-50 flex items-center justify-center">
+                <span className="w-[34px] h-[34px] flex-none rounded-md bg-primary-50 flex items-center justify-center">
                   <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--primary-600)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" /></svg>
                 </span>
                 <div className="flex-1 min-w-0">
@@ -295,7 +295,7 @@ export default function Dashboard({ config }: { config: AppConfig }) {
         </div>
 
         {/* interview prep */}
-        <div className="j4u-grad-ai rounded-[14px] px-5 py-[18px] flex flex-col">
+        <div className="j4u-grad-ai rounded-md px-5 py-[18px] flex flex-col">
           <div className="flex items-center gap-2"><IconSparkle size={15} color="var(--ai-600)" /><span className="text-sm font-bold text-ink-strong">Interview prep</span></div>
           <div className="text-xs text-ink-secondary mt-1.5">
             {waiting ? <>{waiting.jobTitle || 'Your next role'}{waiting.company ? ` · ${waiting.company}` : ''}</> : <>Practice for your next interview</>}
@@ -307,7 +307,7 @@ export default function Dashboard({ config }: { config: AppConfig }) {
               'Tell me about a time you handled a difficult problem under pressure.',
               'Why do you want this role, and why now?',
             ].map((q, i) => (
-              <div key={i} className="flex items-start gap-2.5 bg-surface border border-ai-soft rounded-[10px] px-3 py-2.5">
+              <div key={i} className="flex items-start gap-2.5 bg-surface border border-ai-soft rounded-md px-3 py-2.5">
                 <span className="font-mono text-[10px] font-bold text-ai-700 mt-0.5">Q{i + 1}</span>
                 <span className="flex-1 text-[12.5px] text-ink leading-snug">{q}</span>
               </div>
@@ -316,7 +316,7 @@ export default function Dashboard({ config }: { config: AppConfig }) {
           <button
             type="button"
             title="Mock interview — coming soon"
-            className="mt-3.5 w-full inline-flex items-center justify-center gap-2 h-[42px] rounded-[10px] bg-ai-600 text-white text-[13px] font-semibold j4u-press opacity-70 cursor-default"
+            className="mt-3.5 w-full inline-flex items-center justify-center gap-2 h-[42px] rounded-md bg-ai-600 text-white text-[13px] font-semibold j4u-press opacity-70 cursor-default"
             disabled
           >
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" /><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4" /></svg>
@@ -326,7 +326,7 @@ export default function Dashboard({ config }: { config: AppConfig }) {
       </div>
 
       {/* recent activity */}
-      <div className="bg-surface border border-hair-subtle rounded-[14px] px-5 py-[18px]">
+      <div className="bg-surface border border-hair-subtle rounded-md px-5 py-[18px]">
         <div className="flex items-center gap-2 mb-3.5">
           <div className="text-sm font-bold text-ink-strong">Recent activity</div>
           <span className="text-xs text-ink-muted">— everything the copilot does is logged</span>

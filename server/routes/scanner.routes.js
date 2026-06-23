@@ -1,5 +1,8 @@
 import { Router } from 'express';
 import { BOARDS, scan } from '../scanner/engine.js';
+import { loadConfig } from '../config/store.js';
+import { createEngine } from '../ai/index.js';
+import { estimateSalary } from '../scanner/salary.js';
 
 export function scannerRouter() {
   const router = Router();
@@ -31,6 +34,28 @@ export function scannerRouter() {
       }
 
       const result = await scan({ board, keyword: String(keyword).trim(), country, city });
+      res.json(result);
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  /**
+   * POST /api/scanner/salary
+   * Body: { title, country?, city? } → AI-estimated GCC salary range (clearly an estimate).
+   */
+  router.post('/scanner/salary', async (req, res) => {
+    try {
+      const { title, country, city } = req.body ?? {};
+      if (!title || !String(title).trim()) {
+        return res.status(400).json({ error: 'Missing job title.' });
+      }
+      const config = loadConfig();
+      if (!config.setupComplete) {
+        return res.status(409).json({ error: 'Please complete the AI setup wizard first.' });
+      }
+      const engine = createEngine(config);
+      const result = await estimateSalary({ title: String(title).trim(), country, city }, engine);
       res.json(result);
     } catch (e) {
       res.status(500).json({ error: e.message });

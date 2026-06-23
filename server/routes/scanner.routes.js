@@ -3,6 +3,8 @@ import { BOARDS, scan } from '../scanner/engine.js';
 import { loadConfig } from '../config/store.js';
 import { createEngine } from '../ai/index.js';
 import { estimateSalary } from '../scanner/salary.js';
+import { fetchHtml } from '../lib/browser.js';
+import { htmlToJobText } from '../scanner/extract.js';
 
 export function scannerRouter() {
   const router = Router();
@@ -59,6 +61,33 @@ export function scannerRouter() {
       res.json(result);
     } catch (e) {
       res.status(500).json({ error: e.message });
+    }
+  });
+
+  /**
+   * POST /api/scanner/fetch-job
+   * Body: { url } → fetches the job page (headed browser) and returns its text.
+   * Used by the "paste a job link" flow; the client then evaluates the text.
+   */
+  router.post('/scanner/fetch-job', async (req, res) => {
+    const url = (req.body?.url ?? '').toString().trim();
+    if (!/^https?:\/\/\S+$/i.test(url)) {
+      return res.status(400).json({ error: 'Please paste a valid job link (starting with http).' });
+    }
+    try {
+      const html = await fetchHtml(url);
+      const jobText = htmlToJobText(html);
+      if (!jobText || jobText.length < 40) {
+        return res.status(422).json({ error: "Couldn't read a job description from that link. Try the listing's main page, or paste the text via your CV tools." });
+      }
+      let host = '';
+      try { host = new URL(url).hostname.replace(/^www\./, ''); } catch { /* keep blank */ }
+      res.json({ jobText, source: host });
+    } catch (e) {
+      const msg = e?.message === 'BLOCKED'
+        ? 'That site blocked the fetch (anti-bot). Open it in your browser and paste the description, or try another link.'
+        : 'Could not open that link. Check the URL and try again.';
+      res.status(502).json({ error: msg });
     }
   });
 

@@ -73,6 +73,34 @@ export async function scan({
   return apiJson<ScanResult>(res);
 }
 
+export interface SalaryEstimate {
+  low: number | null;
+  high: number | null;
+  currency: string;
+  period: 'month' | 'year';
+  note: string;
+}
+
+/** AI-estimated GCC salary range for a role (clearly an estimate). */
+export async function estimateSalary(body: { title: string; country?: string; city?: string }): Promise<SalaryEstimate> {
+  const res = await fetch('/api/scanner/salary', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  return apiJson<SalaryEstimate>(res);
+}
+
+/** Fetch a job posting from a pasted URL (server opens it in a headed browser). */
+export async function fetchJobFromUrl(url: string): Promise<{ jobText: string; source: string }> {
+  const res = await fetch('/api/scanner/fetch-job', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ url }),
+  });
+  return apiJson<{ jobText: string; source: string }>(res);
+}
+
 /** Evaluate raw job-description text. Used by both listing and manual-paste flows. */
 export async function evaluateJobText(jobText: string): Promise<EvaluationResult> {
   const res = await fetch('/api/evaluate', {

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import {
   scan,
   evaluateListing,
+  evaluateJobText,
   listBoards,
   type Board,
   type Listing,
@@ -41,6 +42,11 @@ export default function ScanPage() {
   const [rows, setRows] = useState<Record<string, RowState>>(initial.rows);
   const [selected, setSelected] = useState<string | null>(initial.selected);
 
+  // Manual "paste a job" flow (Evaluate merged into the Scan hub).
+  const [mode, setMode] = useState<'search' | 'paste'>('search');
+  const [pasteText, setPasteText] = useState('');
+  const [pasteBusy, setPasteBusy] = useState(false);
+
   // Persist across navigation / reload (within the tab session).
   useEffect(() => {
     saveScanState({ board: selectedBoard, keyword, country, city, listings, rows, selected, hasScanned });
@@ -65,6 +71,35 @@ export default function ScanPage() {
       setScanError(err instanceof Error ? err.message : 'Scan failed. Please try again.');
     } finally {
       setScanning(false); setHasScanned(true);
+    }
+  }
+
+  async function handlePasteEvaluate(e: React.FormEvent) {
+    e.preventDefault();
+    const text = pasteText.trim();
+    if (!text || pasteBusy) return;
+    setPasteBusy(true);
+    setScanError(null);
+    try {
+      const result = await evaluateJobText(text);
+      const r = result as Record<string, unknown>;
+      const url = `pasted:${Date.now()}`;
+      const listing: Listing = {
+        title: (typeof r.jobTitle === 'string' && r.jobTitle) || 'Pasted job',
+        company: typeof r.company === 'string' ? r.company : '',
+        location: typeof r.location === 'string' ? r.location : '',
+        url,
+        source: 'pasted',
+      };
+      setListings((prev) => [listing, ...prev]);
+      setRows((prev) => ({ ...prev, [url]: { busy: false, result, error: null } }));
+      setSelected(url);
+      setHasScanned(true);
+      setPasteText('');
+    } catch (err) {
+      setScanError(err instanceof Error ? err.message : 'Could not evaluate the pasted job. Please try again.');
+    } finally {
+      setPasteBusy(false);
     }
   }
 
@@ -101,6 +136,21 @@ export default function ScanPage() {
         <div className="min-w-0 space-y-4">
           {/* search card */}
           <div className="bg-surface border border-hair-subtle rounded-md p-4 shadow-sm">
+            <div className="mb-3 inline-flex gap-1 bg-surface-sunken p-1 rounded-md" role="tablist" aria-label="Scan mode">
+              {(['search', 'paste'] as const).map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  role="tab"
+                  aria-selected={mode === m}
+                  onClick={() => setMode(m)}
+                  className={`text-[12.5px] font-semibold px-3.5 py-1.5 rounded-sm j4u-press j4u-focus transition-colors ${mode === m ? 'bg-surface text-ink-strong shadow-sm' : 'text-ink-muted hover:text-ink-secondary'}`}
+                >
+                  {m === 'search' ? 'Search a board' : 'Paste a job'}
+                </button>
+              ))}
+            </div>
+            {mode === 'search' ? (
             <form onSubmit={handleScan} aria-label="Job search form" className="space-y-3">
               <div className="grid gap-3 sm:grid-cols-2">
                 <label className="block">
@@ -133,6 +183,27 @@ export default function ScanPage() {
                 ) : 'Scan now'}
               </Button>
             </form>
+            ) : (
+            <form onSubmit={handlePasteEvaluate} aria-label="Paste a job" className="space-y-3">
+              <label className="block">
+                <span className="text-xs font-medium text-ink-secondary">Paste a job description</span>
+                <textarea
+                  aria-label="Job description"
+                  value={pasteText}
+                  onChange={(e) => setPasteText(e.target.value)}
+                  disabled={pasteBusy}
+                  rows={6}
+                  placeholder="Paste the full job posting here — I'll score your fit and let you tailor your CV for it."
+                  className="mt-1 w-full rounded-md border border-hair bg-surface text-ink p-3 text-sm j4u-focus placeholder:text-ink-muted disabled:opacity-60 resize-y"
+                />
+              </label>
+              <Button type="submit" disabled={!pasteText.trim() || pasteBusy} className="w-full sm:w-auto">
+                {pasteBusy ? (
+                  <><span className="inline-block w-3.5 h-3.5 rounded-full border-2 border-white border-t-transparent animate-spin" /> Evaluating…</>
+                ) : 'Evaluate pasted job'}
+              </Button>
+            </form>
+            )}
           </div>
 
           {scanError && (
@@ -256,7 +327,7 @@ function ScanCopilot({ sel, onEvaluate }: { sel: { listing?: Listing; row?: RowS
           )}
 
           <div className="flex flex-col gap-2 mt-4">
-            <Link to={`/documents?eval=${result.id}`} className="inline-flex items-center justify-center gap-1.5 h-10 rounded-md bg-ai-600 text-white text-[13px] font-semibold j4u-press">✨ Tailor my CV for this job</Link>
+            <Link to={`/documents?eval=${result.id}`} className="inline-flex items-center justify-center gap-1.5 h-10 rounded-md bg-ai-600 text-white text-[13px] font-semibold j4u-press hover:bg-ai-700 transition-colors"><IconSparkle size={15} color="#fff" />Tailor my CV for this job</Link>
             {listing.url && <a href={listing.url} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center h-9 rounded-md border border-hair text-ink-strong text-xs font-semibold j4u-press">Open the listing ↗</a>}
           </div>
         </div>

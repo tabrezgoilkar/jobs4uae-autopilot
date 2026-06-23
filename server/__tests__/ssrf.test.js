@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isBlockedAddress } from '../lib/ssrf.js';
+import { isBlockedAddress, assertFetchableUrl } from '../lib/ssrf.js';
 
 describe('isBlockedAddress', () => {
   it('blocks IPv4 loopback / private / link-local / reserved ranges', () => {
@@ -22,5 +22,19 @@ describe('isBlockedAddress', () => {
 
   it('allows public IPv6', () => {
     expect(isBlockedAddress('2001:4860:4860::8888')).toBe(false);
+  });
+});
+
+describe('assertFetchableUrl', () => {
+  it('blocks bracketed IPv6 loopback/private/link-local literals', async () => {
+    for (const u of ['http://[::1]/', 'http://[fe80::1]/', 'http://[fc00::1]/', 'http://[::ffff:127.0.0.1]/']) {
+      await expect(assertFetchableUrl(u), u).rejects.toThrow('SSRF_BLOCKED');
+    }
+  });
+
+  it('blocks localhost, internal hostnames, IP literals and non-http(s)', async () => {
+    for (const u of ['http://localhost/x', 'http://127.0.0.1:5123/', 'http://10.0.0.1/', 'http://foo.internal/', 'file:///etc/passwd']) {
+      await expect(assertFetchableUrl(u), u).rejects.toThrow('SSRF_BLOCKED');
+    }
   });
 });

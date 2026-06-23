@@ -76,13 +76,15 @@ export function scannerRouter() {
       return res.status(400).json({ error: 'Please paste a valid job link (starting with http).' });
     }
     // SSRF guard: only fetch public hosts — never loopback/private/link-local/metadata.
+    let pin;
     try {
-      await assertFetchableUrl(url);
+      pin = await assertFetchableUrl(url);
     } catch {
       return res.status(400).json({ error: "That link points to a private or internal address and can't be fetched. Paste a public job URL." });
     }
     try {
-      const html = await fetchHtml(url);
+      // Pin DNS to the validated IP (anti-rebinding) and re-validate every redirect hop.
+      const html = await fetchHtml(url, { validateUrl: assertFetchableUrl, hostRules: `MAP ${pin.host} ${pin.ip}` });
       const jobText = htmlToJobText(html);
       if (!jobText || jobText.length < 40) {
         return res.status(422).json({ error: "Couldn't read a job description from that link. Try the listing's main page, or paste the text via your CV tools." });

@@ -57,10 +57,12 @@ const BLOCK_MARKERS = [
   'Please verify you are a human',
 ];
 
-export async function fetchHtml(url, { timeout = 45000, headless = false, settleMs = 3500 } = {}) {
+export async function fetchHtml(url, { timeout = 45000, headless = false, settleMs = 3500, validateUrl, hostRules } = {}) {
   const browser = await chromium.launch({
     headless,
-    args: ['--disable-blink-features=AutomationControlled'],
+    // hostRules pins DNS (e.g. "MAP host 1.2.3.4") so the browser can't re-resolve
+    // a validated host to an internal IP (DNS-rebinding defence for pasted links).
+    args: ['--disable-blink-features=AutomationControlled', ...(hostRules ? [`--host-resolver-rules=${hostRules}`] : [])],
   });
   try {
     const context = await browser.newContext({
@@ -76,6 +78,18 @@ export async function fetchHtml(url, { timeout = 45000, headless = false, settle
     // never surfaces as an unhandled rejection.
     page.on('crash', () => {});
     page.on('pageerror', () => {});
+
+    // Re-validate every navigation (incl. redirects) so a public link can't bounce
+    // to an internal host. Allows legit public redirects (e.g. job → company ATS).
+    if (validateUrl) {
+      await page.route('**/*', async (route) => {
+        const req = route.request();
+        if (req.isNavigationRequest()) {
+          try { await validateUrl(req.url()); } catch { return route.abort('blockedbyclient'); }
+        }
+        return route.continue();
+      });
+    }
 
     await page.goto(url, { waitUntil: 'domcontentloaded', timeout });
     // Best-effort settle; if the page is torn down mid-wait, don't crash.

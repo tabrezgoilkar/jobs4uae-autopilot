@@ -47,6 +47,10 @@ export default function ScanPage() {
   const [pasteText, setPasteText] = useState('');
   const [pasteBusy, setPasteBusy] = useState(false);
 
+  // Multi-select + batch scoring.
+  const [picked, setPicked] = useState<Set<string>>(new Set());
+  const [batch, setBatch] = useState<{ busy: boolean; done: number; total: number }>({ busy: false, done: 0, total: 0 });
+
   // Persist across navigation / reload (within the tab session).
   useEffect(() => {
     saveScanState({ board: selectedBoard, keyword, country, city, listings, rows, selected, hasScanned });
@@ -103,9 +107,8 @@ export default function ScanPage() {
     }
   }
 
-  async function evaluate(listing: Listing) {
+  async function evalCore(listing: Listing) {
     const key = listing.url;
-    setSelected(key);
     setRow(key, { busy: true, error: null, result: null });
     try {
       const result = await evaluateListing(listing);
@@ -113,6 +116,33 @@ export default function ScanPage() {
     } catch (e) {
       setRow(key, { busy: false, result: null, error: e instanceof Error ? e.message : 'Evaluation failed.' });
     }
+  }
+
+  async function evaluate(listing: Listing) {
+    setSelected(listing.url);
+    await evalCore(listing);
+  }
+
+  function togglePick(url: string) {
+    setPicked((prev) => {
+      const next = new Set(prev);
+      if (next.has(url)) next.delete(url); else next.add(url);
+      return next;
+    });
+  }
+
+  // Evaluate every picked job that isn't already scored, sequentially (gentle on the AI).
+  async function handleBatchEvaluate() {
+    if (batch.busy) return;
+    const targets = listings.filter((j) => picked.has(j.url) && !rows[j.url]?.result);
+    if (targets.length === 0) return;
+    setBatch({ busy: true, done: 0, total: targets.length });
+    for (let i = 0; i < targets.length; i++) {
+      await evalCore(targets[i]);
+      setBatch((b) => ({ ...b, done: i + 1 }));
+    }
+    setBatch({ busy: false, done: 0, total: 0 });
+    setPicked(new Set());
   }
 
   // Ranked: evaluated jobs first (by fit), then the rest in scan order.
@@ -220,30 +250,67 @@ export default function ScanPage() {
                 <span className="text-[13px] font-bold text-ink-strong">{listings.length} job{listings.length !== 1 ? 's' : ''} found</span>
                 <span className="text-[11.5px] text-ink-muted">evaluated jobs ranked by fit</span>
               </div>
+              {/* Batch bar — appears when ≥1 job is checked */}
+              {picked.size > 0 && (
+                <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-hair-subtle bg-surface px-3.5 py-2.5 shadow-sm">
+                  <span className="text-[12.5px] font-semibold text-ink-strong">{picked.size} selected</span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setPicked(new Set())}
+                      disabled={batch.busy}
+                      className="text-[12px] font-semibold text-ink-muted hover:text-ink-secondary disabled:opacity-50 j4u-focus rounded-sm px-1.5 py-1 transition-colors"
+                    >
+                      Clear
+                    </button>
+                    <Button onClick={handleBatchEvaluate} disabled={batch.busy}>
+                      {batch.busy ? (
+                        <><span className="inline-block w-3.5 h-3.5 rounded-full border-2 border-white border-t-transparent animate-spin" /> Scoring {batch.done}/{batch.total}…</>
+                      ) : `Evaluate selected (${picked.size})`}
+                    </Button>
+                  </div>
+                </div>
+              )}
+
               <div className="flex flex-col gap-2.5">
                 {ranked.map((job) => {
                   const r = rows[job.url];
                   const isSel = selected === job.url;
+                  const isPicked = picked.has(job.url);
                   const rec = r?.result ? (REC_TONE[r.result.recommendation] ?? { label: r.result.recommendation, tone: 'neutral' as Tone }) : null;
                   return (
-                    <button
+                    <div
                       key={job.url}
-                      onClick={() => setSelected(job.url)}
-                      className={`text-left cursor-pointer flex items-center gap-3 rounded-md border px-3.5 py-3 j4u-press ${isSel ? 'border-primary-600 bg-primary-50' : 'border-hair-subtle bg-surface'}`}
+                      className={`flex items-center gap-2.5 rounded-md border px-3 py-3 transition-colors ${isSel ? 'border-primary-600 bg-primary-50' : 'border-hair-subtle bg-surface hover:border-border-strong'}`}
                     >
-                      {r?.result ? <GradeBadge grade={r.result.grade} /> : (
-                        <span className="w-[46px] h-[46px] flex-none rounded-md bg-surface-sunken flex items-center justify-center text-ink-muted text-lg">·</span>
-                      )}
-                      <span className="flex-1 min-w-0">
-                        <span className="block text-[13.5px] font-semibold text-ink-strong truncate">{job.title}</span>
-                        <span className="block text-xs text-ink-muted truncate">
-                          {[job.company, job.location].filter(Boolean).join(' · ')} · <span className="font-mono text-[11px]">{job.source}</span>{job.posted ? ` · ${job.posted}` : ''}
+                      <input
+                        type="checkbox"
+                        checked={isPicked}
+                        onChange={() => togglePick(job.url)}
+                        aria-label={`Select ${job.title} for batch scoring`}
+                        className="flex-none w-4 h-4 accent-primary-600 cursor-pointer j4u-focus rounded-sm"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setSelected(job.url)}
+                        className="text-left cursor-pointer flex items-center gap-3 flex-1 min-w-0 j4u-press"
+                      >
+                        {r?.result ? <GradeBadge grade={r.result.grade} /> : (
+                          <span className="w-[46px] h-[46px] flex-none rounded-md bg-surface-sunken flex items-center justify-center text-ink-muted">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg>
+                          </span>
+                        )}
+                        <span className="flex-1 min-w-0">
+                          <span className="block text-[13.5px] font-semibold text-ink-strong truncate">{job.title}</span>
+                          <span className="block text-xs text-ink-muted truncate">
+                            {[job.company, job.location].filter(Boolean).join(' · ')} · <span className="font-mono text-[11px]">{job.source}</span>{job.posted ? ` · ${job.posted}` : ''}
+                          </span>
                         </span>
-                      </span>
-                      {rec ? <Badge tone={rec.tone}>{rec.label}</Badge> : (
-                        <span className="text-[11.5px] font-semibold text-primary-700 shrink-0">{r?.busy ? '…' : 'Evaluate →'}</span>
-                      )}
-                    </button>
+                        {rec ? <Badge tone={rec.tone}>{rec.label}</Badge> : (
+                          <span className="text-[11.5px] font-semibold text-primary-700 shrink-0">{r?.busy ? '…' : 'Evaluate →'}</span>
+                        )}
+                      </button>
+                    </div>
                   );
                 })}
               </div>

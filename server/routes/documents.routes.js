@@ -12,7 +12,7 @@ export function documentsRouter() {
 
   router.post('/documents/generate', async (req, res) => {
     try {
-      const config = loadConfig();
+      const config = await loadConfig(req.userId);
       if (!config.setupComplete) {
         return res.status(409).json({ error: 'Please complete the AI setup wizard before generating documents.' });
       }
@@ -36,7 +36,7 @@ export function documentsRouter() {
       }
 
       const engine = createEngine(config);
-      const profile = loadProfile(req.userId);
+      const profile = await loadProfile(req.userId);
       const docs = await generateDocuments(profile, jobText, engine);
       // The honest "before tailoring" CV — a deterministic render of the profile,
       // so the UI can show what tailoring actually changed.
@@ -47,25 +47,25 @@ export function documentsRouter() {
     }
   });
 
-  router.get('/documents', (req, res) => {
+  router.get('/documents', async (req, res) => {
     try {
-      res.json(listDocuments(req.userId));
+      res.json(await listDocuments(req.userId));
     } catch (e) {
       res.status(500).json({ error: e.message });
     }
   });
 
-  router.post('/documents', (req, res) => {
+  router.post('/documents', async (req, res) => {
     try {
-      res.json(addDocument(req.userId, req.body ?? {}));
+      res.json(await addDocument(req.userId, req.body ?? {}));
     } catch (e) {
       res.status(500).json({ error: e.message });
     }
   });
 
-  router.get('/documents/:id', (req, res) => {
+  router.get('/documents/:id', async (req, res) => {
     try {
-      const found = getDocument(req.userId, req.params.id);
+      const found = await getDocument(req.userId, req.params.id);
       if (!found) return res.status(404).json({ error: 'Document not found.' });
       res.json(found);
     } catch (e) {
@@ -73,9 +73,9 @@ export function documentsRouter() {
     }
   });
 
-  router.post('/documents/:id', (req, res) => {
+  router.post('/documents/:id', async (req, res) => {
     try {
-      const updated = updateDocument(req.userId, req.params.id, req.body ?? {});
+      const updated = await updateDocument(req.userId, req.params.id, req.body ?? {});
       if (!updated) return res.status(404).json({ error: 'Document not found.' });
       res.json(updated);
     } catch (e) {

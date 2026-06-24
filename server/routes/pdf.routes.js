@@ -16,12 +16,12 @@ export function pdfRouter() {
         return res.status(400).json({ error: `Invalid kind "${kind}". Use "resume" or "cover".` });
       }
 
-      const doc = getDocument(req.userId, req.params.id);
+      const doc = await getDocument(req.userId, req.params.id);
       if (!doc) {
         return res.status(404).json({ error: 'Document not found.' });
       }
 
-      const profile = loadProfile(req.userId);
+      const profile = await loadProfile(req.userId);
 
       let pdfBuffer;
       let filename;

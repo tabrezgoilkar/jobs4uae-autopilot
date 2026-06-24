@@ -20,12 +20,12 @@ export function applyCloudRouter() {
       if (!to) {
         return res.status(422).json({ error: 'No recruiter email found. Paste the post including the address, or enter it.' });
       }
-      const config = loadConfig();
+      const config = await loadConfig(req.userId);
       if (!config.setupComplete) {
         return res.status(409).json({ error: 'Please complete the AI setup wizard before drafting emails.' });
       }
       const engine = createEngine(config);
-      const { subject, body } = await composeApplicationEmail(loadProfile(req.userId), jobText, { email: to, company }, engine);
+      const { subject, body } = await composeApplicationEmail(await loadProfile(req.userId), jobText, { email: to, company }, engine);
       res.json({ to, subject, body, mailto: mailtoLink({ to, subject, body }), gmail: gmailComposeLink({ to, subject, body }), foundEmails: found });
     } catch (e) {
       res.status(400).json({ error: e.message });

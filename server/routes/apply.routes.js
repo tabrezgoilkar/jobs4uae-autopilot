@@ -52,17 +52,17 @@ export function applyRouter() {
         return res.status(409).json({ error: `Connect ${board.name} first (Connections tab).` });
       }
 
-      const config = loadConfig();
+      const config = await loadConfig(req.userId);
       const engine = config.setupComplete
         ? createEngine(config)
         : { generate: async () => { throw new Error('AI not configured'); } };
-      const profile = loadProfile(req.userId);
+      const profile = await loadProfile(req.userId);
       const details = loadDetails();
 
       // Optional: attach a saved tailored document (cover letter + rendered resume PDF).
       const documents = {};
       if (documentId) {
-        const doc = getDocument(req.userId, documentId);
+        const doc = await getDocument(req.userId, documentId);
         if (doc) {
           documents.coverLetter = doc.coverLetterMarkdown ?? '';
           try {

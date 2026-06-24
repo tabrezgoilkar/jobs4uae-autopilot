@@ -33,12 +33,12 @@ export function createApp() {
   // Config + AI-test are now behind the gate (they expose engine config / keys).
   // NOTE: config is still a single global record — per-user settings land in slice
   // A3 (hybrid AI / encrypted BYOK); until then it is at least non-anonymous.
-  app.get('/api/config', (req, res) => {
-    res.json(loadConfig());
+  app.get('/api/config', async (req, res) => {
+    try { res.json(await loadConfig(req.userId)); } catch (e) { res.status(500).json({ error: e.message }); }
   });
 
-  app.post('/api/config', (req, res) => {
-    res.json(saveConfig(req.body ?? {}));
+  app.post('/api/config', async (req, res) => {
+    try { res.json(await saveConfig(req.userId, req.body ?? {})); } catch (e) { res.status(400).json({ error: e.message }); }
   });
 
   app.post('/api/ai/test', async (req, res) => {

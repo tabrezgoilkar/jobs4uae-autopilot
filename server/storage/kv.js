@@ -1,45 +1,89 @@
-import fs from 'node:fs';
+import fs from 'node:fs/promises';
 import path from 'node:path';
 import { dataDir } from '../config/paths.js';
 
-// Per-user JSON key-value storage. The store layer talks to this interface so the
-// same code runs locally (filesystem) and, in the cloud, against Postgres (a
-// drop-in impl added at deploy time). Whole-collection get/set mirrors the
-// original file-store semantics.
+// Per-user JSON key-value storage, async so the same store code runs locally
+// (filesystem) and in the cloud (Neon Postgres). Selected by DATABASE_URL:
+//   - set   → Postgres (serverless-friendly HTTP driver)
+//   - unset → filesystem (local dev; 'local' user stays flat for back-compat)
 //
-//   getJson(userId, key) -> parsed value | null
-//   setJson(userId, key, value) -> value
+//   await getJson(userId, key) -> parsed value | null
+//   await setJson(userId, key, value) -> value
 
 const safe = (s, fallback) => {
   const cleaned = String(s ?? '').replace(/[^a-zA-Z0-9_.-]/g, '_');
   return cleaned && cleaned !== '.' && cleaned !== '..' ? cleaned : fallback;
 };
 
+function usingPostgres() {
+  return !!process.env.DATABASE_URL?.trim();
+}
+
+// --- Filesystem impl (local dev) ---
 function userDir(userId) {
   const id = String(userId ?? '').trim();
-  // 'local' (the dev-bypass single user) stays flat for backward compatibility;
-  // real users are namespaced under data/u/<userId>/.
   if (!id || id === 'local') return dataDir();
   return path.join(dataDir(), 'u', safe(id, 'local'));
 }
-
 function filePath(userId, key) {
   return path.join(userDir(userId), `${safe(key, 'data')}.json`);
 }
-
-export function getJson(userId, key) {
-  const p = filePath(userId, key);
-  if (!fs.existsSync(p)) return null;
+async function fsGet(userId, key) {
   try {
-    return JSON.parse(fs.readFileSync(p, 'utf8'));
+    return JSON.parse(await fs.readFile(filePath(userId, key), 'utf8'));
   } catch {
     return null;
   }
 }
-
-export function setJson(userId, key, value) {
+async function fsSet(userId, key, value) {
   const p = filePath(userId, key);
-  fs.mkdirSync(path.dirname(p), { recursive: true });
-  fs.writeFileSync(p, JSON.stringify(value, null, 2));
+  await fs.mkdir(path.dirname(p), { recursive: true });
+  await fs.writeFile(p, JSON.stringify(value, null, 2));
   return value;
+}
+
+// --- Postgres impl (cloud) — one jsonb row per (user, key) ---
+let sqlClient;
+let ensured;
+async function sql() {
+  if (!sqlClient) {
+    const { neon } = await import('@neondatabase/serverless');
+    sqlClient = neon(process.env.DATABASE_URL);
+  }
+  return sqlClient;
+}
+async function ensureTable() {
+  if (ensured) return ensured;
+  ensured = (async () => {
+    const db = await sql();
+    await db`CREATE TABLE IF NOT EXISTS app_state (
+      user_id text NOT NULL,
+      key text NOT NULL,
+      data jsonb NOT NULL,
+      updated_at timestamptz NOT NULL DEFAULT now(),
+      PRIMARY KEY (user_id, key)
+    )`;
+  })();
+  return ensured;
+}
+async function pgGet(userId, key) {
+  await ensureTable();
+  const db = await sql();
+  const rows = await db`SELECT data FROM app_state WHERE user_id = ${String(userId ?? 'local')} AND key = ${String(key)}`;
+  return rows[0]?.data ?? null;
+}
+async function pgSet(userId, key, value) {
+  await ensureTable();
+  const db = await sql();
+  await db`INSERT INTO app_state (user_id, key, data, updated_at)
+    VALUES (${String(userId ?? 'local')}, ${String(key)}, ${JSON.stringify(value)}::jsonb, now())
+    ON CONFLICT (user_id, key) DO UPDATE SET data = EXCLUDED.data, updated_at = now()`;
+  return value;
+}
+
+export async function getJson(userId, key) {
+  return usingPostgres() ? pgGet(userId, key) : fsGet(userId, key);
+}
+export async function setJson(userId, key, value) {
+  return usingPostgres() ? pgSet(userId, key, value) : fsSet(userId, key, value);
 }

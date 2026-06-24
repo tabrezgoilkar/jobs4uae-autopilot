@@ -30,17 +30,17 @@ function corsForLinkedin(req, res, next) {
 export function profileRouter() {
   const router = Router();
 
-  router.get('/', (req, res) => {
+  router.get('/', async (req, res) => {
     try {
-      res.json(loadProfile(req.userId));
+      res.json(await loadProfile(req.userId));
     } catch (e) {
       res.status(500).json({ error: e.message });
     }
   });
 
-  router.post('/', (req, res) => {
+  router.post('/', async (req, res) => {
     try {
-      res.json(saveProfile(req.userId, req.body ?? {}));
+      res.json(await saveProfile(req.userId, req.body ?? {}));
     } catch (e) {
       res.status(500).json({ error: e.message });
     }
@@ -53,7 +53,7 @@ export function profileRouter() {
       if (!text || !text.trim()) {
         return res.status(422).json({ error: 'Could not read any text from that file.' });
       }
-      const config = loadConfig();
+      const config = await loadConfig(req.userId);
       if (!config.setupComplete) {
         return res.status(409).json({ error: 'Please complete the AI setup wizard before importing a CV.' });
       }
@@ -74,7 +74,7 @@ export function profileRouter() {
   });
 
   router.use('/linkedin/import', corsForLinkedin);
-  router.post('/linkedin/import', upload.single('file'), (req, res) => {
+  router.post('/linkedin/import', upload.single('file'), async (req, res) => {
     try {
       let raw = req.body;
       if (req.file) {
@@ -90,7 +90,7 @@ export function profileRouter() {
         });
       }
       const incoming = linkedinToProfile(raw);
-      const { merged, changes } = mergeProfile(loadProfile(req.userId), incoming);
+      const { merged, changes } = mergeProfile(await loadProfile(req.userId), incoming);
       // A bookmarklet import (cross-origin from linkedin.com) is stashed for the
       // app to pick up; a same-origin file upload uses this response directly.
       if (req.headers.origin === 'https://www.linkedin.com') setPending({ merged, changes });

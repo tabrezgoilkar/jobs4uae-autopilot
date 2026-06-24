@@ -32,13 +32,17 @@ export function authMiddleware({ verifyToken } = {}) {
       return next();
     }
     const token = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '').trim();
-    if (!token) return res.status(401).json({ error: 'Sign in required.' });
+    if (!token) {
+      console.warn('[auth] no bearer token on', req.method, req.url);
+      return res.status(401).json({ error: 'Sign in required.' });
+    }
     try {
       const claims = await verifyToken(token);
       if (!claims?.sub) throw new Error('No subject in token.');
       req.userId = claims.sub;
       next();
-    } catch {
+    } catch (e) {
+      console.warn('[auth] token verification failed:', e?.message);
       res.status(401).json({ error: 'Invalid or expired session.' });
     }
   };

@@ -13,14 +13,14 @@ export function copilotRouter() {
       const question = (req.body?.question ?? '').toString().trim();
       if (!question) return res.status(400).json({ error: 'Please enter a question.' });
 
-      const config = loadConfig();
+      const config = await loadConfig(req.userId);
       if (!config.setupComplete) {
         return res.status(409).json({ error: 'Please complete the AI setup wizard before using the copilot.' });
       }
 
       const history = Array.isArray(req.body?.history) ? req.body.history : [];
       const engine = createEngine(config);
-      const profile = loadProfile(req.userId);
+      const profile = await loadProfile(req.userId);
       let evaluations = [];
       try {
         evaluations = listEvaluations();

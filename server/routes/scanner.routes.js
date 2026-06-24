@@ -53,7 +53,7 @@ export function scannerRouter() {
       if (!title || !String(title).trim()) {
         return res.status(400).json({ error: 'Missing job title.' });
       }
-      const config = loadConfig();
+      const config = await loadConfig(req.userId);
       if (!config.setupComplete) {
         return res.status(409).json({ error: 'Please complete the AI setup wizard first.' });
       }

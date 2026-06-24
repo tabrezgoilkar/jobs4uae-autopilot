@@ -13,13 +13,13 @@ export function evaluateRouter() {
       const jobText = (req.body?.jobText ?? '').trim();
       if (!jobText) return res.status(400).json({ error: 'Please paste a job description.' });
 
-      const config = loadConfig();
+      const config = await loadConfig(req.userId);
       if (!config.setupComplete) {
         return res.status(409).json({ error: 'Please complete the AI setup wizard before evaluating jobs.' });
       }
 
       const engine = createEngine(config);
-      const profile = loadProfile(req.userId);
+      const profile = await loadProfile(req.userId);
       const result = await evaluateJob(profile, jobText, engine);
       const saved = addEvaluation({ ...result, jobText });
       res.json(saved);

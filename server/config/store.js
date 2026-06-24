@@ -1,7 +1,8 @@
-import fs from 'node:fs';
-import path from 'node:path';
-import { configPath } from './paths.js';
+import { getJson, setJson } from '../storage/kv.js';
 
+// Per-user app config (AI engine + keys + setupComplete), via the async storage
+// adapter. Each user has their own config row (cloud) / file (local 'local' user
+// stays flat for back-compat). Setup is therefore per-account.
 export const DEFAULT_CONFIG = {
   engine: null, // 'gemini' | 'byok' | 'ollama'
   gemini: { apiKey: '', model: 'gemini-2.0-flash' },
@@ -10,34 +11,29 @@ export const DEFAULT_CONFIG = {
   setupComplete: false,
 };
 
-export function loadConfig() {
-  const p = configPath();
-  if (!fs.existsSync(p)) return structuredClone(DEFAULT_CONFIG);
-  try {
-    const raw = JSON.parse(fs.readFileSync(p, 'utf8'));
-    return {
-      ...structuredClone(DEFAULT_CONFIG),
-      ...raw,
-      gemini: { ...DEFAULT_CONFIG.gemini, ...raw.gemini },
-      byok: { ...DEFAULT_CONFIG.byok, ...raw.byok },
-      ollama: { ...DEFAULT_CONFIG.ollama, ...raw.ollama },
-    };
-  } catch {
-    return structuredClone(DEFAULT_CONFIG);
-  }
+function normalize(raw) {
+  return {
+    ...structuredClone(DEFAULT_CONFIG),
+    ...raw,
+    gemini: { ...DEFAULT_CONFIG.gemini, ...raw?.gemini },
+    byok: { ...DEFAULT_CONFIG.byok, ...raw?.byok },
+    ollama: { ...DEFAULT_CONFIG.ollama, ...raw?.ollama },
+  };
 }
 
-export function saveConfig(partial) {
-  const base = loadConfig();
+export async function loadConfig(userId) {
+  const raw = await getJson(userId, 'config');
+  return raw ? normalize(raw) : structuredClone(DEFAULT_CONFIG);
+}
+
+export async function saveConfig(userId, partial) {
+  const base = await loadConfig(userId);
   const next = {
     ...base,
     ...partial,
-    gemini: { ...base.gemini, ...partial.gemini },
-    byok: { ...base.byok, ...partial.byok },
-    ollama: { ...base.ollama, ...partial.ollama },
+    gemini: { ...base.gemini, ...partial?.gemini },
+    byok: { ...base.byok, ...partial?.byok },
+    ollama: { ...base.ollama, ...partial?.ollama },
   };
-  const p = configPath();
-  fs.mkdirSync(path.dirname(p), { recursive: true });
-  fs.writeFileSync(p, JSON.stringify(next, null, 2));
-  return next;
+  return setJson(userId, 'config', next);
 }

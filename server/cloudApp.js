@@ -20,8 +20,12 @@ export function createCloudApp() {
 
   app.use('/api', authMiddleware({ verifyToken: clerkVerifier() }));
 
-  app.get('/api/config', (req, res) => res.json(loadConfig()));
-  app.post('/api/config', (req, res) => res.json(saveConfig(req.body ?? {})));
+  app.get('/api/config', async (req, res) => {
+    try { res.json(await loadConfig(req.userId)); } catch (e) { res.status(500).json({ error: e.message }); }
+  });
+  app.post('/api/config', async (req, res) => {
+    try { res.json(await saveConfig(req.userId, req.body ?? {})); } catch (e) { res.status(400).json({ error: e.message }); }
+  });
   app.post('/api/ai/test', async (req, res) => {
     try {
       res.json(await createEngine(req.body ?? {}).testConnection());

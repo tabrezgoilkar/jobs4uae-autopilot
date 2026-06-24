@@ -133,6 +133,54 @@ export async function getPendingLinkedin(): Promise<LinkedinImportResult | null>
   return (await res.json()).pending;
 }
 
+// --- Assisted Auto-Apply (Phase 11) ---
+export interface Connection { id: string; name: string; connected: boolean; updatedAt: string | null; }
+export interface ApplicationFields {
+  nationality: string; visaStatus: string; noticePeriod: string;
+  currentSalary: string; expectedSalary: string; willingToRelocate: string;
+  drivingLicence: string; languages: string[];
+}
+export interface RememberedAnswer { id: string; questionLabel: string; answer: string; source: string; updatedAt: string; }
+export interface ApplicationDetailsData { fields: ApplicationFields; memory: RememberedAnswer[]; }
+export interface PendingQuestion { id: string; selector: string; label: string; type: string; draft?: string; }
+export interface ApplyStartResult { filledCount: number; pending: PendingQuestion[]; }
+
+export async function getConnections(): Promise<Connection[]> {
+  return (await fetch('/api/connections').then(checkOk)).json();
+}
+export async function connectBoard(board: string): Promise<{ ok: boolean }> {
+  return (await fetch(`/api/connections/${board}/connect`, { method: 'POST' }).then(checkOk)).json();
+}
+export async function confirmBoard(board: string): Promise<Connection[]> {
+  return (await fetch(`/api/connections/${board}/confirm`, { method: 'POST' }).then(checkOk)).json();
+}
+export async function disconnectBoard(board: string): Promise<Connection[]> {
+  return (await fetch(`/api/connections/${board}/disconnect`, { method: 'POST' }).then(checkOk)).json();
+}
+
+export async function getApplicationDetails(): Promise<ApplicationDetailsData> {
+  return (await fetch('/api/application-details').then(checkOk)).json();
+}
+export async function saveApplicationDetails(fields: Partial<ApplicationFields>): Promise<ApplicationDetailsData> {
+  return (await fetch('/api/application-details', {
+    method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ fields }),
+  }).then(checkOk)).json();
+}
+
+async function readApply<T>(res: Response): Promise<T> {
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({ error: `Server error ${res.status}` }));
+    throw new Error(body.error || `Server error ${res.status}`);
+  }
+  return res.json();
+}
+export async function applyStart(body: { board: string; jobUrl: string; documentId?: string }): Promise<ApplyStartResult> {
+  return readApply(await fetch('/api/apply/start', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }));
+}
+export async function applyAnswer(body: { board: string; answers: { id: string; answer: string }[] }): Promise<{ remaining: PendingQuestion[] }> {
+  return readApply(await fetch('/api/apply/answer', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }));
+}
+
 export interface Dimension { name: string; score: string; comment: string; }
 export interface Evaluation {
   id: string;

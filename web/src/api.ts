@@ -1,4 +1,4 @@
-export type EngineId = 'gemini' | 'byok' | 'ollama';
+export type EngineId = 'gemini' | 'openrouter' | 'byok' | 'ollama';
 
 export interface ApplicationDetails {
   nationality?: string;
@@ -10,6 +10,7 @@ export interface ApplicationDetails {
 export interface AppConfig {
   engine: EngineId | null;
   gemini: { apiKey: string; model: string };
+  openrouter: { apiKey: string; model: string };
   byok: { baseUrl: string; apiKey: string; model: string };
   ollama: { baseUrl: string; model: string };
   applicationDetails?: ApplicationDetails;

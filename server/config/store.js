@@ -4,8 +4,9 @@ import { getJson, setJson } from '../storage/kv.js';
 // adapter. Each user has their own config row (cloud) / file (local 'local' user
 // stays flat for back-compat). Setup is therefore per-account.
 export const DEFAULT_CONFIG = {
-  engine: null, // 'gemini' | 'byok' | 'ollama'
+  engine: null, // 'gemini' | 'openrouter' | 'byok' | 'ollama'
   gemini: { apiKey: '', model: 'gemini-2.0-flash' },
+  openrouter: { apiKey: '', model: 'auto' }, // auto = discover + rotate free models
   byok: { baseUrl: 'https://api.openai.com/v1', apiKey: '', model: 'gpt-4o-mini' },
   ollama: { baseUrl: 'http://127.0.0.1:11434', model: 'llama3.2' },
   setupComplete: false,
@@ -16,6 +17,7 @@ function normalize(raw) {
     ...structuredClone(DEFAULT_CONFIG),
     ...raw,
     gemini: { ...DEFAULT_CONFIG.gemini, ...raw?.gemini },
+    openrouter: { ...DEFAULT_CONFIG.openrouter, ...raw?.openrouter },
     byok: { ...DEFAULT_CONFIG.byok, ...raw?.byok },
     ollama: { ...DEFAULT_CONFIG.ollama, ...raw?.ollama },
   };

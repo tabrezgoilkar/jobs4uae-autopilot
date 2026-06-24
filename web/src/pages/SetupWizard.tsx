@@ -4,8 +4,9 @@ import { Button } from '../components/ui';
 import { IconSparkle } from '../components/icons';
 
 const ENGINES: { id: EngineId; title: string; blurb: string }[] = [
-  { id: 'gemini', title: 'Gemini (free)', blurb: 'Best quality for free. Needs internet + a free Google key.' },
-  { id: 'byok', title: 'My own key', blurb: 'Use your own Claude / OpenAI / Gemini key.' },
+  { id: 'openrouter', title: 'OpenRouter (free, recommended)', blurb: 'Free models, auto-picks & rotates a working one. Just paste a free OpenRouter key.' },
+  { id: 'gemini', title: 'Gemini', blurb: 'Free Google key — but the free tier isn’t available in every region.' },
+  { id: 'byok', title: 'My own key', blurb: 'Use your own Claude / OpenAI / other OpenAI-compatible key.' },
   { id: 'ollama', title: 'Local AI (offline)', blurb: '100% private & offline. Needs a decent PC.' },
 ];
 
@@ -20,12 +21,12 @@ export default function SetupWizard({
   onComplete: (c: AppConfig) => void;
 }) {
   const [cfg, setCfg] = useState<AppConfig>(initial);
-  const [engine, setEngine] = useState<EngineId>(initial.engine ?? 'gemini');
+  const [engine, setEngine] = useState<EngineId>(initial.engine ?? 'openrouter');
   const [status, setStatus] = useState<{ ok?: boolean; message: string } | null>(null);
   const [busy, setBusy] = useState(false);
 
   function engineBody(): Record<string, unknown> {
-    return { engine, gemini: cfg.gemini, byok: cfg.byok, ollama: cfg.ollama };
+    return { engine, gemini: cfg.gemini, openrouter: cfg.openrouter, byok: cfg.byok, ollama: cfg.ollama };
   }
 
   function selectEngine(id: EngineId) {
@@ -97,6 +98,20 @@ export default function SetupWizard({
           </div>
 
           <div className="mt-6 space-y-3">
+            {engine === 'openrouter' && (
+              <label className="block">
+                <span className={LABEL}>OpenRouter API key</span>
+                <input
+                  type="password"
+                  autoComplete="off"
+                  className={FIELD}
+                  value={cfg.openrouter.apiKey}
+                  onChange={(ev) => setCfg({ ...cfg, openrouter: { ...cfg.openrouter, apiKey: ev.target.value } })}
+                  placeholder="Create a free key at openrouter.ai/keys"
+                />
+                <span className="text-xs text-ink-muted">Free models are auto-discovered and rotated — nothing to pick. Test will show which one connected.</span>
+              </label>
+            )}
             {engine === 'gemini' && (
               <label className="block">
                 <span className={LABEL}>Gemini API key</span>

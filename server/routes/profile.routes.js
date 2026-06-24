@@ -7,6 +7,7 @@ import { normalizeProfile } from '../profile/schema.js';
 import { linkedinToProfile, looksLikeLinkedinExport } from '../profile/linkedin/map.js';
 import { mergeProfile } from '../profile/linkedin/merge.js';
 import { bookmarkletCode } from '../profile/linkedin/bookmarklet.js';
+import { setPending, takePending } from '../profile/linkedin/pending.js';
 import { loadConfig } from '../config/store.js';
 import { createEngine } from '../ai/index.js';
 
@@ -90,10 +91,18 @@ export function profileRouter() {
       }
       const incoming = linkedinToProfile(raw);
       const { merged, changes } = mergeProfile(loadProfile(), incoming);
+      // A bookmarklet import (cross-origin from linkedin.com) is stashed for the
+      // app to pick up; a same-origin file upload uses this response directly.
+      if (req.headers.origin === 'https://www.linkedin.com') setPending({ merged, changes });
       res.json({ merged, changes });
     } catch (e) {
       res.status(400).json({ error: e.message });
     }
+  });
+
+  // The app polls this while the import modal is open; take-once.
+  router.get('/linkedin/pending', (req, res) => {
+    res.json({ pending: takePending() });
   });
 
   return router;

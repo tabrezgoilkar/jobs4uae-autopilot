@@ -76,4 +76,28 @@ describe('LinkedIn import API', () => {
       .send(VOYAGER);
     expect(res.headers['access-control-allow-origin']).toBe('https://www.linkedin.com');
   });
+
+  it('stashes a bookmarklet (linkedin.com origin) import so the app can pick it up once', async () => {
+    const { createApp } = await import('../app.js');
+    const app = createApp();
+    await request(app).post('/api/profile/linkedin/import').set('Origin', 'https://www.linkedin.com').send(VOYAGER);
+
+    const first = await request(app).get('/api/profile/linkedin/pending');
+    expect(first.status).toBe(200);
+    expect(first.body.pending.merged.headline).toBe('Senior Engineer');
+    expect(first.body.pending.changes.added.experience).toBe(1);
+
+    // take-once: a second poll is empty
+    const second = await request(app).get('/api/profile/linkedin/pending');
+    expect(second.body.pending).toBe(null);
+  });
+
+  it('does NOT stash a same-origin file upload (app uses the response directly)', async () => {
+    const { createApp } = await import('../app.js');
+    const app = createApp();
+    const jsonResume = JSON.stringify({ basics: { name: 'John Roe' }, work: [] });
+    await request(app).post('/api/profile/linkedin/import').attach('file', Buffer.from(jsonResume), 'p.json');
+    const res = await request(app).get('/api/profile/linkedin/pending');
+    expect(res.body.pending).toBe(null);
+  });
 });

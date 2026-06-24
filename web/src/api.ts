@@ -93,6 +93,46 @@ export async function importCv(file: File): Promise<Profile> {
   return res.json();
 }
 
+export interface LinkedinChanges {
+  filled: string[];
+  added: Record<string, number>;
+  addedItems: Record<string, string[]>;
+}
+export interface LinkedinImportResult { merged: Profile; changes: LinkedinChanges; }
+
+async function readImport(res: Response): Promise<LinkedinImportResult> {
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({ error: `Server error ${res.status}` }));
+    throw new Error(body.error || `Server error ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function getLinkedinBookmarklet(): Promise<{ href: string }> {
+  const res = await fetch('/api/profile/linkedin/bookmarklet').then(checkOk);
+  return res.json();
+}
+
+export async function importLinkedinFile(file: File): Promise<LinkedinImportResult> {
+  const fd = new FormData();
+  fd.append('file', file);
+  return readImport(await fetch('/api/profile/linkedin/import', { method: 'POST', body: fd }));
+}
+
+export async function importLinkedinJson(raw: unknown): Promise<LinkedinImportResult> {
+  return readImport(await fetch('/api/profile/linkedin/import', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(raw),
+  }));
+}
+
+/** Polls for a bookmarklet import the user triggered in their LinkedIn tab (take-once). */
+export async function getPendingLinkedin(): Promise<LinkedinImportResult | null> {
+  const res = await fetch('/api/profile/linkedin/pending').then(checkOk);
+  return (await res.json()).pending;
+}
+
 export interface Dimension { name: string; score: string; comment: string; }
 export interface Evaluation {
   id: string;

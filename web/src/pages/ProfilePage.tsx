@@ -11,6 +11,7 @@ import { Card, PageHeader, Button } from '../components/ui';
 import { IconSparkle } from '../components/icons';
 import { RadialGauge } from '../components/charts';
 import { analyzeProfile } from '../lib/profileStrength';
+import LinkedinImportModal from '../components/LinkedinImportModal';
 
 const FIELD = 'mt-1 w-full rounded-md border border-hair bg-surface text-ink p-2 text-sm j4u-focus placeholder:text-ink-muted';
 const LABEL = 'text-sm font-medium text-ink-secondary';
@@ -21,7 +22,14 @@ export default function ProfilePage() {
   const [importing, setImporting] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
+  const [linkedinOpen, setLinkedinOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  function onLinkedinApply(merged: Profile) {
+    setProfile(merged);
+    setLinkedinOpen(false);
+    setMessage({ ok: true, text: 'LinkedIn profile merged in. Review the details below, then Save.' });
+  }
 
   useEffect(() => {
     getProfile().then(setProfile).catch(() => setLoadError(true));
@@ -139,10 +147,9 @@ export default function ProfilePage() {
         {importing && <p className="mt-2 text-sm text-primary-700">Reading your CV with AI… this can take a few seconds.</p>}
         <div className="mt-3 pt-3 border-t border-hair-subtle flex items-center gap-3 flex-wrap">
           <span className="text-xs text-ink-muted">Or:</span>
-          <button type="button" title="LinkedIn sync — coming soon" disabled className="inline-flex items-center gap-2 h-9 px-3 rounded-md border border-hair text-ink-secondary text-xs font-semibold opacity-60 cursor-default">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M4.98 3.5A2.5 2.5 0 1 0 5 8.5a2.5 2.5 0 0 0-.02-5zM3 9h4v12H3zM9 9h3.8v1.7h.05c.53-1 1.84-2.05 3.8-2.05 4.06 0 4.8 2.67 4.8 6.14V21h-4v-5.3c0-1.26-.02-2.9-1.77-2.9-1.77 0-2.04 1.38-2.04 2.8V21H9z" /></svg>
-            Sync from LinkedIn
-            <span className="font-mono text-[10px] opacity-70">soon</span>
+          <button type="button" onClick={() => setLinkedinOpen(true)} className="j4u-chip inline-flex items-center gap-2 h-9 px-3 rounded-md border border-hair text-ink-secondary text-xs font-semibold">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="#0a66c2"><path d="M4.98 3.5A2.5 2.5 0 1 0 5 8.5a2.5 2.5 0 0 0-.02-5zM3 9h4v12H3zM9 9h3.8v1.7h.05c.53-1 1.84-2.05 3.8-2.05 4.06 0 4.8 2.67 4.8 6.14V21h-4v-5.3c0-1.26-.02-2.9-1.77-2.9-1.77 0-2.04 1.38-2.04 2.8V21H9z" /></svg>
+            Import from LinkedIn
           </button>
         </div>
       </Card>
@@ -280,6 +287,8 @@ export default function ProfilePage() {
       </div>{/* /left column */}
       <ProfileRail profile={profile} />
       </div>{/* /grid */}
+
+      {linkedinOpen && <LinkedinImportModal onApply={onLinkedinApply} onClose={() => setLinkedinOpen(false)} />}
     </div>
   );
 }

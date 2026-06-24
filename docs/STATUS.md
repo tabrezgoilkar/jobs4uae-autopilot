@@ -27,9 +27,13 @@ Runs entirely on the user's PC — Node/Express server (port 5123) + Vite/React 
 - **Settings page** — change AI engine/model/key in-app, application-details memory, privacy, GitHub feedback links.
 - Bespoke, zero-dependency, token-themed SVG **chart primitives** (RadialGauge / Donut / Sparkline) + eased count-ups.
 
-**Quality:** 258 tests passing (server + web utils); web builds clean; eslint clean.
+**Quality:** 280 tests passing (server + web utils); web builds clean; eslint clean.
 
-## 2026-06-24 — Cloud SaaS Phase A: auth foundation started (on `main`)
+## 2026-06-24 — Cloud SaaS Phase A: **LIVE** (multi-tenant, auth + Postgres verified)
+**Live:** https://jobs4uae-tabrezg-projects-projects.vercel.app — sign up → Clerk login → AI setup →
+edit profile → Save **persists per-user in Neon Postgres** (verified directly in `app_state`:
+per-user `config` + `profile` rows). The full Phase 2 online flow works end-to-end.
+
 Decision: take the app online as a **multi-user product** (option B), AI model **3** (hybrid),
 **without losing any feature** — so it's a **hybrid**: cloud hosts UI/auth/data/AI; a later desktop
 companion runs the headed-browser features (Scan/Assisted Auto-Apply). Spec:
@@ -45,15 +49,35 @@ CV (import → tailored CV/Documents) first**; rest later.
 - **A5 login screens done:** `web/src/AuthGate.tsx` wraps the app in Clerk (`<SignIn>` when
   signed out), a fetch interceptor attaches the session token to `/api`; no Clerk key → renders
   the app directly (local dev). Keys live in gitignored `.env` files only.
-- **A4 Vercel packaging done + deploying:** `server/cloudApp.js` (cloud-safe, Playwright-free
-  routers: profile, documents, email-compose) + `api/[...all].js` serverless entry + `vercel.json`
-  (installs web deps, builds the SPA → `web/dist`). GitHub `main` → Vercel project `jobs4uae`
-  auto-deploys; the build is now **green** (fixed the `tsc not found` failure).
-- **To go live (owner, in Vercel dashboard):** turn OFF Deployment Protection (Vercel Authentication);
-  set env `VITE_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`, `CLERK_AUTHORIZED_PARTIES` (prod URL).
-- **Remaining for Phase A:** Postgres impl behind the `kv` interface (async) + per-user settings/
-  hybrid-AI, so cloud data + AI config actually persist (serverless disk is read-only). Until then
-  the cloud app builds + login works but saves don't persist.
+- **A4 Vercel packaging (live):** `server/cloudApp.js` (cloud-safe, Playwright-free routers) +
+  `api/index.js` serverless entry + `vercel.json`. GitHub `main` → Vercel project `jobs4uae`
+  auto-deploys. Fixed two deploy bugs: the `tsc not found` build failure, and a routing bug where
+  the `[...all]` catch-all only matched one `/api` segment (3+ segment routes 404'd) — now a single
+  function with a `/api/(.*)` rewrite that preserves the path.
+- **Persistence (live):** `server/storage/kv.js` is async with a **Neon Postgres** impl
+  (`@neondatabase/serverless`, one jsonb row per `user_id+key` in `app_state`) + filesystem impl for
+  local dev (`local` user stays flat). `profile`, `documents`, `config` stores are async + per-user.
+  Neon provisioned via the Vercel CLI (Free plan), `DATABASE_URL` set for all envs.
+- **Auth (live):** Clerk verify (fails closed in prod, `authorizedParties` pinned), token attached to
+  `/api` calls by a fetch interceptor; env vars set on Vercel; Deployment Protection off.
+- **Free AI (live):** new `openrouter` engine (`server/ai/index.js`) → `byok.js` pointed at
+  OpenRouter with `model='auto'` → auto-discovers/rotates working `:free` models. Setup wizard offers
+  "OpenRouter (free, recommended)" as the default (fixes the BYOK→OpenAI base-URL trap).
+
+### TO-DO (tracked — we will do these)
+- [ ] **LinkedIn bookmarklet import returns `410`** — LinkedIn retired the Voyager `profileView`
+  endpoint the bookmarklet calls. Must re-point it at LinkedIn's current data source (likely the
+  page's embedded preloaded state or the current GraphQL queryId). Brittle/cat-and-mouse; needs a
+  live logged-in LinkedIn session to verify. (CV-file import is the reliable alternative meanwhile.)
+- [ ] **Hybrid free-tier on the owner key** (AI model 3) — let new users use the app with no key of
+  their own, on `OWNER_AI_KEY` with a per-user daily cap; BYOK bypasses the cap. (Spec §6 of the
+  cloud-saas Phase A design; only the BYOK half is built so far.)
+- [ ] **Per-user settings encryption** — AI keys are stored per-user in `app_state` jsonb in plaintext;
+  encrypt at rest (AES-GCM) per the spec.
+- [ ] **Bring more features online** as their stores go per-user (Evaluate, Tracker, Dashboard,
+  Salary, Application Details) — currently cloud mounts only profile/documents/email-compose.
+- [ ] **Phase B desktop companion** — Scan + Assisted Auto-Apply (headed browser; can't run
+  serverless), paired to the cloud account.
 
 ## 2026-06-24 — Assisted Auto-Apply v1 (Indeed) — backend + UI (on `main`)
 Phase 11 v1 built to spec (`2026-06-21-phase-11-assisted-auto-apply-design.md`), **assisted, never automated** — the app prepares & autofills; the **user clicks Submit**. No passwords stored, no CAPTCHA defeat, no fabricated facts, no unattended submit.

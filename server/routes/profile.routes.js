@@ -3,6 +3,7 @@ import multer from 'multer';
 import { loadProfile, saveProfile } from '../profile/store.js';
 import { extractText } from '../profile/extract.js';
 import { parseCvText } from '../profile/parse.js';
+import { assistProfile } from '../profile/assist.js';
 import { normalizeProfile } from '../profile/schema.js';
 import { linkedinToProfile, looksLikeLinkedinExport } from '../profile/linkedin/map.js';
 import { mergeProfile } from '../profile/linkedin/merge.js';
@@ -103,6 +104,22 @@ export function profileRouter() {
   // The app polls this while the import modal is open; take-once.
   router.get('/linkedin/pending', (req, res) => {
     res.json({ pending: takePending() });
+  });
+
+  // Agentic profile assistant: plain-language request → proposed profile update +
+  // clarifying questions (NOT saved — the UI confirms, then POSTs to save).
+  router.post('/assist', async (req, res) => {
+    try {
+      const message = (req.body?.message ?? '').toString().trim();
+      if (!message) return res.status(400).json({ error: 'Tell the assistant what you want to add or improve.' });
+      const config = await loadConfig(req.userId);
+      if (!config.setupComplete) return res.status(409).json({ error: 'Please complete the AI setup wizard first.' });
+      const engine = createEngine(config);
+      const profile = await loadProfile(req.userId);
+      res.json(await assistProfile(profile, message, engine));
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
   });
 
   return router;

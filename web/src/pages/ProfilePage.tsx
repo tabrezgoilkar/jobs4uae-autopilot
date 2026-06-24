@@ -12,6 +12,7 @@ import { IconSparkle } from '../components/icons';
 import { RadialGauge } from '../components/charts';
 import { analyzeProfile, type ProfileSection } from '../lib/profileStrength';
 import LinkedinImportModal from '../components/LinkedinImportModal';
+import ProfileAssistant from '../components/ProfileAssistant';
 
 const FIELD = 'mt-1 w-full rounded-md border border-hair bg-surface text-ink p-2 text-sm j4u-focus placeholder:text-ink-muted';
 const LABEL = 'text-[12.5px] font-medium text-ink-secondary';
@@ -27,6 +28,7 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [linkedinOpen, setLinkedinOpen] = useState(false);
+  const [assistantOpen, setAssistantOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { getProfile().then(setProfile).catch(() => setLoadError(true)); }, []);
@@ -172,10 +174,16 @@ export default function ProfilePage() {
           <LanguagesCard {...editor} />
           <AwardsCard {...editor} />
         </div>
-        <ProfileRail profile={profile} onFix={onFix} />
+        <ProfileRail profile={profile} onFix={onFix} onImprove={() => setAssistantOpen(true)} />
       </div>
 
       {linkedinOpen && <LinkedinImportModal onApply={onLinkedinApply} onClose={() => setLinkedinOpen(false)} />}
+      {assistantOpen && (
+        <ProfileAssistant
+          onClose={() => setAssistantOpen(false)}
+          onApplied={(p) => { setProfile(p); setMessage({ ok: true, text: 'Assistant updated your profile.' }); }}
+        />
+      )}
     </div>
   );
 }
@@ -462,10 +470,7 @@ function AwardsCard(c: EditorCtx) {
 }
 
 /* ---------- Copilot rail ---------- */
-function openCopilotPanel() {
-  window.dispatchEvent(new KeyboardEvent('keydown', { key: 'j', ctrlKey: true, bubbles: true }));
-}
-function ProfileRail({ profile, onFix }: { profile: Profile; onFix: (s: ProfileSection) => void }) {
+function ProfileRail({ profile, onFix, onImprove }: { profile: Profile; onFix: (s: ProfileSection) => void; onImprove: () => void }) {
   const { score, suggestions } = useMemo(() => analyzeProfile(profile), [profile]);
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
   const visible = suggestions.filter((s) => !dismissed.has(s.title));
@@ -487,7 +492,7 @@ function ProfileRail({ profile, onFix }: { profile: Profile; onFix: (s: ProfileS
             <div className="text-[11.5px] text-ink-secondary mt-0.5 leading-snug">{label}</div>
           </div>
         </div>
-        <button onClick={openCopilotPanel} className="j4u-press mt-3 w-full inline-flex items-center justify-center gap-2 h-9 rounded-md bg-ai-600 text-white text-[12.5px] font-semibold">
+        <button onClick={onImprove} className="j4u-press mt-3 w-full inline-flex items-center justify-center gap-2 h-9 rounded-md bg-ai-600 text-white text-[12.5px] font-semibold">
           <IconSparkle size={14} color="#fff" /> Improve with AI
         </button>
         <div className="text-[10px] font-bold tracking-wide uppercase text-ai-700 mt-[18px] mb-2.5">Suggestions</div>

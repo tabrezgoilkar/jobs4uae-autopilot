@@ -165,6 +165,18 @@ export async function getPendingLinkedin(): Promise<LinkedinImportResult | null>
   return (await res.json()).pending;
 }
 
+export interface AssistResult { reply: string; questions: string[]; proposed: Profile | null; }
+export async function assistProfile(message: string): Promise<AssistResult> {
+  const res = await fetch('/api/profile/assist', {
+    method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ message }),
+  });
+  if (!res.ok) {
+    const b = await res.json().catch(() => ({ error: `Server error ${res.status}` }));
+    throw new Error(b.error || `Server error ${res.status}`);
+  }
+  return res.json();
+}
+
 // --- Assisted Auto-Apply (Phase 11) ---
 export interface Connection { id: string; name: string; connected: boolean; updatedAt: string | null; }
 export interface ApplicationFields {

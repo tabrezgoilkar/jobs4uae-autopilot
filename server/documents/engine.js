@@ -1,14 +1,30 @@
-import { extractJson } from '../lib/json.js';
 import { DOC_SYSTEM, buildDocumentsPrompt } from './prompt.js';
 import { coerceGrade } from '../lib/grades.js';
 
-function normalizeDocuments(raw = {}) {
+// The AI returns sentinel-delimited sections rather than JSON, because the resume
+// and cover letter are large freeform Markdown — embedding them in JSON routinely
+// breaks parsing (unescaped quotes/newlines inside the string values). Sentinels
+// are robust to any content.
+function parseSections(text) {
+  const out = {};
+  const re = /===\s*([A-Z]+)\s*===/g;
+  const marks = [];
+  let m;
+  while ((m = re.exec(text))) marks.push({ name: m[1], headerStart: m.index, contentStart: re.lastIndex });
+  for (let i = 0; i < marks.length; i++) {
+    const end = i + 1 < marks.length ? marks[i + 1].headerStart : text.length;
+    out[marks[i].name] = text.slice(marks[i].contentStart, end).trim();
+  }
+  return out;
+}
+
+function normalizeDocuments(s) {
   return {
-    resumeMarkdown: typeof raw.resumeMarkdown === 'string' ? raw.resumeMarkdown : '',
-    coverLetterMarkdown: typeof raw.coverLetterMarkdown === 'string' ? raw.coverLetterMarkdown : '',
-    fitScore: coerceGrade(raw.fitScore),
-    missingSkills: Array.isArray(raw.missingSkills) ? raw.missingSkills.map(String) : [],
-    rationale: typeof raw.rationale === 'string' ? raw.rationale.trim() : '',
+    resumeMarkdown: s.RESUME ?? '',
+    coverLetterMarkdown: s.COVER ?? '',
+    fitScore: coerceGrade(s.FIT),
+    missingSkills: s.MISSING ? s.MISSING.split(/[,\n]+/).map((x) => x.trim()).filter(Boolean) : [],
+    rationale: s.RATIONALE ?? '',
   };
 }
 
@@ -17,13 +33,7 @@ export async function generateDocuments(profile, jobText, engine) {
     system: DOC_SYSTEM,
     prompt: buildDocumentsPrompt(profile, jobText),
   });
-  let parsed;
-  try {
-    parsed = extractJson(raw);
-  } catch (e) {
-    throw new Error(`Could not understand the AI response while writing your documents. ${e.message}`);
-  }
-  const docs = normalizeDocuments(parsed);
+  const docs = normalizeDocuments(parseSections(String(raw ?? '')));
   if (!docs.resumeMarkdown && !docs.coverLetterMarkdown) {
     throw new Error('The AI did not return any document content. Please try again.');
   }

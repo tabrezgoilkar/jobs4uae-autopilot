@@ -5,7 +5,7 @@ export const DOC_SYSTEM =
   "candidate's strongest matching proofs? what's their biggest gap and how do we honestly soften it?), then you reshape, " +
   'reorder, and rewrite — foregrounding the most relevant evidence, leading bullets with impact, and mirroring the job\'s ' +
   'language. This is real tailoring, NOT a light re-word of the same CV. You NEVER invent employers, titles, dates, ' +
-  'metrics, qualifications, or skills. You write clean, ATS-friendly Markdown. Return ONLY valid JSON.';
+  'metrics, qualifications, or skills. You write clean, ATS-friendly Markdown. Return ONLY the five marked sections requested — no preamble, no JSON, no code fences.';
 
 export function buildDocumentsPrompt(profile, jobText) {
   return `Coach this candidate into the strongest HONEST application for the job below, and explain your reasoning.
@@ -45,14 +45,20 @@ Markdown rules: real headings and "- " bullets, blank line between sections, NO 
 
 5) rationale — 2–4 sentences of COACHING: the key tailoring decisions you made and WHY (which strengths you led with for this role, what language you mirrored, and which gap you addressed and how) — honest, specific to this candidate and job, no fabrication.
 
-Return JSON with EXACTLY these keys:
-{
-  "resumeMarkdown": string,
-  "coverLetterMarkdown": string,
-  "fitScore": "A" | "B" | "C" | "D" | "F",
-  "missingSkills": string[],
-  "rationale": string
-}
+Return EXACTLY these five sections and NOTHING else — no preamble, no JSON, no code fences. Each section starts with its marker alone on its own line:
+
+===FIT===
+A single grade letter (A, B, C, D, or F) — the fit AFTER tailoring.
+===MISSING===
+Comma-separated skills the JOB needs that the candidate still genuinely lacks (leave this line blank if none).
+===RATIONALE===
+The 2–4 sentences of coaching described above.
+===RESUME===
+The full tailored resume in Markdown, using the structure described above.
+===COVER===
+The full cover letter in Markdown.
+
+(Put the resume and cover letter Markdown directly under their markers — write freely, no escaping needed.)
 
 CANDIDATE PROFILE (JSON):
 ${JSON.stringify(profile)}

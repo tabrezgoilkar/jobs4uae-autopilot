@@ -44,7 +44,7 @@ describe('documents API', () => {
 
   it('POST /api/documents/generate returns tailored markdown from pasted jobText', async () => {
     writeConfig();
-    stubGemini(JSON.stringify({ resumeMarkdown: '# Jane', coverLetterMarkdown: 'Dear team', fitScore: 'A', missingSkills: ['SAP'] }));
+    stubGemini('===FIT===\nA\n===MISSING===\nSAP\n===RATIONALE===\nLed with audit.\n===RESUME===\n# Jane\n===COVER===\nDear team\n');
     const { createApp } = await import('../app.js');
     const res = await request(createApp()).post('/api/documents/generate').send({ jobText: 'Accountant', jobTitle: 'Accountant', company: 'ACME' });
     expect(res.status).toBe(200);
@@ -63,7 +63,7 @@ describe('documents API', () => {
     const app = createApp();
     const ev = await request(app).post('/api/evaluate').send({ jobText: 'EVAL-JOB-TEXT' });
     // Now re-stub with doc-shaped JSON and generate from that evaluation.
-    stubGemini(JSON.stringify({ resumeMarkdown: '# Tailored', coverLetterMarkdown: 'Hello' }));
+    stubGemini('===RESUME===\n# Tailored\n===COVER===\nHello\n');
     const res = await request(app).post('/api/documents/generate').send({ evaluationId: ev.body.id });
     expect(res.status).toBe(200);
     expect(res.body.resumeMarkdown).toContain('Tailored');
@@ -76,7 +76,7 @@ describe('documents API', () => {
       path.join(tmpDir, 'profile.json'),
       JSON.stringify({ fullName: 'Base Candidate', headline: 'Engineer', summary: 'My real summary', skills: ['X'] }),
     );
-    stubGemini(JSON.stringify({ resumeMarkdown: '# Tailored Jane', coverLetterMarkdown: 'Dear', fitScore: 'A', missingSkills: [] }));
+    stubGemini('===FIT===\nA\n===MISSING===\n\n===RATIONALE===\nx\n===RESUME===\n# Tailored Jane\n===COVER===\nDear\n');
     const { createApp } = await import('../app.js');
     const res = await request(createApp()).post('/api/documents/generate').send({ jobText: 'Engineer role' });
     expect(res.status).toBe(200);
@@ -109,7 +109,7 @@ describe('documents API', () => {
       path.join(tmpDir, 'evaluations.json'),
       JSON.stringify([{ id: 'ev_old', jobTitle: 'Legacy', company: 'Old', grade: 'C', createdAt: '2026-01-01T00:00:00.000Z' }]),
     );
-    stubGemini(JSON.stringify({ resumeMarkdown: '# Fallback', coverLetterMarkdown: 'Hi' }));
+    stubGemini('===RESUME===\n# Fallback\n===COVER===\nHi\n');
     const { createApp } = await import('../app.js');
     const res = await request(createApp())
       .post('/api/documents/generate')

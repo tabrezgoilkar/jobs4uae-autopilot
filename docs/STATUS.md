@@ -18,7 +18,7 @@ Runs entirely on the user's PC — Node/Express server (port 5123) + Vite/React 
 
 **Find & apply**
 - **Scan** — Indeed board (real, live-verified; headed browser + embedded-JSON parse). Rebuilt as the design's 2-column **fit-&-tailor workspace**: ranked job list + sticky Copilot panel (fit dial, dimension-by-dimension, worth-strengthening, "Tailor my CV for this job").
-- Auto-apply — placeholder (Phase 11).
+- **Auto-apply — assisted apply live (Indeed)**: Connect → autofill (contact + CV PDF + cover letter + remembered answers) → answer new questions once → user reviews & submits. Backend + UI done; see Phase 11 below.
 
 **Design system & shell (Lumzi)**
 - Tokens (cobalt primary, iris AI accents, hairline-first, IBM Plex), light + dark.
@@ -27,7 +27,17 @@ Runs entirely on the user's PC — Node/Express server (port 5123) + Vite/React 
 - **Settings page** — change AI engine/model/key in-app, application-details memory, privacy, GitHub feedback links.
 - Bespoke, zero-dependency, token-themed SVG **chart primitives** (RadialGauge / Donut / Sparkline) + eased count-ups.
 
-**Quality:** 215 tests passing (server + web utils); web builds clean; eslint clean.
+**Quality:** 246 tests passing (server + web utils); web builds clean; eslint clean.
+
+## 2026-06-24 — Assisted Auto-Apply v1 (Indeed) — backend + UI (on `main`)
+Phase 11 v1 built to spec (`2026-06-21-phase-11-assisted-auto-apply-design.md`), **assisted, never automated** — the app prepares & autofills; the **user clicks Submit**. No passwords stored, no CAPTCHA defeat, no fabricated facts, no unattended submit.
+- **Application Details store** (`server/apply/answers/store.js`) — standard GCC answers (nationality, visa, notice, current/expected salary, relocate, licence, languages) + an **accumulating Q&A memory** (upsert by normalized question key → asked once, reused forever). `GET/POST /api/application-details`.
+- **AI answer-matcher** (`apply/match.js`) — maps a form question to a stored field/memory answer (exact memory short-circuits the AI), **drafts** open-ended free-text from the real profile, or **asks** — and **never invents** a factual answer.
+- **Indeed board config + autofiller** (`apply/boards/indeed.js`, `apply/autofill.js`) — config-driven field map; fills contact fields + **resume PDF** + **cover letter** + known/draftable screening answers, returns the rest as pending, **never calls submit** (unit-tested via a fake page adapter).
+- **Headed persistent browser** (`apply/browser.js`) — per-board `launchPersistentContext` (session only, never passwords); real page adapter (manual-verify, like the scanner).
+- **Connections + apply API** — `GET /api/connections`, `connect`/`confirm`/`disconnect`; `POST /api/apply/start` (open job → autofill → `{ filledCount, pending }`) + `POST /api/apply/answer` (fill into the live form, remember, return remaining). **No submit route.**
+- **Auto-apply page wired** — Connect Indeed → "I've logged in" → Connected; Apply workspace (paste job URL → Open & autofill → answer-new-questions panel with AI drafts → "review the form & Submit yourself"); inline Application Details editor (seeded from Settings answers).
+- 39 new tests. **Live Indeed connect + one real assisted application are verifiable only on the user's machine** (selectors/login are inherently manual, like scanning); all orchestration/store/matcher/routes are unit-tested.
 
 ## 2026-06-24 — LinkedIn profile sync + Documents word-diff (on `main`)
 - **LinkedIn import (Phase 9, partial)** — pull your **own** LinkedIn profile into My Profile, Rezi-style, **local-first**:
@@ -51,7 +61,7 @@ Runs entirely on the user's PC — Node/Express server (port 5123) + Vite/React 
 ## Remaining
 
 - **Phase 8** — more boards: ATS (Greenhouse/Lever — reliable, testable anywhere), then Bayt/Naukrigulf/GulfTalent via headed browser; per-board verification gating. (Bayt/Naukrigulf scrapers were removed from the active build — Cloudflare-blocked; see plan below.)
-- **Phase 11 — Assisted Auto-Apply backend** (page UI done): the live flow behind the Auto-apply page — persistent per-board browser session (connect/login), open job → **autofill** fields + CV PDF + cover letter + known answers → user clicks Submit; accumulating Q&A memory; optional email-apply. Needs the user's machine to test real board logins.
+- **Phase 11 — Assisted Auto-Apply**: **v1 (Indeed) shipped** (above). Remaining: verify on a real Indeed login/application (user's machine); then more boards (Bayt/Naukrigulf via same config pattern), **LinkedIn connect**, and **Email-Apply** for "send your CV to hr@…" post-jobs (§6.6 of the spec).
 - **Phase 9** — LinkedIn import shipped (above); remaining: **Phase 9b** polished Chrome extension (wraps the same `/api/profile/linkedin/import` endpoint) + assisted batch apply.
 - **Phase 10** — one-click Windows installer + auto-install Ollama.
 - **Phase 18** — mock interview.

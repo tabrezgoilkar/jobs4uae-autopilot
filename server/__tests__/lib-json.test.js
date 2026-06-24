@@ -14,4 +14,18 @@ describe('extractJson (shared)', () => {
   it('throws when there is no JSON', () => {
     expect(() => extractJson('nope')).toThrow();
   });
+  it('repairs raw newlines/tabs inside string values (weak models)', () => {
+    // A model returned real newlines inside the markdown string — invalid JSON, but recoverable.
+    const raw = '{"resumeMarkdown":"# Jane\n\n## Summary\nGreat dev.","fitScore":"A"}';
+    const out = extractJson(raw);
+    expect(out.fitScore).toBe('A');
+    expect(out.resumeMarkdown).toContain('## Summary');
+    expect(out.resumeMarkdown).toContain('\n');
+  });
+  it('does not corrupt structural formatting when repairing', () => {
+    const raw = '{\n  "a": "line1\nline2",\n  "b": 2\n}';
+    const out = extractJson(raw);
+    expect(out.b).toBe(2);
+    expect(out.a).toBe('line1\nline2');
+  });
 });

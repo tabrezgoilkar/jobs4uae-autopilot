@@ -131,6 +131,8 @@ export interface DocumentDraft {
   coverLetterMarkdown: string;
   /** Deterministic CV rendered from the profile (the "before tailoring" baseline). */
   baseResumeMarkdown?: string;
+  /** Career-coach reasoning: the key tailoring decisions and why. */
+  rationale?: string;
   jobTitle: string;
   company: string;
   evaluationId: string | null;

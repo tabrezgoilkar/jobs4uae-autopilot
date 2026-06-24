@@ -12,61 +12,74 @@ import {
   type Evaluation,
 } from '../api';
 import { gradeToStars, learningLinks } from '../lib/skills';
-import { diffLines, type DiffLine } from '../lib/diff';
+import { diffSections, type ChangeSegment } from '../lib/wordDiff';
 import DownloadButtons from '../features/pdf/DownloadButtons';
 import { Card, PageHeader, Button } from '../components/ui';
 import { RadialGauge } from '../components/charts';
+import { IconSparkle } from '../components/icons';
 
-type CvView = 'preview' | 'edit' | 'diff';
+type CvView = 'final' | 'edit' | 'diff';
 
-/** Renders the line-level diff between the profile baseline and the tailored CV. */
-function DiffView({ diff, added, removed }: { diff: DiffLine[]; added: number; removed: number }) {
+function Segs({ segments }: { segments: ChangeSegment[] }) {
+  return (
+    <p className="leading-relaxed whitespace-pre-wrap break-words text-[13px] text-ink">
+      {segments.map((seg, j) => {
+        if (seg.type === 'add') return <span key={j} className="rounded-[3px] bg-success-soft px-0.5 text-success-text">{seg.text}</span>;
+        if (seg.type === 'remove') return <span key={j} className="rounded-[3px] bg-danger-soft px-0.5 text-danger-text line-through decoration-danger-text/50">{seg.text}</span>;
+        return <span key={j}>{seg.text}</span>;
+      })}
+    </p>
+  );
+}
+
+/** Word-level, section-grouped "what changed" — a Word-style amendment review. */
+function AmendmentView({
+  sections,
+  rationale,
+  changeCount,
+  onRevert,
+}: {
+  sections: ReturnType<typeof diffSections>;
+  rationale: string;
+  changeCount: number;
+  onRevert: () => void;
+}) {
+  const changed = sections.filter((s) => s.changed);
   return (
     <div>
-      <div className="flex flex-wrap items-center gap-3 px-5 py-3 border-b border-hair-subtle text-[12px]">
-        <span className="text-ink-muted">Compared to your profile CV — what tailoring changed:</span>
-        <span className="inline-flex items-center gap-1.5 font-semibold text-success-text">
-          <span className="w-2.5 h-2.5 rounded-[3px] bg-success-soft border border-success-text/30" />
-          {added} added
+      <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3 border-b border-hair-subtle">
+        <span className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-ai-700">
+          <IconSparkle size={13} color="var(--ai-600)" />
+          {changeCount} change{changeCount !== 1 ? 's' : ''} the copilot made for this job
         </span>
-        <span className="inline-flex items-center gap-1.5 font-semibold text-danger-text">
-          <span className="w-2.5 h-2.5 rounded-[3px] bg-danger-soft border border-danger-text/30" />
-          {removed} removed
+        <span className="flex items-center gap-3 text-[11px] font-semibold">
+          <span className="text-success-text">insertions</span>
+          <span className="text-danger-text line-through decoration-danger-text/50">deletions</span>
         </span>
       </div>
-      {added === 0 && removed === 0 ? (
-        <p className="px-5 py-8 text-center text-sm text-ink-muted">
-          The tailored CV matches your profile CV line-for-line — no changes to show.
-        </p>
+      {changed.length === 0 ? (
+        <p className="px-5 py-8 text-center text-sm text-ink-muted">No changes from your profile CV yet.</p>
       ) : (
-        <div className="px-3 py-3 font-mono text-[12.5px] leading-relaxed overflow-x-auto">
-          {diff.map((line, i) => {
-            const base = 'flex gap-2 px-2 py-0.5 rounded-[4px] whitespace-pre-wrap break-words';
-            if (line.type === 'add') {
-              return (
-                <div key={i} className={`${base} bg-success-soft text-success-text`}>
-                  <span aria-hidden="true" className="select-none opacity-60">+</span>
-                  <span className="flex-1">{line.text || ' '}</span>
-                </div>
-              );
-            }
-            if (line.type === 'remove') {
-              return (
-                <div key={i} className={`${base} bg-danger-soft text-danger-text`}>
-                  <span aria-hidden="true" className="select-none opacity-60">−</span>
-                  <span className="flex-1 line-through decoration-danger-text/40">{line.text || ' '}</span>
-                </div>
-              );
-            }
-            return (
-              <div key={i} className={`${base} text-ink-muted`}>
-                <span aria-hidden="true" className="select-none opacity-30">&nbsp;</span>
-                <span className="flex-1">{line.text || ' '}</span>
-              </div>
-            );
-          })}
+        <div className="px-6 py-5 space-y-4">
+          {changed.map((sec, i) => (
+            <div key={i}>
+              {sec.heading && <div className="text-[11px] font-bold uppercase tracking-wide text-primary-700 mb-1">{sec.heading}</div>}
+              <Segs segments={sec.segments} />
+            </div>
+          ))}
         </div>
       )}
+      {rationale && (
+        <div className="px-6 py-4 border-t border-hair-subtle bg-ai-soft">
+          <span className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-ai-700">
+            <IconSparkle size={12} color="var(--ai-600)" /> Why — your copilot&apos;s reasoning
+          </span>
+          <p className="mt-1.5 text-[12.5px] text-ink leading-relaxed">{rationale}</p>
+        </div>
+      )}
+      <div className="px-6 py-3 border-t border-hair-subtle flex justify-end">
+        <button onClick={onRevert} className="text-[12px] font-semibold text-ink-muted hover:text-danger-text j4u-focus rounded-sm px-1.5 py-1 transition-colors">Revert all to my CV</button>
+      </div>
     </div>
   );
 }
@@ -90,6 +103,7 @@ export default function DocumentsPage() {
   const [resume, setResume] = useState('');
   const [cover, setCover] = useState('');
   const [baseResume, setBaseResume] = useState('');
+  const [rationale, setRationale] = useState('');
   const [docId, setDocId] = useState<string | null>(null);
   const [fitScore, setFitScore] = useState('');
   const [missingSkills, setMissingSkills] = useState<string[]>([]);
@@ -98,7 +112,7 @@ export default function DocumentsPage() {
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [recent, setRecent] = useState<DocumentRecord[]>([]);
   const [tab, setTab] = useState<'resume' | 'cover'>('resume');
-  const [view, setView] = useState<CvView>('preview');
+  const [view, setView] = useState<CvView>('final');
 
   useEffect(() => {
     listEvaluations().then(setEvals).catch(() => {});
@@ -128,14 +142,15 @@ export default function DocumentsPage() {
       setResume(draft.resumeMarkdown);
       setCover(draft.coverLetterMarkdown);
       setBaseResume(draft.baseResumeMarkdown ?? '');
+      setRationale(draft.rationale ?? '');
       setJobTitle(draft.jobTitle);
       setCompany(draft.company);
       setFitScore(draft.fitScore);
       setMissingSkills(draft.missingSkills ?? []);
       setDocId(null);
-      setView('preview');
+      setView('final');
       setTab('resume');
-      setMessage({ ok: true, text: 'Documents generated! Review them, edit if needed, then Save.' });
+      setMessage({ ok: true, text: 'Tailored by your copilot. Review the reasoning in "What changed", edit if needed, then Save.' });
     } catch (e) {
       setMessage({ ok: false, text: e instanceof Error ? e.message : 'Generation failed.' });
     } finally {
@@ -147,7 +162,7 @@ export default function DocumentsPage() {
     setSaving(true);
     setMessage(null);
     try {
-      const payload = { jobTitle, company, evaluationId: evalId || null, resumeMarkdown: resume, coverLetterMarkdown: cover, baseResumeMarkdown: baseResume, fitScore, missingSkills };
+      const payload = { jobTitle, company, evaluationId: evalId || null, resumeMarkdown: resume, coverLetterMarkdown: cover, baseResumeMarkdown: baseResume, rationale, fitScore, missingSkills };
       const saved = docId ? await updateDocument(docId, payload) : await saveDocument(payload);
       setDocId(saved.id);
       setMessage({ ok: true, text: 'Saved.' });
@@ -169,9 +184,10 @@ export default function DocumentsPage() {
     setResume(d.resumeMarkdown);
     setCover(d.coverLetterMarkdown);
     setBaseResume(d.baseResumeMarkdown ?? '');
+    setRationale(d.rationale ?? '');
     setFitScore(d.fitScore ?? '');
     setMissingSkills(d.missingSkills ?? []);
-    setView('preview');
+    setView('final');
     setTab('resume');
     setMessage(null);
   }
@@ -181,17 +197,16 @@ export default function DocumentsPage() {
   const fitPct = GRADE_PCT[(fitScore || '').toUpperCase()] ?? 0;
   const stars = gradeToStars(fitScore || 'C');
 
-  // "What changed" diff — only meaningful on the CV tab when we have a baseline.
+  // "What changed" — word-level, section-grouped; only on the CV tab with a baseline.
   const canDiff = tab === 'resume' && !!baseResume.trim();
-  const diff = useMemo(() => (canDiff ? diffLines(baseResume, resume) : []), [canDiff, baseResume, resume]);
-  const added = diff.filter((l) => l.type === 'add').length;
-  const removed = diff.filter((l) => l.type === 'remove').length;
-  // Guard: if we land on the cover tab while the diff view is active, show preview instead.
-  const effectiveView: CvView = view === 'diff' && !canDiff ? 'preview' : view;
+  const sections = useMemo(() => (canDiff ? diffSections(baseResume, resume) : []), [canDiff, baseResume, resume]);
+  const changeCount = sections.filter((s) => s.changed).length;
+  // Guard: if we land on the cover tab while the diff view is active, fall back.
+  const effectiveView: CvView = view === 'diff' && !canDiff ? 'final' : view;
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Documents" subtitle="Generate a tailored resume and cover letter, fine-tune them, and download as PDF." />
+      <PageHeader title="Documents" subtitle="Your copilot tailors a CV and cover letter for the job — with its reasoning — then you fine-tune and download." />
 
       {/* Generator */}
       <Card>
@@ -214,7 +229,7 @@ export default function DocumentsPage() {
             </label>
           )}
           <Button onClick={onGenerate} disabled={busy || (!evalId && !jobText.trim())}>
-            {busy ? 'Writing…' : hasContent ? 'Regenerate' : 'Generate'}
+            {busy ? 'Coaching your CV…' : hasContent ? 'Re-tailor' : 'Tailor my CV'}
           </Button>
         </div>
       </Card>
@@ -229,20 +244,20 @@ export default function DocumentsPage() {
         <div className="grid lg:grid-cols-[1fr_300px] gap-[18px] items-start">
           {/* Document preview / editor */}
           <Card padding={false}>
-            <div className="flex items-center gap-2 p-3 border-b border-hair-subtle">
+            <div className="flex flex-wrap items-center gap-2 p-3 border-b border-hair-subtle">
               <div className="flex gap-1 bg-surface-sunken p-1 rounded-md">
                 {(['resume', 'cover'] as const).map((t) => (
-                  <button key={t} onClick={() => { setTab(t); if (t === 'cover' && view === 'diff') setView('preview'); }} className={`text-[12.5px] font-semibold px-3.5 py-1.5 rounded-sm j4u-press ${tab === t ? 'bg-surface text-ink-strong shadow-sm' : 'text-ink-muted'}`}>
+                  <button key={t} onClick={() => { setTab(t); if (t === 'cover' && view === 'diff') setView('final'); }} className={`text-[12.5px] font-semibold px-3.5 py-1.5 rounded-sm j4u-press j4u-focus transition-colors ${tab === t ? 'bg-surface text-ink-strong shadow-sm' : 'text-ink-muted hover:text-ink-secondary'}`}>
                     {t === 'resume' ? 'Tailored CV' : 'Cover letter'}
                   </button>
                 ))}
               </div>
               <div className="ml-auto flex gap-1 bg-surface-sunken p-1 rounded-md">
-                <button onClick={() => setView('preview')} className={`text-[11.5px] font-semibold px-3 py-1.5 rounded-sm j4u-press ${effectiveView === 'preview' ? 'bg-surface text-ink-strong shadow-sm' : 'text-ink-muted'}`}>Preview</button>
+                <button onClick={() => setView('final')} className={`text-[11.5px] font-semibold px-3 py-1.5 rounded-sm j4u-press j4u-focus transition-colors ${effectiveView === 'final' ? 'bg-surface text-ink-strong shadow-sm' : 'text-ink-muted hover:text-ink-secondary'}`}>Final</button>
                 {canDiff && (
-                  <button onClick={() => setView('diff')} className={`text-[11.5px] font-semibold px-3 py-1.5 rounded-sm j4u-press ${effectiveView === 'diff' ? 'bg-surface text-ink-strong shadow-sm' : 'text-ink-muted'}`}>What changed</button>
+                  <button onClick={() => setView('diff')} className={`text-[11.5px] font-semibold px-3 py-1.5 rounded-sm j4u-press j4u-focus transition-colors ${effectiveView === 'diff' ? 'bg-surface text-ink-strong shadow-sm' : 'text-ink-muted hover:text-ink-secondary'}`}>What changed</button>
                 )}
-                <button onClick={() => setView('edit')} className={`text-[11.5px] font-semibold px-3 py-1.5 rounded-sm j4u-press ${effectiveView === 'edit' ? 'bg-surface text-ink-strong shadow-sm' : 'text-ink-muted'}`}>Edit</button>
+                <button onClick={() => setView('edit')} className={`text-[11.5px] font-semibold px-3 py-1.5 rounded-sm j4u-press j4u-focus transition-colors ${effectiveView === 'edit' ? 'bg-surface text-ink-strong shadow-sm' : 'text-ink-muted hover:text-ink-secondary'}`}>Edit</button>
               </div>
             </div>
             {effectiveView === 'edit' ? (
@@ -255,7 +270,7 @@ export default function DocumentsPage() {
                 onChange={(e) => setActiveValue(e.target.value)}
               />
             ) : effectiveView === 'diff' ? (
-              <DiffView diff={diff} added={added} removed={removed} />
+              <AmendmentView sections={sections} rationale={rationale} changeCount={changeCount} onRevert={() => { setResume(baseResume); setView('final'); }} />
             ) : (
               <div className="px-7 py-6 j4u-doc" dangerouslySetInnerHTML={{ __html: renderMd(activeValue) }} />
             )}
@@ -263,6 +278,17 @@ export default function DocumentsPage() {
 
           {/* Right rail */}
           <div className="flex flex-col gap-3.5">
+            {rationale && (
+              <div className="j4u-grad-ai rounded-md p-4">
+                <div className="flex items-center gap-1.5">
+                  <IconSparkle size={14} color="var(--ai-600)" />
+                  <span className="text-[11px] font-bold tracking-wide uppercase text-ai-700">Coach's note</span>
+                </div>
+                <p className="mt-2 text-[12.5px] text-ink leading-relaxed">{rationale}</p>
+                {canDiff && <button onClick={() => setView('diff')} className="mt-2.5 text-[12px] font-semibold text-ai-700 hover:underline j4u-focus rounded-sm">See what changed →</button>}
+              </div>
+            )}
+
             {fitScore && (
               <Card>
                 <div className="text-[11px] font-bold tracking-wide uppercase text-ink-muted mb-2">Fit after tailoring</div>
@@ -283,7 +309,7 @@ export default function DocumentsPage() {
             <Card>
               <div className="text-[11px] font-bold tracking-wide uppercase text-warning-text mb-2.5">Still worth adding</div>
               {missingSkills.length === 0 ? (
-                <p className="text-[12.5px] text-success-text">No major gaps — nicely tailored! 🎯</p>
+                <p className="text-[12.5px] text-success-text">No major gaps — nicely tailored.</p>
               ) : (
                 <>
                   <div className="flex flex-wrap gap-1.5">
@@ -302,7 +328,7 @@ export default function DocumentsPage() {
 
             <Button onClick={onSave} disabled={saving}>{saving ? 'Saving…' : docId ? 'Update saved' : 'Save documents'}</Button>
             <DownloadButtons docId={docId} />
-            <Button variant="ai" onClick={onGenerate} disabled={busy}>✨ Regenerate with copilot</Button>
+            <Button variant="ai" onClick={onGenerate} disabled={busy}><IconSparkle size={14} color="#fff" /> Re-tailor with copilot</Button>
             {!docId && <p className="text-[11px] text-ink-muted text-center">Save first to enable PDF download.</p>}
           </div>
         </div>

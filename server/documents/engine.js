@@ -8,6 +8,7 @@ function normalizeDocuments(raw = {}) {
     coverLetterMarkdown: typeof raw.coverLetterMarkdown === 'string' ? raw.coverLetterMarkdown : '',
     fitScore: coerceGrade(raw.fitScore),
     missingSkills: Array.isArray(raw.missingSkills) ? raw.missingSkills.map(String) : [],
+    rationale: typeof raw.rationale === 'string' ? raw.rationale.trim() : '',
   };
 }
 

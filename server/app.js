@@ -11,6 +11,8 @@ import { trackerRouter } from './routes/tracker.routes.js';
 import { scannerRouter } from './routes/scanner.routes.js';
 import { copilotRouter } from './routes/copilot.routes.js';
 import { applyRouter } from './routes/apply.routes.js';
+import { authMiddleware } from './auth/middleware.js';
+import { clerkVerifier } from './auth/clerk.js';
 import { installPageHtml } from './profile/linkedin/bookmarklet.js';
 
 export function createApp() {
@@ -40,6 +42,10 @@ export function createApp() {
       res.status(400).json({ ok: false, message: e.message });
     }
   });
+
+  // Everything below requires a signed-in user (cloud); local dev → userId 'local'.
+  // Mounted after the public health/config/ai-test endpoints above.
+  app.use('/api', authMiddleware({ verifyToken: clerkVerifier() }));
 
   app.use('/api/profile', profileRouter());
   app.use('/api', evaluateRouter());

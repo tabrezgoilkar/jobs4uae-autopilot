@@ -16,6 +16,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@clerk/backend": "^3.8.3",
     "cheerio": "^1.2.0",
     "express": "^4.19.2",
     "mammoth": "^1.12.0",

@@ -16,6 +16,37 @@ export interface AppConfig {
   setupComplete: boolean;
 }
 
+// --- Auth: attach the Clerk session token to /api requests ---
+// The token getter is registered by the Clerk provider (see main.tsx). When it's
+// unset (local dev without Clerk), requests go out unauthenticated and the server
+// runs in its 'local' dev-bypass mode — so nothing here changes local behaviour.
+type TokenGetter = () => Promise<string | null>;
+let authTokenGetter: TokenGetter | null = null;
+export function setAuthTokenGetter(getter: TokenGetter | null): void {
+  authTokenGetter = getter;
+}
+
+declare global {
+  interface Window { __j4uFetchPatched?: boolean }
+}
+
+if (typeof window !== 'undefined' && !window.__j4uFetchPatched) {
+  window.__j4uFetchPatched = true;
+  const realFetch = window.fetch.bind(window);
+  window.fetch = async (input: RequestInfo | URL, init: RequestInit = {}) => {
+    const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+    if (authTokenGetter && url.startsWith('/api')) {
+      try {
+        const token = await authTokenGetter();
+        if (token) init = { ...init, headers: { ...(init.headers ?? {}), Authorization: `Bearer ${token}` } };
+      } catch {
+        // fall through unauthenticated; the server will 401 and the UI reacts
+      }
+    }
+    return realFetch(input, init);
+  };
+}
+
 async function checkOk(res: Response): Promise<Response> {
   if (!res.ok) throw new Error(`Server error ${res.status}`);
   return res;

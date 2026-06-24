@@ -5,12 +5,12 @@ import '@fontsource/ibm-plex-mono';
 import './index.css';
 import './styles/tokens.css';
 import { initTheme } from './theme/theme';
-import App from './App.tsx';
+import AuthGate from './AuthGate';
 
 initTheme();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    <AuthGate />
   </StrictMode>,
 );

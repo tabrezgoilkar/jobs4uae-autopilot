@@ -10,12 +10,18 @@ import { pdfRouter } from './routes/pdf.routes.js';
 import { trackerRouter } from './routes/tracker.routes.js';
 import { scannerRouter } from './routes/scanner.routes.js';
 import { copilotRouter } from './routes/copilot.routes.js';
+import { installPageHtml } from './profile/linkedin/bookmarklet.js';
 
 export function createApp() {
   const app = express();
   app.use(express.json({ limit: '2mb' }));
 
   app.get('/api/health', (req, res) => res.json({ ok: true }));
+
+  // Standalone page with the drag-to-bookmarks LinkedIn importer.
+  app.get('/linkedin', (req, res) => {
+    res.type('html').send(installPageHtml(`${req.protocol}://${req.get('host')}`));
+  });
 
   app.get('/api/config', (req, res) => {
     res.json(loadConfig());

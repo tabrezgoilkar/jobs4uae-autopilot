@@ -6,6 +6,7 @@ import { parseCvText } from '../profile/parse.js';
 import { normalizeProfile } from '../profile/schema.js';
 import { linkedinToProfile, looksLikeLinkedinExport } from '../profile/linkedin/map.js';
 import { mergeProfile } from '../profile/linkedin/merge.js';
+import { bookmarkletCode } from '../profile/linkedin/bookmarklet.js';
 import { loadConfig } from '../config/store.js';
 import { createEngine } from '../ai/index.js';
 
@@ -66,6 +67,11 @@ export function profileRouter() {
   // Import a LinkedIn export (Voyager JSON from the bookmarklet, or an uploaded
   // JSON Resume / .json file) and MERGE it into the saved profile. Returns the
   // merge candidate + a change summary for review — does not persist.
+  // The draggable bookmarklet, with this server's own origin baked in.
+  router.get('/linkedin/bookmarklet', (req, res) => {
+    res.json({ href: bookmarkletCode(`${req.protocol}://${req.get('host')}`) });
+  });
+
   router.use('/linkedin/import', corsForLinkedin);
   router.post('/linkedin/import', upload.single('file'), (req, res) => {
     try {

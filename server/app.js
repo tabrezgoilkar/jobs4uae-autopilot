@@ -15,17 +15,34 @@ import { authMiddleware } from './auth/middleware.js';
 import { clerkVerifier } from './auth/clerk.js';
 import { installPageHtml } from './profile/linkedin/bookmarklet.js';
 
+// Refuse to boot a production instance that would let auth fail open.
+function assertProdAuthConfig() {
+  if (process.env.NODE_ENV !== 'production') return;
+  if (!process.env.CLERK_SECRET_KEY?.trim()) {
+    throw new Error('CLERK_SECRET_KEY is required in production — auth must not fail open.');
+  }
+  if (!(process.env.CLERK_AUTHORIZED_PARTIES || '').trim()) {
+    throw new Error('CLERK_AUTHORIZED_PARTIES (prod frontend origin[s]) is required in production.');
+  }
+}
+
 export function createApp() {
+  assertProdAuthConfig();
   const app = express();
   app.use(express.json({ limit: '2mb' }));
 
+  // Public, secret-free endpoints (no auth).
   app.get('/api/health', (req, res) => res.json({ ok: true }));
-
-  // Standalone page with the drag-to-bookmarks LinkedIn importer.
   app.get('/linkedin', (req, res) => {
     res.type('html').send(installPageHtml(`${req.protocol}://${req.get('host')}`));
   });
 
+  // Everything below requires a signed-in user (cloud); local dev → userId 'local'.
+  app.use('/api', authMiddleware({ verifyToken: clerkVerifier() }));
+
+  // Config + AI-test are now behind the gate (they expose engine config / keys).
+  // NOTE: config is still a single global record — per-user settings land in slice
+  // A3 (hybrid AI / encrypted BYOK); until then it is at least non-anonymous.
   app.get('/api/config', (req, res) => {
     res.json(loadConfig());
   });
@@ -42,10 +59,6 @@ export function createApp() {
       res.status(400).json({ ok: false, message: e.message });
     }
   });
-
-  // Everything below requires a signed-in user (cloud); local dev → userId 'local'.
-  // Mounted after the public health/config/ai-test endpoints above.
-  app.use('/api', authMiddleware({ verifyToken: clerkVerifier() }));
 
   app.use('/api/profile', profileRouter());
   app.use('/api', evaluateRouter());

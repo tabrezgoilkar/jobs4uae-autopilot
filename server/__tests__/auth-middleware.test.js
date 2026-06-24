@@ -11,9 +11,11 @@ function mockRes() {
 }
 
 const ORIGINAL = process.env.CLERK_SECRET_KEY;
+const ORIGINAL_ENV = process.env.NODE_ENV;
 afterEach(() => {
   if (ORIGINAL === undefined) delete process.env.CLERK_SECRET_KEY;
   else process.env.CLERK_SECRET_KEY = ORIGINAL;
+  process.env.NODE_ENV = ORIGINAL_ENV;
 });
 
 describe('authMiddleware', () => {
@@ -24,6 +26,29 @@ describe('authMiddleware', () => {
     const next = vi.fn();
     await authMiddleware()(req, res, next);
     expect(req.userId).toBe('local');
+    expect(next).toHaveBeenCalledOnce();
+  });
+
+  it('fails CLOSED in production when CLERK_SECRET_KEY is missing (no silent bypass)', async () => {
+    delete process.env.CLERK_SECRET_KEY;
+    process.env.NODE_ENV = 'production';
+    const req = { headers: {} };
+    const res = mockRes();
+    const next = vi.fn();
+    await authMiddleware()(req, res, next);
+    expect(res.statusCode).toBe(500);
+    expect(req.userId).toBeUndefined();
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it('treats an empty/whitespace CLERK_SECRET_KEY as unset', async () => {
+    process.env.CLERK_SECRET_KEY = '   ';
+    process.env.NODE_ENV = 'test';
+    const req = { headers: {} };
+    const res = mockRes();
+    const next = vi.fn();
+    await authMiddleware()(req, res, next);
+    expect(req.userId).toBe('local'); // dev bypass, not a broken verify path
     expect(next).toHaveBeenCalledOnce();
   });
 

@@ -9,7 +9,13 @@
 
 export function authMiddleware({ verifyToken } = {}) {
   return async function auth(req, res, next) {
-    if (!process.env.CLERK_SECRET_KEY) {
+    const hasClerk = process.env.CLERK_SECRET_KEY?.trim();
+    if (!hasClerk) {
+      // Fail CLOSED in production — never silently downgrade to a shared 'local'
+      // account because a secret is missing. The bypass is a dev-only convenience.
+      if (process.env.NODE_ENV === 'production') {
+        return res.status(500).json({ error: 'Server authentication is misconfigured.' });
+      }
       req.userId = 'local';
       return next();
     }

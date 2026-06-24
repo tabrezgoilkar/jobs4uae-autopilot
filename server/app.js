@@ -10,6 +10,7 @@ import { pdfRouter } from './routes/pdf.routes.js';
 import { trackerRouter } from './routes/tracker.routes.js';
 import { scannerRouter } from './routes/scanner.routes.js';
 import { copilotRouter } from './routes/copilot.routes.js';
+import { applyRouter } from './routes/apply.routes.js';
 import { installPageHtml } from './profile/linkedin/bookmarklet.js';
 
 export function createApp() {
@@ -47,6 +48,7 @@ export function createApp() {
   app.use('/api', trackerRouter());
   app.use('/api', scannerRouter());
   app.use('/api', copilotRouter());
+  app.use('/api', applyRouter());
 
   // In production, serve the built web app if it exists.
   const webDist = path.resolve(process.cwd(), 'web/dist');

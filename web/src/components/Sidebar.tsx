@@ -2,11 +2,16 @@ import type { ReactElement } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { IconHome, IconUser, IconDoc, IconBars, IconSearch, IconSend, IconSparkle, IconSettings } from './icons';
 
+// In the cloud build, hide features that aren't online yet (Tracker, Scan,
+// Auto-apply need per-user data / a real browser — see Phase B). Detected by the
+// presence of the Clerk key, which is only set on the deployed app.
+const IS_CLOUD = !!import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
+
 const WORKSPACE = [
   { to: '/', label: 'Home', Icon: IconHome },
   { to: '/profile', label: 'My profile', Icon: IconUser },
   { to: '/documents', label: 'Documents', Icon: IconDoc },
-  { to: '/tracker', label: 'Tracker', Icon: IconBars },
+  { to: '/tracker', label: 'Tracker', Icon: IconBars, cloud: false },
 ] as const;
 
 const FIND_APPLY = [
@@ -49,13 +54,17 @@ export default function Sidebar({ engine }: { engine: string | null }) {
       </div>
 
       <nav aria-label="Main" style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-        {WORKSPACE.map(({ to, label, Icon }) => (
+        {WORKSPACE.filter((i) => !(IS_CLOUD && 'cloud' in i && i.cloud === false)).map(({ to, label, Icon }) => (
           <NavItem key={to} to={to} label={label} Icon={Icon} active={isActive(to)} />
         ))}
-        <div style={{ margin: '12px 10px 6px', fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>Find &amp; apply</div>
-        {FIND_APPLY.map(({ to, label, Icon }) => (
-          <NavItem key={to} to={to} label={label} Icon={Icon} active={isActive(to)} />
-        ))}
+        {!IS_CLOUD && (
+          <>
+            <div style={{ margin: '12px 10px 6px', fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>Find &amp; apply</div>
+            {FIND_APPLY.map(({ to, label, Icon }) => (
+              <NavItem key={to} to={to} label={label} Icon={Icon} active={isActive(to)} />
+            ))}
+          </>
+        )}
         <div style={{ margin: '12px 10px 6px', fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>Workspace</div>
         <NavItem to="/settings" label="Settings" Icon={IconSettings} active={isActive('/settings')} />
       </nav>

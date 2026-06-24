@@ -10,7 +10,7 @@ import {
 import { Card, PageHeader, Button } from '../components/ui';
 import { IconSparkle } from '../components/icons';
 import { RadialGauge } from '../components/charts';
-import { analyzeProfile } from '../lib/profileStrength';
+import { analyzeProfile, type ProfileSection } from '../lib/profileStrength';
 import LinkedinImportModal from '../components/LinkedinImportModal';
 
 const FIELD = 'mt-1 w-full rounded-md border border-hair bg-surface text-ink p-2 text-sm j4u-focus placeholder:text-ink-muted';
@@ -19,17 +19,12 @@ const LABEL = 'text-sm font-medium text-ink-secondary';
 export default function ProfilePage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loadError, setLoadError] = useState(false);
+  const [editing, setEditing] = useState(false);
   const [importing, setImporting] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [linkedinOpen, setLinkedinOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
-
-  function onLinkedinApply(merged: Profile) {
-    setProfile(merged);
-    setLinkedinOpen(false);
-    setMessage({ ok: true, text: 'LinkedIn profile merged in. Review the details below, then Save.' });
-  }
 
   useEffect(() => {
     getProfile().then(setProfile).catch(() => setLoadError(true));
@@ -37,6 +32,13 @@ export default function ProfilePage() {
 
   function set<K extends keyof Profile>(key: K, value: Profile[K]) {
     setProfile((p) => (p ? { ...p, [key]: value } : p));
+  }
+
+  function onLinkedinApply(merged: Profile) {
+    setProfile(merged);
+    setLinkedinOpen(false);
+    setEditing(true);
+    setMessage({ ok: true, text: 'LinkedIn profile merged in. Review the details below, then Save.' });
   }
 
   async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
@@ -47,6 +49,7 @@ export default function ProfilePage() {
     try {
       const parsed = await importCv(file);
       setProfile(parsed);
+      setEditing(true);
       setMessage({ ok: true, text: 'CV imported! Review the details below, then Save.' });
     } catch (err) {
       setMessage({ ok: false, text: err instanceof Error ? err.message : 'Import failed.' });
@@ -63,6 +66,7 @@ export default function ProfilePage() {
     try {
       const saved = await saveProfile(profile);
       setProfile(saved);
+      setEditing(false);
       setMessage({ ok: true, text: 'Profile saved.' });
     } catch {
       setMessage({ ok: false, text: 'Could not save your profile. Please try again.' });
@@ -101,8 +105,7 @@ export default function ProfilePage() {
 
   type ListKey = 'projects' | 'certifications' | 'languages' | 'awards';
   function listAdd(key: ListKey, blank: unknown) {
-    if (!profile) return;
-    set(key, [...(profile[key] as unknown[]), blank] as never);
+    setProfile((p) => (p ? { ...p, [key]: [...(p[key] as unknown[]), blank] } as Profile : p));
   }
   function listUpd(key: ListKey, i: number, patch: Record<string, unknown>) {
     if (!profile) return;
@@ -113,6 +116,21 @@ export default function ProfilePage() {
     set(key, (profile[key] as unknown[]).filter((_, idx) => idx !== i) as never);
   }
 
+  // Jump into edit mode at the relevant section (used by the copilot suggestions).
+  function onFix(section: ProfileSection) {
+    setEditing(true);
+    if (profile) {
+      if (section === 'experience' && profile.experience.length === 0) addExp();
+      if (section === 'projects' && profile.projects.length === 0) listAdd('projects', { name: '', description: '', tech: [], url: '' });
+      if (section === 'certifications' && profile.certifications.length === 0) listAdd('certifications', { name: '', issuer: '', year: '', url: '' });
+      if (section === 'languages' && profile.languages.length === 0) listAdd('languages', { name: '', level: '' });
+      if (section === 'awards' && profile.awards.length === 0) listAdd('awards', { title: '', issuer: '', year: '', description: '' });
+    }
+    window.setTimeout(() => {
+      document.getElementById(`sec-${section}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 60);
+  }
+
   if (loadError) {
     return (
       <div role="alert" className="text-sm rounded-md p-3 bg-danger-soft text-danger-text border border-danger-soft">
@@ -120,39 +138,23 @@ export default function ProfilePage() {
       </div>
     );
   }
-
   if (!profile) {
     return <div className="text-ink-muted text-sm">Loading…</div>;
   }
 
   return (
     <div className="space-y-6">
-      <PageHeader title="My profile" subtitle="Upload your CV to fill this in automatically, or type it yourself." />
-
-      <div className="grid lg:grid-cols-[1fr_300px] gap-[18px] items-start">
-      <div className="space-y-6 min-w-0">
-
-      <Card>
-        <label className="block">
-          <span className={LABEL}>Import from a CV file (PDF, Word, or text)</span>
-          <input
-            ref={fileRef}
-            type="file"
-            accept=".pdf,.docx,.txt,.md"
-            onChange={onFile}
-            disabled={importing}
-            className="mt-2 block text-sm text-ink-secondary"
-          />
-        </label>
-        {importing && <p className="mt-2 text-sm text-primary-700">Reading your CV with AI… this can take a few seconds.</p>}
-        <div className="mt-3 pt-3 border-t border-hair-subtle flex items-center gap-3 flex-wrap">
-          <span className="text-xs text-ink-muted">Or:</span>
-          <button type="button" onClick={() => setLinkedinOpen(true)} className="j4u-chip inline-flex items-center gap-2 h-9 px-3 rounded-md border border-hair text-ink-secondary text-xs font-semibold">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="#0a66c2"><path d="M4.98 3.5A2.5 2.5 0 1 0 5 8.5a2.5 2.5 0 0 0-.02-5zM3 9h4v12H3zM9 9h3.8v1.7h.05c.53-1 1.84-2.05 3.8-2.05 4.06 0 4.8 2.67 4.8 6.14V21h-4v-5.3c0-1.26-.02-2.9-1.77-2.9-1.77 0-2.04 1.38-2.04 2.8V21H9z" /></svg>
-            Import from LinkedIn
-          </button>
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <PageHeader title="My profile" subtitle={editing ? 'Edit your details, then Save.' : 'Your profile at a glance. Click Edit to change anything.'} />
+        <div className="flex items-center gap-2 pt-1">
+          {editing ? (
+            <Button onClick={onSave} disabled={saving || importing}>{saving ? 'Saving…' : 'Save'}</Button>
+          ) : (
+            <Button onClick={() => setEditing(true)}>Edit profile</Button>
+          )}
+          {editing && <button onClick={() => setEditing(false)} className="j4u-chip text-sm font-semibold text-ink-secondary border border-hair rounded-md px-3 h-9">View</button>}
         </div>
-      </Card>
+      </div>
 
       {message && (
         <div role="status" className={`text-sm rounded-md p-3 border ${message.ok ? 'bg-success-soft text-success-text border-success-soft' : 'bg-danger-soft text-danger-text border-danger-soft'}`}>
@@ -160,8 +162,182 @@ export default function ProfilePage() {
         </div>
       )}
 
+      <div className="grid lg:grid-cols-[1fr_300px] gap-[18px] items-start">
+        <div className="space-y-6 min-w-0">
+          {editing ? (
+            <EditForm
+              profile={profile}
+              fileRef={fileRef}
+              importing={importing}
+              onFile={onFile}
+              openLinkedin={() => setLinkedinOpen(true)}
+              set={set}
+              updateExp={updateExp} addExp={addExp} removeExp={removeExp}
+              updateEdu={updateEdu} addEdu={addEdu} removeEdu={removeEdu}
+              listAdd={listAdd} listUpd={listUpd} listDel={listDel}
+            />
+          ) : (
+            <ProfileView profile={profile} onEdit={() => setEditing(true)} />
+          )}
+        </div>
+        <ProfileRail profile={profile} onFix={onFix} />
+      </div>
+
+      {linkedinOpen && <LinkedinImportModal onApply={onLinkedinApply} onClose={() => setLinkedinOpen(false)} />}
+    </div>
+  );
+}
+
+/* ---------- Read-only view ---------- */
+
+function Chip({ children }: { children: React.ReactNode }) {
+  return <span className="inline-flex items-center rounded-full border border-hair bg-surface-sunken px-2.5 py-0.5 text-xs text-ink-secondary">{children}</span>;
+}
+
+function dateRange(a?: string, b?: string) {
+  return [a, b].filter(Boolean).join(' – ');
+}
+
+function ProfileView({ profile: p, onEdit }: { profile: Profile; onEdit: () => void }) {
+  const empty = !p.fullName?.trim() && p.experience.length === 0 && p.skills.length === 0;
+  if (empty) {
+    return (
       <Card>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="text-center py-8">
+          <div className="text-[15px] font-semibold text-ink-strong">Your profile is empty</div>
+          <p className="mt-1 text-sm text-ink-muted">Import your CV or LinkedIn, or add details by hand.</p>
+          <div className="mt-4"><Button onClick={onEdit}>Add your details</Button></div>
+        </div>
+      </Card>
+    );
+  }
+  const contact = [p.email, p.phone, p.location].filter((s) => s?.trim());
+  return (
+    <div className="space-y-5">
+      <Card>
+        <div className="text-2xl font-bold text-ink-strong tracking-tight">{p.fullName || 'Unnamed'}</div>
+        {p.headline && <div className="text-[15px] text-primary-700 font-medium mt-0.5">{p.headline}</div>}
+        {contact.length > 0 && <div className="mt-2 text-[13px] text-ink-secondary">{contact.join('  ·  ')}</div>}
+        {p.summary?.trim() && <p className="mt-3 text-sm text-ink-secondary leading-relaxed whitespace-pre-wrap">{p.summary}</p>}
+        {p.skills.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-1.5">{p.skills.map((s, i) => <Chip key={i}>{s}</Chip>)}</div>
+        )}
+      </Card>
+
+      {p.experience.length > 0 && (
+        <Card title="Experience">
+          <div className="space-y-4">
+            {p.experience.map((x, i) => (
+              <div key={i} className="border-l-2 border-hair pl-3">
+                <div className="text-[14px] font-semibold text-ink-strong">{x.title || 'Role'}{x.company ? ` · ${x.company}` : ''}</div>
+                {dateRange(x.startDate, x.endDate) && <div className="text-xs text-ink-muted">{dateRange(x.startDate, x.endDate)}</div>}
+                {x.description?.trim() && <p className="mt-1 text-[13px] text-ink-secondary leading-relaxed whitespace-pre-wrap">{x.description}</p>}
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {p.education.length > 0 && (
+        <Card title="Education">
+          <div className="space-y-3">
+            {p.education.map((x, i) => (
+              <div key={i}>
+                <div className="text-[14px] font-semibold text-ink-strong">{[x.degree, x.field].filter(Boolean).join(', ') || x.institution}</div>
+                <div className="text-[13px] text-ink-secondary">{[x.institution, x.year].filter(Boolean).join('  ·  ')}</div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {p.projects.length > 0 && (
+        <Card title="Projects">
+          <div className="space-y-3">
+            {p.projects.map((x, i) => (
+              <div key={i}>
+                <div className="text-[14px] font-semibold text-ink-strong">{x.name}{x.url ? <a href={x.url} target="_blank" rel="noreferrer" className="ml-2 text-[12px] text-primary-700 font-medium">link ↗</a> : null}</div>
+                {x.description?.trim() && <p className="text-[13px] text-ink-secondary leading-relaxed">{x.description}</p>}
+                {x.tech.length > 0 && <div className="mt-1 flex flex-wrap gap-1.5">{x.tech.map((t, j) => <Chip key={j}>{t}</Chip>)}</div>}
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {p.certifications.length > 0 && (
+        <Card title="Certifications">
+          <div className="space-y-2">
+            {p.certifications.map((x, i) => (
+              <div key={i} className="text-[13px] text-ink-secondary">
+                <span className="font-semibold text-ink-strong">{x.name}</span>{[x.issuer, x.year].filter(Boolean).length ? ` — ${[x.issuer, x.year].filter(Boolean).join(', ')}` : ''}
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {p.languages.length > 0 && (
+        <Card title="Languages">
+          <div className="flex flex-wrap gap-1.5">{p.languages.map((x, i) => <Chip key={i}>{x.name}{x.level ? ` · ${x.level}` : ''}</Chip>)}</div>
+        </Card>
+      )}
+
+      {p.awards.length > 0 && (
+        <Card title="Awards & honors">
+          <div className="space-y-2">
+            {p.awards.map((x, i) => (
+              <div key={i} className="text-[13px] text-ink-secondary">
+                <span className="font-semibold text-ink-strong">{x.title}</span>{[x.issuer, x.year].filter(Boolean).length ? ` — ${[x.issuer, x.year].filter(Boolean).join(', ')}` : ''}
+                {x.description?.trim() && <div className="text-[12.5px] text-ink-muted">{x.description}</div>}
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+/* ---------- Editable form ---------- */
+
+interface EditFormProps {
+  profile: Profile;
+  fileRef: React.RefObject<HTMLInputElement | null>;
+  importing: boolean;
+  onFile: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  openLinkedin: () => void;
+  set: <K extends keyof Profile>(key: K, value: Profile[K]) => void;
+  updateExp: (i: number, key: keyof Experience, value: string) => void;
+  addExp: () => void; removeExp: (i: number) => void;
+  updateEdu: (i: number, key: keyof Education, value: string) => void;
+  addEdu: () => void; removeEdu: (i: number) => void;
+  listAdd: (key: 'projects' | 'certifications' | 'languages' | 'awards', blank: unknown) => void;
+  listUpd: (key: 'projects' | 'certifications' | 'languages' | 'awards', i: number, patch: Record<string, unknown>) => void;
+  listDel: (key: 'projects' | 'certifications' | 'languages' | 'awards', i: number) => void;
+}
+
+function EditForm(props: EditFormProps) {
+  const { profile, fileRef, importing, onFile, openLinkedin, set, updateExp, addExp, removeExp, updateEdu, addEdu, removeEdu, listAdd, listUpd, listDel } = props;
+  return (
+    <>
+      <Card>
+        <label className="block">
+          <span className={LABEL}>Import from a CV file (PDF, Word, or text)</span>
+          <input ref={fileRef} type="file" accept=".pdf,.docx,.txt,.md" onChange={onFile} disabled={importing} className="mt-2 block text-sm text-ink-secondary" />
+        </label>
+        {importing && <p className="mt-2 text-sm text-primary-700">Reading your CV with AI… this can take a few seconds.</p>}
+        <div className="mt-3 pt-3 border-t border-hair-subtle flex items-center gap-3 flex-wrap">
+          <span className="text-xs text-ink-muted">Or:</span>
+          <button type="button" onClick={openLinkedin} className="j4u-chip inline-flex items-center gap-2 h-9 px-3 rounded-md border border-hair text-ink-secondary text-xs font-semibold">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="#0a66c2"><path d="M4.98 3.5A2.5 2.5 0 1 0 5 8.5a2.5 2.5 0 0 0-.02-5zM3 9h4v12H3zM9 9h3.8v1.7h.05c.53-1 1.84-2.05 3.8-2.05 4.06 0 4.8 2.67 4.8 6.14V21h-4v-5.3c0-1.26-.02-2.9-1.77-2.9-1.77 0-2.04 1.38-2.04 2.8V21H9z" /></svg>
+            Import from LinkedIn
+          </button>
+        </div>
+      </Card>
+
+      <Card>
+        <div id="sec-basics" className="grid gap-4 sm:grid-cols-2 scroll-mt-20">
           <label className="block"><span className={LABEL}>Full name</span>
             <input className={FIELD} value={profile.fullName} onChange={(e) => set('fullName', e.target.value)} /></label>
           <label className="block"><span className={LABEL}>Headline / current title</span>
@@ -175,17 +351,12 @@ export default function ProfilePage() {
           <label className="block sm:col-span-2"><span className={LABEL}>Professional summary</span>
             <textarea className={FIELD} rows={3} value={profile.summary} onChange={(e) => set('summary', e.target.value)} /></label>
           <label className="block sm:col-span-2"><span className={LABEL}>Skills (comma separated)</span>
-            <input
-              className={FIELD}
-              value={profile.skills.join(', ')}
-              onChange={(e) => set('skills', e.target.value.split(',').map((s) => s.trim()).filter(Boolean))}
-            /></label>
+            <input className={FIELD} value={profile.skills.join(', ')} onChange={(e) => set('skills', e.target.value.split(',').map((s) => s.trim()).filter(Boolean))} /></label>
         </div>
       </Card>
 
       <Card title="Experience" action={<button onClick={addExp} className="text-sm font-semibold text-primary-700 j4u-focus rounded">+ Add</button>}>
-        <div className="space-y-4">
-          {/* Index keys are acceptable here: inputs are controlled and the lists are short. */}
+        <div id="sec-experience" className="space-y-4 scroll-mt-20">
           {profile.experience.map((x, i) => (
             <div key={i} className="border border-hair-subtle rounded-md p-4 grid gap-3 sm:grid-cols-2">
               <input className={FIELD} aria-label="Job title" placeholder="Job title" value={x.title} onChange={(e) => updateExp(i, 'title', e.target.value)} />
@@ -201,7 +372,7 @@ export default function ProfilePage() {
       </Card>
 
       <Card title="Education" action={<button onClick={addEdu} className="text-sm font-semibold text-primary-700 j4u-focus rounded">+ Add</button>}>
-        <div className="space-y-4">
+        <div id="sec-education" className="space-y-4 scroll-mt-20">
           {profile.education.map((x, i) => (
             <div key={i} className="border border-hair-subtle rounded-md p-4 grid gap-3 sm:grid-cols-2">
               <input className={FIELD} aria-label="Institution" placeholder="Institution" value={x.institution} onChange={(e) => updateEdu(i, 'institution', e.target.value)} />
@@ -215,9 +386,8 @@ export default function ProfilePage() {
         </div>
       </Card>
 
-      {/* Projects */}
       <Card title="Projects" action={<button onClick={() => listAdd('projects', { name: '', description: '', tech: [], url: '' })} className="text-sm font-semibold text-primary-700 j4u-focus rounded">+ Add</button>}>
-        <div className="space-y-4">
+        <div id="sec-projects" className="space-y-4 scroll-mt-20">
           {profile.projects.map((x, i) => (
             <div key={i} className="border border-hair-subtle rounded-md p-4 grid gap-3 sm:grid-cols-2">
               <input className={FIELD} aria-label="Project name" placeholder="Project name" value={x.name} onChange={(e) => listUpd('projects', i, { name: e.target.value })} />
@@ -231,9 +401,8 @@ export default function ProfilePage() {
         </div>
       </Card>
 
-      {/* Certifications */}
       <Card title="Certifications" action={<button onClick={() => listAdd('certifications', { name: '', issuer: '', year: '', url: '' })} className="text-sm font-semibold text-primary-700 j4u-focus rounded">+ Add</button>}>
-        <div className="space-y-4">
+        <div id="sec-certifications" className="space-y-4 scroll-mt-20">
           {profile.certifications.map((x, i) => (
             <div key={i} className="border border-hair-subtle rounded-md p-4 grid gap-3 sm:grid-cols-2">
               <input className={FIELD} aria-label="Certification name" placeholder="Certification" value={x.name} onChange={(e) => listUpd('certifications', i, { name: e.target.value })} />
@@ -247,9 +416,8 @@ export default function ProfilePage() {
         </div>
       </Card>
 
-      {/* Languages */}
       <Card title="Languages" action={<button onClick={() => listAdd('languages', { name: '', level: '' })} className="text-sm font-semibold text-primary-700 j4u-focus rounded">+ Add</button>}>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div id="sec-languages" className="grid gap-3 sm:grid-cols-2 scroll-mt-20">
           {profile.languages.map((x, i) => (
             <div key={i} className="border border-hair-subtle rounded-md p-3 flex items-center gap-2">
               <input className={FIELD} aria-label="Language" placeholder="Language" value={x.name} onChange={(e) => listUpd('languages', i, { name: e.target.value })} />
@@ -261,9 +429,8 @@ export default function ProfilePage() {
         </div>
       </Card>
 
-      {/* Awards & honors */}
       <Card title="Awards & honors" action={<button onClick={() => listAdd('awards', { title: '', issuer: '', year: '', description: '' })} className="text-sm font-semibold text-primary-700 j4u-focus rounded">+ Add</button>}>
-        <div className="space-y-4">
+        <div id="sec-awards" className="space-y-4 scroll-mt-20">
           {profile.awards.map((x, i) => (
             <div key={i} className="border border-hair-subtle rounded-md p-4 grid gap-3 sm:grid-cols-2">
               <input className={FIELD} aria-label="Award title" placeholder="Award (e.g. 1st place)" value={x.title} onChange={(e) => listUpd('awards', i, { title: e.target.value })} />
@@ -276,28 +443,13 @@ export default function ProfilePage() {
           {profile.awards.length === 0 && <p className="text-sm text-ink-muted">No awards added yet.</p>}
         </div>
       </Card>
-
-      <div className="flex items-center gap-3">
-        <Button onClick={onSave} disabled={saving || importing}>
-          {saving ? 'Saving…' : 'Save profile'}
-        </Button>
-        {profile.updatedAt && <span className="text-xs text-ink-muted">Last saved {new Date(profile.updatedAt).toLocaleString()}</span>}
-      </div>
-
-      </div>{/* /left column */}
-      <ProfileRail profile={profile} />
-      </div>{/* /grid */}
-
-      {linkedinOpen && <LinkedinImportModal onApply={onLinkedinApply} onClose={() => setLinkedinOpen(false)} />}
-    </div>
+    </>
   );
 }
 
-function openCopilot() {
-  window.dispatchEvent(new KeyboardEvent('keydown', { key: 'j', ctrlKey: true, bubbles: true }));
-}
+/* ---------- Copilot rail ---------- */
 
-function ProfileRail({ profile }: { profile: Profile }) {
+function ProfileRail({ profile, onFix }: { profile: Profile; onFix: (s: ProfileSection) => void }) {
   const { score, suggestions } = useMemo(() => analyzeProfile(profile), [profile]);
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
   const visible = suggestions.filter((s) => !dismissed.has(s.title));
@@ -333,7 +485,7 @@ function ProfileRail({ profile }: { profile: Profile }) {
                 <div className="text-[12.5px] font-semibold text-ink-strong leading-snug">{s.title}</div>
                 <div className="text-[11.5px] text-ink-secondary mt-0.5 leading-snug">{s.detail}</div>
                 <div className="flex gap-1.5 mt-2.5">
-                  <button onClick={openCopilot} className="j4u-press text-[11.5px] font-semibold text-white bg-ai-600 rounded-md px-2.5 py-1">Ask copilot</button>
+                  <button onClick={() => onFix(s.section)} className="j4u-press text-[11.5px] font-semibold text-white bg-ai-600 rounded-md px-2.5 py-1">Add / fix</button>
                   <button onClick={() => setDismissed((d) => new Set(d).add(s.title))} className="j4u-chip text-[11.5px] font-semibold text-ink-secondary border border-hair rounded-md px-2.5 py-1">Dismiss</button>
                 </div>
               </div>

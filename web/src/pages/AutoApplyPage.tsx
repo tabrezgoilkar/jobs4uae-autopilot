@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
   getConfig,
   getConnections,
@@ -9,9 +10,11 @@ import {
   saveApplicationDetails,
   applyStart,
   applyAnswer,
+  composeEmail,
   type Connection,
   type ApplicationFields,
   type PendingQuestion,
+  type EmailDraft,
 } from '../api';
 import { PageHeader, Badge } from '../components/ui';
 import { IconSparkle } from '../components/icons';
@@ -65,6 +68,13 @@ export default function AutoApplyPage() {
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [applyError, setApplyError] = useState<string | null>(null);
   const [savingAnswers, setSavingAnswers] = useState(false);
+
+  // email-apply workspace
+  const [emailJobText, setEmailJobText] = useState('');
+  const [emailRecruiter, setEmailRecruiter] = useState('');
+  const [drafting, setDrafting] = useState(false);
+  const [draft, setDraft] = useState<EmailDraft | null>(null);
+  const [emailError, setEmailError] = useState<string | null>(null);
 
   const indeed = connections.find((c) => c.id === 'indeed');
   const connected = !!indeed?.connected;
@@ -149,6 +159,25 @@ export default function AutoApplyPage() {
   function setField<K extends keyof ApplicationFields>(k: K, v: ApplicationFields[K]) {
     setForm((f) => ({ ...f, [k]: v }));
   }
+
+  async function onDraftEmail() {
+    if (!emailJobText.trim()) return;
+    setDrafting(true); setEmailError(null); setDraft(null);
+    try {
+      const d = await composeEmail({ jobText: emailJobText.trim(), recruiterEmail: emailRecruiter.trim() || undefined });
+      setDraft(d);
+      setEmailRecruiter(d.to);
+    } catch (e) {
+      setEmailError(e instanceof Error ? e.message : 'Could not draft the email.');
+    } finally {
+      setDrafting(false);
+    }
+  }
+  // Rebuild draft links client-side so the user's edits to To/Subject/Body are reflected.
+  const enc = encodeURIComponent;
+  const mailtoOf = (d: EmailDraft) => `mailto:${d.to}?subject=${enc(d.subject)}&body=${enc(d.body)}`;
+  const gmailOf = (d: EmailDraft) => `https://mail.google.com/mail/?view=cm&fs=1&to=${enc(d.to)}&su=${enc(d.subject)}&body=${enc(d.body)}`;
+  const patchDraft = (patch: Partial<EmailDraft>) => setDraft((d) => (d ? { ...d, ...patch } : d));
 
   return (
     <div className="space-y-6 j4u-rise">
@@ -258,6 +287,45 @@ export default function AutoApplyPage() {
           </div>
         </section>
       )}
+
+      {/* Email-Apply — for "send your CV to hr@…" post-jobs (no board connection needed) */}
+      <section className="space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-sm font-bold text-ink-strong">Email apply</h2>
+          <span className="text-[11.5px] text-ink-muted">for "send your CV to hr@…" posts</span>
+        </div>
+        <div className="rounded-md border border-hair-subtle bg-surface p-4 shadow-sm space-y-3">
+          <label className="block">
+            <span className={LABEL}>Paste the job post or recruiter message</span>
+            <textarea className={FIELD} rows={4} placeholder="e.g. We're hiring an Accountant in Dubai — send your CV to hr@company.com" value={emailJobText} onChange={(e) => setEmailJobText(e.target.value)} />
+          </label>
+          <div className="flex gap-2 flex-wrap items-end">
+            <label className="block flex-1 min-w-[220px]">
+              <span className={LABEL}>Recruiter email {draft || emailRecruiter ? '' : '(auto-detected from the post)'}</span>
+              <input className={FIELD} placeholder="hr@company.com" value={emailRecruiter} onChange={(e) => setEmailRecruiter(e.target.value)} />
+            </label>
+            <button onClick={onDraftEmail} disabled={drafting || !emailJobText.trim()} className="inline-flex items-center justify-center h-[38px] px-4 rounded-md bg-primary-600 text-white text-[12.5px] font-semibold j4u-press disabled:opacity-60">
+              {drafting ? 'Drafting…' : 'Draft email'}
+            </button>
+          </div>
+
+          {emailError && <p role="alert" className="text-sm rounded-md p-2.5 bg-danger-soft text-danger-text border border-danger-soft">{emailError}</p>}
+
+          {draft && (
+            <div className="space-y-3 pt-1 border-t border-hair-subtle">
+              <label className="block"><span className={LABEL}>To</span><input className={FIELD} value={draft.to} onChange={(e) => patchDraft({ to: e.target.value })} /></label>
+              <label className="block"><span className={LABEL}>Subject</span><input className={FIELD} value={draft.subject} onChange={(e) => patchDraft({ subject: e.target.value })} /></label>
+              <label className="block"><span className={LABEL}>Body — review &amp; edit before sending</span><textarea className={FIELD} rows={8} value={draft.body} onChange={(e) => patchDraft({ body: e.target.value })} /></label>
+              <div className="flex gap-2 flex-wrap items-center">
+                <a href={gmailOf(draft)} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center h-9 px-4 rounded-md bg-primary-600 text-white text-[12.5px] font-semibold j4u-press">Open in Gmail</a>
+                <a href={mailtoOf(draft)} className="j4u-chip inline-flex items-center justify-center h-9 px-4 rounded-md border border-hair text-ink-secondary text-[12.5px] font-semibold">Open mail app</a>
+                <Link to="/documents" className="text-[12px] font-semibold text-primary-700 hover:underline j4u-focus rounded ml-auto">Attach your CV — download it from Documents →</Link>
+              </div>
+              <p className="text-[11.5px] text-ink-muted">Review before sending — the draft opens in your email, you attach the CV PDF and click Send. Nothing is sent automatically.</p>
+            </div>
+          )}
+        </div>
+      </section>
 
       {/* How it works */}
       <section className="space-y-3">

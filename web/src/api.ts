@@ -181,6 +181,11 @@ export async function applyAnswer(body: { board: string; answers: { id: string; 
   return readApply(await fetch('/api/apply/answer', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }));
 }
 
+export interface EmailDraft { to: string; subject: string; body: string; mailto: string; gmail: string; foundEmails: string[]; }
+export async function composeEmail(body: { jobText: string; recruiterEmail?: string; company?: string }): Promise<EmailDraft> {
+  return readApply(await fetch('/api/apply/email/compose', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }));
+}
+
 export interface Dimension { name: string; score: string; comment: string; }
 export interface Evaluation {
   id: string;

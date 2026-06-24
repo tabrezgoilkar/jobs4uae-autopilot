@@ -27,7 +27,7 @@ Runs entirely on the user's PC — Node/Express server (port 5123) + Vite/React 
 - **Settings page** — change AI engine/model/key in-app, application-details memory, privacy, GitHub feedback links.
 - Bespoke, zero-dependency, token-themed SVG **chart primitives** (RadialGauge / Donut / Sparkline) + eased count-ups.
 
-**Quality:** 246 tests passing (server + web utils); web builds clean; eslint clean.
+**Quality:** 258 tests passing (server + web utils); web builds clean; eslint clean.
 
 ## 2026-06-24 — Assisted Auto-Apply v1 (Indeed) — backend + UI (on `main`)
 Phase 11 v1 built to spec (`2026-06-21-phase-11-assisted-auto-apply-design.md`), **assisted, never automated** — the app prepares & autofills; the **user clicks Submit**. No passwords stored, no CAPTCHA defeat, no fabricated facts, no unattended submit.
@@ -37,7 +37,8 @@ Phase 11 v1 built to spec (`2026-06-21-phase-11-assisted-auto-apply-design.md`),
 - **Headed persistent browser** (`apply/browser.js`) — per-board `launchPersistentContext` (session only, never passwords); real page adapter (manual-verify, like the scanner).
 - **Connections + apply API** — `GET /api/connections`, `connect`/`confirm`/`disconnect`; `POST /api/apply/start` (open job → autofill → `{ filledCount, pending }`) + `POST /api/apply/answer` (fill into the live form, remember, return remaining). **No submit route.**
 - **Auto-apply page wired** — Connect Indeed → "I've logged in" → Connected; Apply workspace (paste job URL → Open & autofill → answer-new-questions panel with AI drafts → "review the form & Submit yourself"); inline Application Details editor (seeded from Settings answers).
-- 39 new tests. **Live Indeed connect + one real assisted application are verifiable only on the user's machine** (selectors/login are inherently manual, like scanning); all orchestration/store/matcher/routes are unit-tested.
+- **Email-Apply** (`apply/email/compose.js` + `POST /api/apply/email/compose` + UI section) — for the GCC "send your CV to hr@…" post-jobs (no form, fully legitimate). Paste a post → pulls the recruiter email → AI-drafts a tailored subject+body from the **real** profile (anti-fabrication) → review/edit → **Open in Gmail / mail app** (no credentials, no auto-send) + attach CV from Documents. Discovery via LinkedIn deferred; works from any pasted post.
+- 51 new tests. **Live Indeed connect + one real assisted application are verifiable only on the user's machine** (selectors/login are inherently manual, like scanning); all orchestration/store/matcher/email/routes are unit-tested.
 
 ## 2026-06-24 — LinkedIn profile sync + Documents word-diff (on `main`)
 - **LinkedIn import (Phase 9, partial)** — pull your **own** LinkedIn profile into My Profile, Rezi-style, **local-first**:
@@ -61,7 +62,7 @@ Phase 11 v1 built to spec (`2026-06-21-phase-11-assisted-auto-apply-design.md`),
 ## Remaining
 
 - **Phase 8** — more boards: ATS (Greenhouse/Lever — reliable, testable anywhere), then Bayt/Naukrigulf/GulfTalent via headed browser; per-board verification gating. (Bayt/Naukrigulf scrapers were removed from the active build — Cloudflare-blocked; see plan below.)
-- **Phase 11 — Assisted Auto-Apply**: **v1 (Indeed) shipped** (above). Remaining: verify on a real Indeed login/application (user's machine); then more boards (Bayt/Naukrigulf via same config pattern), **LinkedIn connect**, and **Email-Apply** for "send your CV to hr@…" post-jobs (§6.6 of the spec).
+- **Phase 11 — Assisted Auto-Apply**: **v1 (Indeed) + Email-Apply shipped** (above). Remaining: verify on a real Indeed login/application (user's machine); then more boards (Bayt/Naukrigulf via same config pattern), **LinkedIn connect**, and the **LinkedIn-post discovery** for Email-Apply (assistive, needs LinkedIn connect). Optional SMTP one-click send (currently mailto/Gmail draft, no creds).
 - **Phase 9** — LinkedIn import shipped (above); remaining: **Phase 9b** polished Chrome extension (wraps the same `/api/profile/linkedin/import` endpoint) + assisted batch apply.
 - **Phase 10** — one-click Windows installer + auto-install Ollama.
 - **Phase 18** — mock interview.

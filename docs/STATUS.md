@@ -1,6 +1,6 @@
 # Jobs4UAE Autopilot — build status
 
-_Last updated: 2026-06-23_
+_Last updated: 2026-06-24_
 
 A free, **local-first** job-search copilot for the GCC (UAE, Saudi, Qatar, Kuwait, Bahrain, Oman).
 Runs entirely on the user's PC — Node/Express server (port 5123) + Vite/React app. **No cloud deploy**
@@ -10,7 +10,7 @@ Runs entirely on the user's PC — Node/Express server (port 5123) + Vite/React 
 
 **Core pipeline**
 - Setup wizard + AI engine (Gemini / OpenRouter / Local Ollama) with **OpenRouter free-model auto-fallback** (auto-discovers & rotates working free models; self-heals when a `:free` model is retired).
-- My Profile — CV import (AI) → editable profile, now incl. **Projects / Certifications / Languages / Awards** + a **Profile copilot** rail (strength gauge + suggestions). LinkedIn sync = placeholder (Phase 9).
+- My Profile — CV import (AI) → editable profile, now incl. **Projects / Certifications / Languages / Awards** + a **Profile copilot** rail (strength gauge + suggestions). **LinkedIn import** live (bookmarklet → Voyager JSON → merge; see below).
 - Evaluate — honest A–F fit score with dimensions, matched/missing skills.
 - Documents — tabbed **Tailored CV / Cover letter**, rendered preview (marked + DOMPurify) ↔ edit, **fit-after-tailoring gauge**, "still worth adding" skills + free-learn links, PDF download, regenerate.
 - PDF export — UAE-style resume/cover (Playwright render).
@@ -27,7 +27,16 @@ Runs entirely on the user's PC — Node/Express server (port 5123) + Vite/React 
 - **Settings page** — change AI engine/model/key in-app, application-details memory, privacy, GitHub feedback links.
 - Bespoke, zero-dependency, token-themed SVG **chart primitives** (RadialGauge / Donut / Sparkline) + eased count-ups.
 
-**Quality:** 167 tests passing (server + web utils); web builds clean.
+**Quality:** 215 tests passing (server + web utils); web builds clean; eslint clean.
+
+## 2026-06-24 — LinkedIn profile sync + Documents word-diff (on `main`)
+- **LinkedIn import (Phase 9, partial)** — pull your **own** LinkedIn profile into My Profile, Rezi-style, **local-first**:
+  - A self-contained **"Send to Jobs4UAE" bookmarklet** runs in your logged-in LinkedIn tab and calls LinkedIn's own **Voyager API** (no public-page scraping, which is auth-walled/blocked). It auto-imports to the local app, or — if LinkedIn's CSP blocks the POST — downloads `linkedin-profile.json` to upload. Served at `GET /linkedin` (install page) + `GET /api/profile/linkedin/bookmarklet`.
+  - Server: `linkedinToProfile()` (tolerant Voyager **or** JSON Resume mapper) → `mergeProfile()` (fills only blank fields, appends new roles/skills/certs by key, returns a change summary — **never overwrites your edits**) → `POST /api/profile/linkedin/import` (returns `{ merged, changes }`, doesn't persist). CORS scoped to `linkedin.com`; in-memory take-once pending hand-off.
+  - Web: **My Profile → Import from LinkedIn** modal — drag-the-bookmarklet + file/paste fallback, polls for the bookmarklet hand-off, **review screen** (what gets merged) → Apply into the editable profile → existing Save.
+  - 34 new tests. **Live Voyager extraction is verifiable only on the user's machine** with their LinkedIn session (same posture as assisted-apply); map/merge/route/bookmarklet are fully unit-tested.
+  - Spec: `docs/superpowers/specs/2026-06-24-linkedin-profile-sync-design.md`. **Phase 9b** = polished Chrome extension wrapping the same import endpoint.
+- **Documents — word-level "what changed":** replaced the line file-diff with a section-aware, token-level (LCS) inline diff on the tailored CV.
 
 ## 2026-06-23 — product-quality + design-fidelity pass (on `main`)
 - **Design system locked to spec:** every block re-aligned to the Lumzi **6px (`md`) radius** ("enterprise-precise, not rounded-toy") app-wide — cards/controls 6px, hairline borders, sparing elevation. Tracker rebuilt to parity then corrected to the canonical block treatment.
@@ -43,7 +52,7 @@ Runs entirely on the user's PC — Node/Express server (port 5123) + Vite/React 
 
 - **Phase 8** — more boards: ATS (Greenhouse/Lever — reliable, testable anywhere), then Bayt/Naukrigulf/GulfTalent via headed browser; per-board verification gating. (Bayt/Naukrigulf scrapers were removed from the active build — Cloudflare-blocked; see plan below.)
 - **Phase 11 — Assisted Auto-Apply backend** (page UI done): the live flow behind the Auto-apply page — persistent per-board browser session (connect/login), open job → **autofill** fields + CV PDF + cover letter + known answers → user clicks Submit; accumulating Q&A memory; optional email-apply. Needs the user's machine to test real board logins.
-- **Phase 9** — LinkedIn assisted + real profile sync + batch apply.
+- **Phase 9** — LinkedIn import shipped (above); remaining: **Phase 9b** polished Chrome extension (wraps the same `/api/profile/linkedin/import` endpoint) + assisted batch apply.
 - **Phase 10** — one-click Windows installer + auto-install Ollama.
 - **Phase 18** — mock interview.
 - Smaller items: wire the **salary benchmark** estimate into the Scan copilot UI; **multi-board chips** (needs Phase 8 boards); rebuild Scan "paste a job **link**" (paste a URL → fetch + score) to match the design.
@@ -53,5 +62,6 @@ Runs entirely on the user's PC — Node/Express server (port 5123) + Vite/React 
 ## Key docs
 - Product/design spec: `docs/superpowers/specs/2026-06-21-gcc-career-copilot-design.md`
 - Assisted-apply spec: `docs/superpowers/specs/2026-06-21-phase-11-assisted-auto-apply-design.md`
+- LinkedIn profile sync spec: `docs/superpowers/specs/2026-06-24-linkedin-profile-sync-design.md`
 - Scanner rework plan: `docs/superpowers/plans/2026-06-23-NEXT-naukrigulf-bayt-scanner-rework.md`
 - Approved visual design: claude.ai/design project `be1ada00-42de-4811-9c55-6ad7bc8dece6` (`Jobs4UAE Autopilot.dc.html`).

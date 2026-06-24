@@ -57,13 +57,13 @@ export function applyRouter() {
       const engine = config.setupComplete
         ? createEngine(config)
         : { generate: async () => { throw new Error('AI not configured'); } };
-      const profile = loadProfile();
+      const profile = loadProfile(req.userId);
       const details = loadDetails();
 
       // Optional: attach a saved tailored document (cover letter + rendered resume PDF).
       const documents = {};
       if (documentId) {
-        const doc = getDocument(documentId);
+        const doc = getDocument(req.userId, documentId);
         if (doc) {
           documents.coverLetter = doc.coverLetterMarkdown ?? '';
           try {
@@ -119,7 +119,7 @@ export function applyRouter() {
         return res.status(409).json({ error: 'Please complete the AI setup wizard before drafting emails.' });
       }
       const engine = createEngine(config);
-      const { subject, body } = await composeApplicationEmail(loadProfile(), jobText, { email: to, company }, engine);
+      const { subject, body } = await composeApplicationEmail(loadProfile(req.userId), jobText, { email: to, company }, engine);
       res.json({ to, subject, body, mailto: mailtoLink({ to, subject, body }), gmail: gmailComposeLink({ to, subject, body }), foundEmails: found });
     } catch (e) {
       res.status(400).json({ error: e.message });

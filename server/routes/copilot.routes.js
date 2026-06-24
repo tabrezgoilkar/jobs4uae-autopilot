@@ -20,7 +20,7 @@ export function copilotRouter() {
 
       const history = Array.isArray(req.body?.history) ? req.body.history : [];
       const engine = createEngine(config);
-      const profile = loadProfile();
+      const profile = loadProfile(req.userId);
       let evaluations = [];
       try {
         evaluations = listEvaluations();

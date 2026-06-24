@@ -32,7 +32,7 @@ export function profileRouter() {
 
   router.get('/', (req, res) => {
     try {
-      res.json(loadProfile());
+      res.json(loadProfile(req.userId));
     } catch (e) {
       res.status(500).json({ error: e.message });
     }
@@ -40,7 +40,7 @@ export function profileRouter() {
 
   router.post('/', (req, res) => {
     try {
-      res.json(saveProfile(req.body ?? {}));
+      res.json(saveProfile(req.userId, req.body ?? {}));
     } catch (e) {
       res.status(500).json({ error: e.message });
     }
@@ -90,7 +90,7 @@ export function profileRouter() {
         });
       }
       const incoming = linkedinToProfile(raw);
-      const { merged, changes } = mergeProfile(loadProfile(), incoming);
+      const { merged, changes } = mergeProfile(loadProfile(req.userId), incoming);
       // A bookmarklet import (cross-origin from linkedin.com) is stashed for the
       // app to pick up; a same-origin file upload uses this response directly.
       if (req.headers.origin === 'https://www.linkedin.com') setPending({ merged, changes });

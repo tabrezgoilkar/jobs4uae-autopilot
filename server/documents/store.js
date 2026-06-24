@@ -1,52 +1,45 @@
-import fs from 'node:fs';
-import path from 'node:path';
-import { dataDir } from '../config/paths.js';
+import { getJson, setJson } from '../storage/kv.js';
 
-function storePath() {
-  return path.join(dataDir(), 'documents.json');
+// Per-user tailored-document store (resume + cover letter markdown), keyed via the
+// storage adapter so it works locally (files) and in the cloud (Postgres).
+
+function listAll(userId) {
+  const arr = getJson(userId, 'documents');
+  return Array.isArray(arr) ? arr : [];
 }
 
-export function listDocuments() {
-  const p = storePath();
-  if (!fs.existsSync(p)) return [];
-  try {
-    const arr = JSON.parse(fs.readFileSync(p, 'utf8'));
-    return Array.isArray(arr) ? arr : [];
-  } catch {
-    return [];
-  }
+export function listDocuments(userId) {
+  return listAll(userId);
 }
 
-function writeAll(list) {
-  const p = storePath();
-  fs.mkdirSync(path.dirname(p), { recursive: true });
-  fs.writeFileSync(p, JSON.stringify(list, null, 2));
+function writeAll(userId, list) {
+  setJson(userId, 'documents', list);
 }
 
 function newId() {
   return `doc_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
-export function addDocument(doc) {
+export function addDocument(userId, doc) {
   const { id: _i, createdAt: _c, updatedAt: _u, ...rest } = doc ?? {};
   const now = new Date().toISOString();
   const record = { ...rest, id: newId(), createdAt: now, updatedAt: now };
-  const list = listDocuments();
+  const list = listAll(userId);
   list.unshift(record);
-  writeAll(list);
+  writeAll(userId, list);
   return record;
 }
 
-export function getDocument(id) {
-  return listDocuments().find((d) => d.id === id) ?? null;
+export function getDocument(userId, id) {
+  return listAll(userId).find((d) => d.id === id) ?? null;
 }
 
-export function updateDocument(id, patch) {
-  const list = listDocuments();
+export function updateDocument(userId, id, patch) {
+  const list = listAll(userId);
   const idx = list.findIndex((d) => d.id === id);
   if (idx === -1) return null;
   const { id: _i, createdAt: _c, updatedAt: _u, ...rest } = patch ?? {};
   list[idx] = { ...list[idx], ...rest, updatedAt: new Date().toISOString() };
-  writeAll(list);
+  writeAll(userId, list);
   return list[idx];
 }

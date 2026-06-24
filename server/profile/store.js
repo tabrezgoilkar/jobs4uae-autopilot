@@ -1,26 +1,12 @@
-import fs from 'node:fs';
-import path from 'node:path';
-import { dataDir } from '../config/paths.js';
 import { EMPTY_PROFILE, normalizeProfile } from './schema.js';
+import { getJson, setJson } from '../storage/kv.js';
 
-function profilePath() {
-  return path.join(dataDir(), 'profile.json');
+export function loadProfile(userId) {
+  const raw = getJson(userId, 'profile');
+  return raw ? normalizeProfile(raw) : structuredClone(EMPTY_PROFILE);
 }
 
-export function loadProfile() {
-  const p = profilePath();
-  if (!fs.existsSync(p)) return structuredClone(EMPTY_PROFILE);
-  try {
-    return normalizeProfile(JSON.parse(fs.readFileSync(p, 'utf8')));
-  } catch {
-    return structuredClone(EMPTY_PROFILE);
-  }
-}
-
-export function saveProfile(profile) {
+export function saveProfile(userId, profile) {
   const next = { ...normalizeProfile(profile), updatedAt: new Date().toISOString() };
-  const p = profilePath();
-  fs.mkdirSync(path.dirname(p), { recursive: true });
-  fs.writeFileSync(p, JSON.stringify(next, null, 2));
-  return next;
+  return setJson(userId, 'profile', next);
 }

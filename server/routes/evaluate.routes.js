@@ -19,7 +19,7 @@ export function evaluateRouter() {
       }
 
       const engine = createEngine(config);
-      const profile = loadProfile();
+      const profile = loadProfile(req.userId);
       const result = await evaluateJob(profile, jobText, engine);
       const saved = addEvaluation({ ...result, jobText });
       res.json(saved);

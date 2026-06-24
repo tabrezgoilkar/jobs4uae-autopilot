@@ -36,7 +36,7 @@ export function documentsRouter() {
       }
 
       const engine = createEngine(config);
-      const profile = loadProfile();
+      const profile = loadProfile(req.userId);
       const docs = await generateDocuments(profile, jobText, engine);
       // The honest "before tailoring" CV — a deterministic render of the profile,
       // so the UI can show what tailoring actually changed.
@@ -49,7 +49,7 @@ export function documentsRouter() {
 
   router.get('/documents', (req, res) => {
     try {
-      res.json(listDocuments());
+      res.json(listDocuments(req.userId));
     } catch (e) {
       res.status(500).json({ error: e.message });
     }
@@ -57,7 +57,7 @@ export function documentsRouter() {
 
   router.post('/documents', (req, res) => {
     try {
-      res.json(addDocument(req.body ?? {}));
+      res.json(addDocument(req.userId, req.body ?? {}));
     } catch (e) {
       res.status(500).json({ error: e.message });
     }
@@ -65,7 +65,7 @@ export function documentsRouter() {
 
   router.get('/documents/:id', (req, res) => {
     try {
-      const found = getDocument(req.params.id);
+      const found = getDocument(req.userId, req.params.id);
       if (!found) return res.status(404).json({ error: 'Document not found.' });
       res.json(found);
     } catch (e) {
@@ -75,7 +75,7 @@ export function documentsRouter() {
 
   router.post('/documents/:id', (req, res) => {
     try {
-      const updated = updateDocument(req.params.id, req.body ?? {});
+      const updated = updateDocument(req.userId, req.params.id, req.body ?? {});
       if (!updated) return res.status(404).json({ error: 'Document not found.' });
       res.json(updated);
     } catch (e) {

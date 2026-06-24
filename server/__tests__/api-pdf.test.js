@@ -24,7 +24,7 @@ async function seedData() {
   const { saveProfile } = await import('../profile/store.js');
   const { addDocument } = await import('../documents/store.js');
 
-  saveProfile({
+  saveProfile('local', {
     fullName: 'Jane Al-Rashidi',
     email: 'jane@example.com',
     phone: '+971 50 000 0001',
@@ -32,7 +32,7 @@ async function seedData() {
     nationality: 'British',
   });
 
-  const doc = addDocument({
+  const doc = addDocument('local', {
     jobTitle: 'Finance Manager',
     company: 'ACME Corp',
     resumeMarkdown: '# Experience\nDid great things.',

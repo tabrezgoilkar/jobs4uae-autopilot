@@ -14,7 +14,7 @@ afterEach(() => fs.rmSync(tmpDir, { recursive: true, force: true }));
 describe('profile store', () => {
   it('returns an empty profile when none exists', async () => {
     const { loadProfile } = await import('../profile/store.js');
-    const p = loadProfile();
+    const p = loadProfile('local');
     expect(p.fullName).toBe('');
     expect(Array.isArray(p.skills)).toBe(true);
     expect(p.skills).toHaveLength(0);
@@ -22,17 +22,17 @@ describe('profile store', () => {
 
   it('saves and reloads a profile, stamping updatedAt', async () => {
     const { saveProfile, loadProfile } = await import('../profile/store.js');
-    const saved = saveProfile({ fullName: 'Jane Doe', skills: ['Node', 'React'] });
+    const saved = saveProfile('local', { fullName: 'Jane Doe', skills: ['Node', 'React'] });
     expect(saved.updatedAt).toBeTruthy();
-    const p = loadProfile();
+    const p = loadProfile('local');
     expect(p.fullName).toBe('Jane Doe');
     expect(p.skills).toEqual(['Node', 'React']);
   });
 
   it('normalizes malformed array fields to empty arrays', async () => {
     const { saveProfile, loadProfile } = await import('../profile/store.js');
-    saveProfile({ fullName: 'X', skills: 'not-an-array' });
-    const p = loadProfile();
+    saveProfile('local', { fullName: 'X', skills: 'not-an-array' });
+    const p = loadProfile('local');
     expect(p.skills).toEqual([]);
   });
 });

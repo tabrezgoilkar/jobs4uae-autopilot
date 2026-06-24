@@ -29,6 +29,22 @@ Runs entirely on the user's PC — Node/Express server (port 5123) + Vite/React 
 
 **Quality:** 258 tests passing (server + web utils); web builds clean; eslint clean.
 
+## 2026-06-24 — Cloud SaaS Phase A: auth foundation started (on `main`)
+Decision: take the app online as a **multi-user product** (option B), AI model **3** (hybrid),
+**without losing any feature** — so it's a **hybrid**: cloud hosts UI/auth/data/AI; a later desktop
+companion runs the headed-browser features (Scan/Assisted Auto-Apply). Spec:
+`2026-06-24-cloud-saas-phase-a-foundation-design.md`. Phase 2 online scope (per owner): **Profile +
+CV (import → tailored CV/Documents) first**; rest later.
+- **Authentication foundation done + tested (slices A1–A3):**
+  - `server/storage/kv.js` — per-user JSON storage adapter (`getJson/setJson`); `local` stays flat
+    (back-compatible local dev), real users namespace under `data/u/<userId>/`. Postgres impl drops
+    in behind the same interface at deploy.
+  - Profile + documents stores refactored to per-user; `req.userId` threaded through every route.
+  - `server/auth/middleware.js` — sets `req.userId`: Clerk bearer-token verify when
+    `CLERK_SECRET_KEY` is set, else `local` (no login needed on the owner's PC). 15 tests.
+- **Remaining for Phase A:** A4 Vercel packaging + provision Neon Postgres + Clerk; A5 Clerk login
+  screens (frontend). Both need the owner's Vercel + Clerk accounts (in progress).
+
 ## 2026-06-24 — Assisted Auto-Apply v1 (Indeed) — backend + UI (on `main`)
 Phase 11 v1 built to spec (`2026-06-21-phase-11-assisted-auto-apply-design.md`), **assisted, never automated** — the app prepares & autofills; the **user clicks Submit**. No passwords stored, no CAPTCHA defeat, no fabricated facts, no unattended submit.
 - **Application Details store** (`server/apply/answers/store.js`) — standard GCC answers (nationality, visa, notice, current/expected salary, relocate, licence, languages) + an **accumulating Q&A memory** (upsert by normalized question key → asked once, reused forever). `GET/POST /api/application-details`.

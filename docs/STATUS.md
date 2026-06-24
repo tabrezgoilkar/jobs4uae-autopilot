@@ -42,8 +42,18 @@ CV (import → tailored CV/Documents) first**; rest later.
   - Profile + documents stores refactored to per-user; `req.userId` threaded through every route.
   - `server/auth/middleware.js` — sets `req.userId`: Clerk bearer-token verify when
     `CLERK_SECRET_KEY` is set, else `local` (no login needed on the owner's PC). 15 tests.
-- **Remaining for Phase A:** A4 Vercel packaging + provision Neon Postgres + Clerk; A5 Clerk login
-  screens (frontend). Both need the owner's Vercel + Clerk accounts (in progress).
+- **A5 login screens done:** `web/src/AuthGate.tsx` wraps the app in Clerk (`<SignIn>` when
+  signed out), a fetch interceptor attaches the session token to `/api`; no Clerk key → renders
+  the app directly (local dev). Keys live in gitignored `.env` files only.
+- **A4 Vercel packaging done + deploying:** `server/cloudApp.js` (cloud-safe, Playwright-free
+  routers: profile, documents, email-compose) + `api/[...all].js` serverless entry + `vercel.json`
+  (installs web deps, builds the SPA → `web/dist`). GitHub `main` → Vercel project `jobs4uae`
+  auto-deploys; the build is now **green** (fixed the `tsc not found` failure).
+- **To go live (owner, in Vercel dashboard):** turn OFF Deployment Protection (Vercel Authentication);
+  set env `VITE_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`, `CLERK_AUTHORIZED_PARTIES` (prod URL).
+- **Remaining for Phase A:** Postgres impl behind the `kv` interface (async) + per-user settings/
+  hybrid-AI, so cloud data + AI config actually persist (serverless disk is read-only). Until then
+  the cloud app builds + login works but saves don't persist.
 
 ## 2026-06-24 — Assisted Auto-Apply v1 (Indeed) — backend + UI (on `main`)
 Phase 11 v1 built to spec (`2026-06-21-phase-11-assisted-auto-apply-design.md`), **assisted, never automated** — the app prepares & autofills; the **user clicks Submit**. No passwords stored, no CAPTCHA defeat, no fabricated facts, no unattended submit.

@@ -40,9 +40,11 @@ export default function CopilotPanel({ open, onClose }: { open: boolean; onClose
   }
 
   return (
+    <div className="fixed inset-0 z-50 flex justify-end" style={{ background: 'var(--scrim)' }} onClick={onClose}>
     <aside
-      className="flex flex-col"
-      style={{ width: 380, flex: 'none', background: 'var(--surface)', borderLeft: '1px solid var(--border-subtle)', boxShadow: 'var(--shadow-lg)' }}
+      onClick={(e) => e.stopPropagation()}
+      className="flex flex-col h-full w-full max-w-[400px]"
+      style={{ background: 'var(--surface)', borderLeft: '1px solid var(--border-subtle)', boxShadow: 'var(--shadow-lg)' }}
     >
       <div className="flex items-center gap-2.5 px-4 py-3.5 border-b border-hair-subtle">
         <IconSparkle size={17} color="var(--ai-600)" />
@@ -101,5 +103,6 @@ export default function CopilotPanel({ open, onClose }: { open: boolean; onClose
         </form>
       </div>
     </aside>
+    </div>
   );
 }

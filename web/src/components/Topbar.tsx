@@ -26,22 +26,29 @@ function metaFor(pathname: string) {
 export default function Topbar({
   onOpenPalette,
   onToggleCopilot,
+  onOpenNav,
 }: {
   onOpenPalette: () => void;
   onToggleCopilot: () => void;
+  onOpenNav: () => void;
 }) {
   const { pathname } = useLocation();
   const { title, sub } = metaFor(pathname);
 
   return (
     <header
-      className="sticky top-0 z-10 flex items-center gap-3 px-7 py-3 border-b border-hair-subtle"
+      className="sticky top-0 z-10 flex items-center gap-2 sm:gap-3 px-4 md:px-7 py-3 border-b border-hair-subtle"
       style={{ background: 'color-mix(in srgb, var(--surface) 85%, transparent)', backdropFilter: 'blur(8px)' }}
     >
-      <div className="text-[15px] font-bold text-ink-strong">{title}</div>
-      {sub && <div className="text-xs text-ink-muted">{sub}</div>}
+      {/* Mobile menu button */}
+      <button type="button" onClick={onOpenNav} aria-label="Open menu" className="md:hidden -ml-1 p-1.5 text-ink-secondary">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+      </button>
 
-      <div className="ml-auto flex items-center gap-2.5">
+      <div className="text-[15px] font-bold text-ink-strong truncate">{title}</div>
+      {sub && <div className="hidden sm:block text-xs text-ink-muted truncate">{sub}</div>}
+
+      <div className="ml-auto flex items-center gap-2 sm:gap-2.5">
         {/* ⌘K command palette — ask the UAE job market */}
         <button
           type="button"
@@ -60,14 +67,14 @@ export default function Topbar({
           type="button"
           onClick={onToggleCopilot}
           title="Career copilot (⌘J)"
-          className="j4u-press inline-flex items-center gap-1.5 h-[34px] px-3 rounded-md text-xs font-semibold text-ai-700 border border-ai-soft bg-ai-soft"
+          className="j4u-press inline-flex items-center gap-1.5 h-[34px] px-2.5 sm:px-3 rounded-md text-xs font-semibold text-ai-700 border border-ai-soft bg-ai-soft"
         >
           <IconSparkle size={13} color="var(--ai-600)" />
-          Copilot
-          <span className="font-mono text-[10px] opacity-70">⌘J</span>
+          <span>Copilot</span>
+          <span className="hidden sm:inline font-mono text-[10px] opacity-70">⌘J</span>
         </button>
 
-        <span className="w-px h-5 bg-hair-subtle mx-0.5" />
+        <span className="hidden sm:block w-px h-5 bg-hair-subtle mx-0.5" />
         <ThemeToggle />
       </div>
     </header>

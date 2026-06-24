@@ -13,7 +13,6 @@ import { loadConfig } from '../config/store.js';
 import { createEngine } from '../ai/index.js';
 import { getDocument } from '../documents/store.js';
 import { renderResumePdf } from '../documents/pdf/render.js';
-import { extractEmails, mailtoLink, gmailComposeLink, composeApplicationEmail } from '../apply/email/compose.js';
 
 // Assisted Auto-Apply (Phase 11). The app prepares and assists; the USER submits.
 // There is deliberately no "submit" route.
@@ -105,26 +104,7 @@ export function applyRouter() {
     }
   });
 
-  // --- Email-Apply (the "send your CV to hr@…" channel) ---
-  router.post('/apply/email/compose', async (req, res) => {
-    try {
-      const { jobText = '', recruiterEmail, company } = req.body ?? {};
-      const found = extractEmails(jobText);
-      const to = String(recruiterEmail ?? '').trim() || found[0];
-      if (!to) {
-        return res.status(422).json({ error: 'No recruiter email found. Paste the post including the address, or enter it.' });
-      }
-      const config = loadConfig();
-      if (!config.setupComplete) {
-        return res.status(409).json({ error: 'Please complete the AI setup wizard before drafting emails.' });
-      }
-      const engine = createEngine(config);
-      const { subject, body } = await composeApplicationEmail(loadProfile(req.userId), jobText, { email: to, company }, engine);
-      res.json({ to, subject, body, mailto: mailtoLink({ to, subject, body }), gmail: gmailComposeLink({ to, subject, body }), foundEmails: found });
-    } catch (e) {
-      res.status(400).json({ error: e.message });
-    }
-  });
+  // Email-Apply compose lives in apply-cloud.routes.js (cloud-safe, no browser).
 
   return router;
 }

@@ -7,6 +7,18 @@
 // verifyToken is injected (the real Clerk verifier is wired in app.js) so this is
 // unit-testable without the Clerk SDK or a network.
 
+// Refuse to boot a production instance that would let auth fail open or accept
+// tokens from any origin. Called by both the full and cloud app factories.
+export function assertProdAuthConfig() {
+  if (process.env.NODE_ENV !== 'production') return;
+  if (!process.env.CLERK_SECRET_KEY?.trim()) {
+    throw new Error('CLERK_SECRET_KEY is required in production — auth must not fail open.');
+  }
+  if (!(process.env.CLERK_AUTHORIZED_PARTIES || '').trim()) {
+    throw new Error('CLERK_AUTHORIZED_PARTIES (prod frontend origin[s]) is required in production.');
+  }
+}
+
 export function authMiddleware({ verifyToken } = {}) {
   return async function auth(req, res, next) {
     const hasClerk = process.env.CLERK_SECRET_KEY?.trim();

@@ -11,20 +11,10 @@ import { trackerRouter } from './routes/tracker.routes.js';
 import { scannerRouter } from './routes/scanner.routes.js';
 import { copilotRouter } from './routes/copilot.routes.js';
 import { applyRouter } from './routes/apply.routes.js';
-import { authMiddleware } from './auth/middleware.js';
+import { applyCloudRouter } from './routes/apply-cloud.routes.js';
+import { authMiddleware, assertProdAuthConfig } from './auth/middleware.js';
 import { clerkVerifier } from './auth/clerk.js';
 import { installPageHtml } from './profile/linkedin/bookmarklet.js';
-
-// Refuse to boot a production instance that would let auth fail open.
-function assertProdAuthConfig() {
-  if (process.env.NODE_ENV !== 'production') return;
-  if (!process.env.CLERK_SECRET_KEY?.trim()) {
-    throw new Error('CLERK_SECRET_KEY is required in production — auth must not fail open.');
-  }
-  if (!(process.env.CLERK_AUTHORIZED_PARTIES || '').trim()) {
-    throw new Error('CLERK_AUTHORIZED_PARTIES (prod frontend origin[s]) is required in production.');
-  }
-}
 
 export function createApp() {
   assertProdAuthConfig();
@@ -67,6 +57,7 @@ export function createApp() {
   app.use('/api', trackerRouter());
   app.use('/api', scannerRouter());
   app.use('/api', copilotRouter());
+  app.use('/api', applyCloudRouter());
   app.use('/api', applyRouter());
 
   // In production, serve the built web app if it exists.

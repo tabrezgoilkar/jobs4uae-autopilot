@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { marked } from 'marked';
+import DOMPurify from 'dompurify';
 import {
   getProfile,
   saveProfile,
@@ -194,6 +196,19 @@ function Chip({ children }: { children: React.ReactNode }) {
   return <span className="inline-flex items-center rounded-full border border-hair bg-surface-sunken px-2.5 py-0.5 text-xs text-ink-secondary">{children}</span>;
 }
 
+// Inline "• …" runs (common when CV text is flattened) → markdown bullet lines,
+// so even older plain-text profiles still render as a list.
+function toMarkdown(text: string): string {
+  return text.replace(/\s*[••‣◦⁃∙]\s+/g, '\n- ');
+}
+
+/** Renders a description as markdown (bullets, bold lead-ins, etc.) — reuses the
+ *  `.j4u-doc` styles from the Documents preview. */
+function RichText({ text }: { text: string }) {
+  const html = DOMPurify.sanitize(marked.parse(toMarkdown(text), { async: false }) as string);
+  return <div className="j4u-doc text-[13px] text-ink-secondary" dangerouslySetInnerHTML={{ __html: html }} />;
+}
+
 function dateRange(a?: string, b?: string) {
   return [a, b].filter(Boolean).join(' – ');
 }
@@ -218,7 +233,7 @@ function ProfileView({ profile: p, onEdit }: { profile: Profile; onEdit: () => v
         <div className="text-2xl font-bold text-ink-strong tracking-tight">{p.fullName || 'Unnamed'}</div>
         {p.headline && <div className="text-[15px] text-primary-700 font-medium mt-0.5">{p.headline}</div>}
         {contact.length > 0 && <div className="mt-2 text-[13px] text-ink-secondary">{contact.join('  ·  ')}</div>}
-        {p.summary?.trim() && <p className="mt-3 text-sm text-ink-secondary leading-relaxed whitespace-pre-wrap">{p.summary}</p>}
+        {p.summary?.trim() && <div className="mt-3"><RichText text={p.summary} /></div>}
         {p.skills.length > 0 && (
           <div className="mt-3 flex flex-wrap gap-1.5">{p.skills.map((s, i) => <Chip key={i}>{s}</Chip>)}</div>
         )}
@@ -231,7 +246,7 @@ function ProfileView({ profile: p, onEdit }: { profile: Profile; onEdit: () => v
               <div key={i} className="border-l-2 border-hair pl-3">
                 <div className="text-[14px] font-semibold text-ink-strong">{x.title || 'Role'}{x.company ? ` · ${x.company}` : ''}</div>
                 {dateRange(x.startDate, x.endDate) && <div className="text-xs text-ink-muted">{dateRange(x.startDate, x.endDate)}</div>}
-                {x.description?.trim() && <p className="mt-1 text-[13px] text-ink-secondary leading-relaxed whitespace-pre-wrap">{x.description}</p>}
+                {x.description?.trim() && <RichText text={x.description} />}
               </div>
             ))}
           </div>
@@ -257,7 +272,7 @@ function ProfileView({ profile: p, onEdit }: { profile: Profile; onEdit: () => v
             {p.projects.map((x, i) => (
               <div key={i}>
                 <div className="text-[14px] font-semibold text-ink-strong">{x.name}{x.url ? <a href={x.url} target="_blank" rel="noreferrer" className="ml-2 text-[12px] text-primary-700 font-medium">link ↗</a> : null}</div>
-                {x.description?.trim() && <p className="text-[13px] text-ink-secondary leading-relaxed">{x.description}</p>}
+                {x.description?.trim() && <RichText text={x.description} />}
                 {x.tech.length > 0 && <div className="mt-1 flex flex-wrap gap-1.5">{x.tech.map((t, j) => <Chip key={j}>{t}</Chip>)}</div>}
               </div>
             ))}

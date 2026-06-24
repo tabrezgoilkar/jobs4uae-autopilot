@@ -24,6 +24,13 @@ function buildPrompt(cvText) {
 }
 Use empty strings/arrays for anything not present. Do not invent information.
 
+FORMATTING — preserve the resume's structure inside the text fields using **Markdown**:
+- "summary": keep paragraphs as written.
+- experience/projects/awards "description": keep the intro sentence(s) as a short paragraph, then
+  EACH achievement/responsibility as its own Markdown bullet line starting with "- ". Preserve any
+  bold lead-ins as "**bold**" (e.g. "- **Directed IT strategy** across the enterprise…"). Keep the
+  original wording — do not summarise or drop bullets.
+
 RESUME:
 """
 ${cvText}

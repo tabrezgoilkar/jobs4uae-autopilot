@@ -2,10 +2,10 @@ import { useState } from 'react';
 import type { AppConfig } from '../api';
 import CommandPalette from '../components/CommandPalette';
 import CopilotPanel from '../components/CopilotPanel';
-import DocumentsPage from '../pages/DocumentsPage';
 import SettingsPage from '../pages/SettingsPage';
 import MobileHome from './MobileHome';
 import MobileProfile from './MobileProfile';
+import MobileDocuments from './MobileDocuments';
 import MobileComingSoon from './MobileComingSoon';
 
 export type MobileRoute = 'home' | 'scan' | 'tracker' | 'documents' | 'auto-apply' | 'profile' | 'settings';
@@ -67,7 +67,7 @@ export default function MobileApp({ config }: { config: AppConfig }) {
         <div className="px-4 pt-4" style={{ paddingBottom: 96 }}>
           {route === 'home' && <MobileHome go={go} />}
           {route === 'profile' && <MobileProfile onOpenSettings={() => go('settings')} />}
-          {route === 'documents' && <div className="-mx-4 -mt-4"><DocumentsPage /></div>}
+          {route === 'documents' && <MobileDocuments />}
           {route === 'settings' && <div className="-mx-4 -mt-4"><SettingsPage /></div>}
           {comingSoon && <MobileComingSoon route={route} />}
         </div>

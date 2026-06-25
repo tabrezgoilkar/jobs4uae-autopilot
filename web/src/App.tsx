@@ -12,6 +12,8 @@ import ScanPage from './pages/ScanPage';
 import AutoApplyPage from './pages/AutoApplyPage';
 import SettingsPage from './pages/SettingsPage';
 import ComingSoon from './pages/ComingSoon';
+import { useIsMobile } from './mobile/useIsMobile';
+import MobileApp from './mobile/MobileApp';
 
 // In the deployed (cloud) build, browser-driven + not-yet-per-user features
 // aren't functional — route them to a clear "coming soon" page, not a broken one.
@@ -20,6 +22,7 @@ const IS_CLOUD = !!import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 export default function App() {
   const [config, setConfig] = useState<AppConfig | null>(null);
   const [error, setError] = useState(false);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     getConfig().then(setConfig).catch(() => setError(true));
@@ -39,6 +42,15 @@ export default function App() {
 
   if (!config.setupComplete) {
     return <SetupWizard initial={config} onComplete={setConfig} />;
+  }
+
+  // Phones get the dedicated mobile app; embedded pages still use router hooks.
+  if (isMobile) {
+    return (
+      <BrowserRouter>
+        <MobileApp config={config} />
+      </BrowserRouter>
+    );
   }
 
   return (

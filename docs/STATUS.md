@@ -29,6 +29,20 @@ Runs entirely on the user's PC — Node/Express server (port 5123) + Vite/React 
 
 **Quality:** 280 tests passing (server + web utils); web builds clean; eslint clean.
 
+## 2026-06-25 — Mobile app (phone-native UI) — LIVE
+Implemented the approved **Jobs4UAE Mobile** design (DesignSync project
+`be1ada00-…`, file `Jobs4UAE Mobile.dc.html`) as a dedicated phone UI. `web/src/mobile/`:
+`useIsMobile` splits phone (<768px) → `MobileApp` (top app bar + 5-tab bottom bar +
+state routing) vs the unchanged desktop shell. Native screens on the Lumzi tokens:
+**MobileHome** (greeting/briefing/stats/review/recent docs — real data, honest empties),
+**MobileProfile** (strength ring, import-CV/LinkedIn-sync/Improve-with-AI, details/skills/
+experience/languages), **MobileDocuments** (paste JD → tailor → fit stars + CV/Cover tabs +
+rendered body + missing-skills + PDF + saved-docs list), **MobileSettings** (engine selector +
+privacy + help), and native bottom **sheets** (Career-copilot chat + Ask-the-UAE-market) wired to
+`/api/copilot`. Scan/Tracker/Auto-apply → on-brand "coming soon". Deferred sheets: job-verdict
+(needs scan/eval) + mock-interview (Phase 18). All earlier mobile-responsive shell fixes still apply
+to desktop. Build + lint clean.
+
 ## 2026-06-24 — Cloud SaaS Phase A: **LIVE** (multi-tenant, auth + Postgres verified)
 **Live:** https://jobs4uae-tabrezg-projects-projects.vercel.app — sign up → Clerk login → AI setup →
 edit profile → Save **persists per-user in Neon Postgres** (verified directly in `app_state`:

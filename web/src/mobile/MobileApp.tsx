@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import type { AppConfig } from '../api';
-import CommandPalette from '../components/CommandPalette';
-import CopilotPanel from '../components/CopilotPanel';
+import { MobileCopilotSheet, MobileAskSheet } from './MobileSheets';
 import MobileHome from './MobileHome';
 import MobileProfile from './MobileProfile';
 import MobileDocuments from './MobileDocuments';
@@ -86,8 +85,8 @@ export default function MobileApp({ config }: { config: AppConfig }) {
         })}
       </nav>
 
-      {paletteOpen && <CommandPalette open onClose={() => setPaletteOpen(false)} />}
-      <CopilotPanel open={copilotOpen} onClose={() => setCopilotOpen(false)} />
+      {paletteOpen && <MobileAskSheet onClose={() => setPaletteOpen(false)} />}
+      {copilotOpen && <MobileCopilotSheet onClose={() => setCopilotOpen(false)} />}
     </div>
   );
 }

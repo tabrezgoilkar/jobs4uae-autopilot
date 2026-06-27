@@ -5,6 +5,7 @@ import { getProfile, saveProfile, importCv, type Profile } from '../api';
 import { analyzeProfile } from '../lib/profileStrength';
 import LinkedinImportModal from '../components/LinkedinImportModal';
 import ProfileAssistant from '../components/ProfileAssistant';
+import CvExportModal from '../features/cv/CvExportModal';
 
 function md(text: string) {
   return DOMPurify.sanitize(marked.parse(text.replace(/\s*[••‣◦⁃∙]\s+/g, '\n- '), { async: false }) as string);
@@ -17,6 +18,7 @@ export default function MobileProfile({ onOpenSettings }: { onOpenSettings: () =
   const [importing, setImporting] = useState(false);
   const [linkedinOpen, setLinkedinOpen] = useState(false);
   const [assistantOpen, setAssistantOpen] = useState(false);
+  const [cvOpen, setCvOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -49,10 +51,15 @@ export default function MobileProfile({ onOpenSettings }: { onOpenSettings: () =
         <div className="flex-1"><div className="text-[14px] font-bold" style={{ color: 'var(--text-strong)' }}>Profile strength</div><div className="text-[12px] mt-0.5 leading-snug" style={{ color: 'var(--text-secondary)' }}>{(strength?.score ?? 0) >= 65 ? 'Strong — a few tweaks lift your match.' : 'Fill the gaps to match more jobs.'}</div></div>
       </div>
 
-      {/* improve with AI */}
-      <button onClick={() => setAssistantOpen(true)} className="j4u-press w-full flex items-center justify-center gap-2 text-white text-[13px] font-semibold" style={{ height: 44, borderRadius: 12, background: 'var(--ai-600)', border: 'none' }}>
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="#fff"><path d="M12 2l2 6 6 2-6 2-2 6-2-6-6-2 6-2z" /></svg>Improve with AI
-      </button>
+      {/* improve with AI + export */}
+      <div className="flex gap-2.5">
+        <button onClick={() => setAssistantOpen(true)} className="j4u-press flex-1 flex items-center justify-center gap-2 text-white text-[13px] font-semibold" style={{ height: 44, borderRadius: 12, background: 'var(--ai-600)', border: 'none' }}>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="#fff"><path d="M12 2l2 6 6 2-6 2-2 6-2-6-6-2 6-2z" /></svg>Improve with AI
+        </button>
+        <button onClick={() => setCvOpen(true)} className="j4u-press flex-none flex items-center justify-center gap-2 text-[13px] font-semibold" style={{ height: 44, padding: '0 16px', borderRadius: 12, background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text-strong)' }}>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M14 3H6v18h12V8z" /><path d="M14 3v5h5" /></svg>Export CV
+        </button>
+      </div>
 
       {/* import / sync */}
       <div className="flex flex-col gap-2.5">
@@ -120,6 +127,7 @@ export default function MobileProfile({ onOpenSettings }: { onOpenSettings: () =
       {toast && <div className="j4u-rise" style={{ position: 'fixed', bottom: 88, left: '50%', transform: 'translateX(-50%)', zIndex: 90, background: 'var(--text-strong)', color: '#fff', padding: '10px 16px', borderRadius: 11, fontSize: 12.5, fontWeight: 500, boxShadow: 'var(--shadow-overlay)' }}>{toast}</div>}
       {linkedinOpen && <LinkedinImportModal onApply={async (m) => { setLinkedinOpen(false); try { setProfile(await saveProfile(m)); flash('LinkedIn merged & saved'); } catch { setProfile(m); } }} onClose={() => setLinkedinOpen(false)} />}
       {assistantOpen && <ProfileAssistant onClose={() => setAssistantOpen(false)} onApplied={(p) => { setProfile(p); flash('Profile updated'); }} />}
+      {cvOpen && <CvExportModal profile={profile} onClose={() => setCvOpen(false)} />}
     </div>
   );
 }

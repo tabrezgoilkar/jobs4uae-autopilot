@@ -13,6 +13,7 @@ import { RadialGauge } from '../components/charts';
 import { analyzeProfile, type ProfileSection } from '../lib/profileStrength';
 import LinkedinImportModal from '../components/LinkedinImportModal';
 import ProfileAssistant from '../components/ProfileAssistant';
+import CvExportModal from '../features/cv/CvExportModal';
 
 const FIELD = 'mt-1 w-full rounded-md border border-hair bg-surface text-ink p-2 text-sm j4u-focus placeholder:text-ink-muted';
 const LABEL = 'text-[12.5px] font-medium text-ink-secondary';
@@ -29,6 +30,7 @@ export default function ProfilePage() {
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [linkedinOpen, setLinkedinOpen] = useState(false);
   const [assistantOpen, setAssistantOpen] = useState(false);
+  const [cvOpen, setCvOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { getProfile().then(setProfile).catch(() => setLoadError(true)); }, []);
@@ -157,6 +159,10 @@ export default function ProfilePage() {
             <svg width="14" height="14" viewBox="0 0 24 24" fill="#0a66c2"><path d="M4.98 3.5A2.5 2.5 0 1 0 5 8.5a2.5 2.5 0 0 0-.02-5zM3 9h4v12H3zM9 9h3.8v1.7h.05c.53-1 1.84-2.05 3.8-2.05 4.06 0 4.8 2.67 4.8 6.14V21h-4v-5.3c0-1.26-.02-2.9-1.77-2.9-1.77 0-2.04 1.38-2.04 2.8V21H9z" /></svg>
             Import from LinkedIn
           </button>
+          <button type="button" onClick={() => setCvOpen(true)} className="inline-flex items-center gap-2 h-9 px-3 rounded-md bg-primary-600 text-white text-xs font-semibold j4u-press">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14 3H6v18h12V8z" /><path d="M14 3v5h5" /></svg>
+            View / export CV
+          </button>
         </div>
       </Card>
 
@@ -177,6 +183,7 @@ export default function ProfilePage() {
         <ProfileRail profile={profile} onFix={onFix} onImprove={() => setAssistantOpen(true)} />
       </div>
 
+      {cvOpen && <CvExportModal profile={profile} onClose={() => setCvOpen(false)} />}
       {linkedinOpen && <LinkedinImportModal onApply={onLinkedinApply} onClose={() => setLinkedinOpen(false)} />}
       {assistantOpen && (
         <ProfileAssistant

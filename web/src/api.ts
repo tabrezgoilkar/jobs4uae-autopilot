@@ -48,8 +48,19 @@ if (typeof window !== 'undefined' && !window.__j4uFetchPatched) {
   };
 }
 
+// Carries the HTTP status so callers can distinguish an auth failure (401 — the
+// session is missing/expired/unauthorized) from a real server/network problem.
+export class ApiError extends Error {
+  status: number;
+  constructor(status: number) {
+    super(`Server error ${status}`);
+    this.name = 'ApiError';
+    this.status = status;
+  }
+}
+
 async function checkOk(res: Response): Promise<Response> {
-  if (!res.ok) throw new Error(`Server error ${res.status}`);
+  if (!res.ok) throw new ApiError(res.status);
   return res;
 }
 

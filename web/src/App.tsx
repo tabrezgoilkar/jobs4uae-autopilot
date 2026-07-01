@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { getConfig, type AppConfig } from './api';
+import { getConfig, ApiError, type AppConfig } from './api';
 import SetupWizard from './pages/SetupWizard';
 import AppShell from './components/AppShell';
+import Button from './components/ui/Button';
 import Dashboard from './pages/Dashboard';
 import ProfilePage from './pages/ProfilePage';
 import EvaluatePage from './pages/EvaluatePage';
@@ -21,14 +22,27 @@ const IS_CLOUD = !!import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
 export default function App() {
   const [config, setConfig] = useState<AppConfig | null>(null);
-  const [error, setError] = useState(false);
+  const [error, setError] = useState<null | 'auth' | 'server'>(null);
   const isMobile = useIsMobile();
 
   useEffect(() => {
-    getConfig().then(setConfig).catch(() => setError(true));
+    getConfig()
+      .then(setConfig)
+      // A 401 means the session was rejected (expired/unauthorized), not that the
+      // server is unreachable — show a sign-in prompt instead of a "server down".
+      .catch((e) => setError(e instanceof ApiError && e.status === 401 ? 'auth' : 'server'));
   }, []);
 
-  if (error) {
+  if (error === 'auth') {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4 p-6 text-center">
+        <p style={{ color: 'var(--text-muted)' }}>Your session has expired or isn’t authorized. Please sign in again.</p>
+        <Button type="button" onClick={() => window.location.reload()}>Sign in again</Button>
+      </div>
+    );
+  }
+
+  if (error === 'server') {
     return (
       <div className="min-h-screen flex items-center justify-center p-6 text-center" style={{ color: 'var(--danger-text)' }}>
         Cannot reach the Jobs4UAE Autopilot server. Make sure it is running, then refresh this page.

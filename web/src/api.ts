@@ -141,7 +141,7 @@ export interface LinkedinChanges {
   added: Record<string, number>;
   addedItems: Record<string, string[]>;
 }
-export interface LinkedinImportResult { merged: Profile; changes: LinkedinChanges; }
+export interface LinkedinImportResult { merged: Profile; changes: LinkedinChanges; partial?: boolean; }
 
 async function readImport(res: Response): Promise<LinkedinImportResult> {
   if (!res.ok) {
@@ -174,6 +174,49 @@ export async function importLinkedinJson(raw: unknown): Promise<LinkedinImportRe
 export async function getPendingLinkedin(): Promise<LinkedinImportResult | null> {
   const res = await fetch('/api/profile/linkedin/pending').then(checkOk);
   return (await res.json()).pending;
+}
+
+/** Carries the server's `reason` (e.g. 'blocked') so the UI can offer a fallback. */
+export class LinkedinImportError extends Error {
+  reason?: string;
+  constructor(message: string, reason?: string) {
+    super(message);
+    this.name = 'LinkedinImportError';
+    this.reason = reason;
+  }
+}
+
+/** Cheap client-side guard so the Import button only enables on a plausible profile URL. */
+export function isLikelyProfileUrl(url: string): boolean {
+  return /^https?:\/\/([a-z]+\.)?linkedin\.com\/in\/[^/]+\/?/i.test(url.trim());
+}
+
+/** Paste-a-URL prefill (basics). Throws LinkedinImportError with reason 'blocked' on the cloud. */
+export async function importLinkedinUrl(url: string): Promise<LinkedinImportResult> {
+  const res = await fetch('/api/profile/linkedin/url', {
+    method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ url }),
+  });
+  if (!res.ok) {
+    const b = await res.json().catch(() => ({}));
+    throw new LinkedinImportError(b.error || `Server error ${res.status}`, b.reason);
+  }
+  return res.json();
+}
+
+/** Screenshot import — reads 1+ profile screenshots with a vision model (works on cloud). */
+export async function importLinkedinScreenshots(files: File[]): Promise<LinkedinImportResult> {
+  const fd = new FormData();
+  files.forEach((f) => fd.append('images', f));
+  return readImport(await fetch('/api/profile/linkedin/vision', { method: 'POST', body: fd }));
+}
+
+export interface BaselineResult { profile: Profile; baselineMarkdown: string; summaryGenerated: boolean; }
+/** After import: fill a blank summary (AI, anti-fabrication) + render a base CV. */
+export async function buildBaseline(profile: Profile): Promise<BaselineResult> {
+  const res = await fetch('/api/profile/baseline', {
+    method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ profile }),
+  }).then(checkOk);
+  return res.json();
 }
 
 export interface AssistResult { reply: string; questions: string[]; proposed: Profile | null; }

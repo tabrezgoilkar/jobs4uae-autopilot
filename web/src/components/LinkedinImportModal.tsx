@@ -1,12 +1,18 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
-  getLinkedinBookmarklet,
   importLinkedinFile,
-  importLinkedinJson,
-  getPendingLinkedin,
+  importLinkedinUrl,
+  importLinkedinScreenshots,
+  buildBaseline,
+  isLikelyProfileUrl,
+  LinkedinImportError,
   type LinkedinImportResult,
   type Profile,
 } from '../api';
+
+// On the cloud build (Clerk key present) the paste-URL fetch is blocked by
+// LinkedIn's IP wall, so screenshots is the reliable default there.
+const IS_CLOUD = !!import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
 const FIELD_LABELS: Record<string, string> = {
   fullName: 'Full name', email: 'Email', phone: 'Phone',
@@ -16,6 +22,8 @@ const SECTION_LABELS: Record<string, string> = {
   experience: 'experience', education: 'education', certifications: 'certifications',
   languages: 'languages', awards: 'awards', projects: 'projects', skills: 'skills', links: 'links',
 };
+
+type Tab = 'url' | 'screenshots' | 'file';
 
 function LinkedInMark() {
   return (
@@ -32,65 +40,44 @@ export default function LinkedinImportModal({
   onApply: (merged: Profile) => void;
   onClose: () => void;
 }) {
+  const [tab, setTab] = useState<Tab>(IS_CLOUD ? 'screenshots' : 'url');
   const [result, setResult] = useState<LinkedinImportResult | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState<false | 'import' | 'baseline'>(false);
   const [error, setError] = useState<string | null>(null);
-  const [showPaste, setShowPaste] = useState(false);
-  const [pasteText, setPasteText] = useState('');
-  const bmRef = useRef<HTMLAnchorElement>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
+  const [url, setUrl] = useState('');
+  const [files, setFiles] = useState<File[]>([]);
 
-  // Load the bookmarklet href; set it via setAttribute so React doesn't sanitize the javascript: URL.
-  useEffect(() => {
-    getLinkedinBookmarklet()
-      .then(({ href }) => { if (bmRef.current) bmRef.current.setAttribute('href', href); })
-      .catch(() => {});
-  }, []);
-
-  // Close on Escape.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
 
-  // While waiting on the input screen, poll for an import the user triggered in their LinkedIn tab.
-  useEffect(() => {
-    if (result) return;
-    const id = setInterval(() => {
-      getPendingLinkedin().then((p) => { if (p) setResult(p); }).catch(() => {});
-    }, 2500);
-    return () => clearInterval(id);
-  }, [result]);
-
-  async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setBusy(true); setError(null);
+  async function run(fn: () => Promise<LinkedinImportResult>) {
+    setBusy('import'); setError(null);
     try {
-      setResult(await importLinkedinFile(file));
+      setResult(await fn());
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not read that file.');
+      if (err instanceof LinkedinImportError && err.reason === 'blocked') {
+        setError('LinkedIn blocked reading that URL (common on the cloud). Use the Screenshots tab instead.');
+        setTab('screenshots');
+      } else {
+        setError(err instanceof Error ? err.message : 'Import failed.');
+      }
     } finally {
       setBusy(false);
-      if (fileRef.current) fileRef.current.value = '';
     }
   }
 
-  async function onPaste() {
-    setBusy(true); setError(null);
-    let parsed: unknown;
+  // Apply = fill a baseline summary, then hand the profile back for review + Save.
+  async function apply() {
+    if (!result) return;
+    setBusy('baseline');
     try {
-      parsed = JSON.parse(pasteText);
+      const { profile } = await buildBaseline(result.merged);
+      onApply(profile);
     } catch {
-      setBusy(false);
-      setError('That is not valid JSON. Paste the contents of linkedin-profile.json.');
-      return;
-    }
-    try {
-      setResult(await importLinkedinJson(parsed));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Import failed.');
+      onApply(result.merged); // best-effort — apply without the baseline step
     } finally {
       setBusy(false);
     }
@@ -120,67 +107,75 @@ export default function LinkedinImportModal({
 
         {!result && (
           <div className="p-5 space-y-4">
-            <p className="text-[13px] text-ink-secondary leading-snug">
-              Pulls your profile in your own browser — it goes only to this local app, never to a cloud.
-            </p>
-
-            <ol className="space-y-3 text-[13.5px] text-ink-secondary">
-              <li className="flex items-start gap-2.5">
-                <Step n={1} />
-                <span className="pt-0.5">
-                  Drag this button to your bookmarks bar:&nbsp;
-                  <a
-                    ref={bmRef}
-                    href="#"
-                    onClick={(e) => e.preventDefault()}
-                    draggable
-                    className="inline-flex items-center gap-1.5 align-middle h-8 px-3 rounded-md bg-[#0a66c2] text-white text-xs font-semibold cursor-grab active:cursor-grabbing select-none"
-                  >
-                    <LinkedInMark /> Send to Jobs4UAE
-                  </a>
-                </span>
-              </li>
-              <li className="flex items-start gap-2.5">
-                <Step n={2} />
-                <span className="pt-0.5">Open <strong className="text-ink">your own</strong> LinkedIn profile while logged in.</span>
-              </li>
-              <li className="flex items-start gap-2.5">
-                <Step n={3} />
-                <span className="pt-0.5">Click the <strong className="text-ink">Send to Jobs4UAE</strong> bookmark — your profile appears here to review.</span>
-              </li>
-            </ol>
-
-            <div className="flex items-center gap-2 text-[12px] text-ai-700">
-              <span className="inline-block w-2 h-2 rounded-full bg-ai-500 animate-pulse" />
-              Waiting for your LinkedIn import…
-              <a href="/linkedin" target="_blank" rel="noreferrer" className="ml-auto text-primary-700 font-semibold j4u-focus rounded">Full instructions ↗</a>
+            <div role="tablist" aria-label="Import method" className="flex gap-1 p-1 rounded-md bg-ai-soft/40 border border-hair-subtle">
+              <TabButton active={tab === 'url'} onClick={() => { setTab('url'); setError(null); }}>Paste URL</TabButton>
+              <TabButton active={tab === 'screenshots'} onClick={() => { setTab('screenshots'); setError(null); }}>Screenshots</TabButton>
+              <TabButton active={tab === 'file'} onClick={() => { setTab('file'); setError(null); }}>Upload file</TabButton>
             </div>
 
-            <div className="pt-3 border-t border-hair-subtle">
-              <div className="text-[12px] text-ink-muted mb-2">Or import a saved file (linkedin-profile.json or a JSON Resume):</div>
-              <div className="flex items-center gap-3 flex-wrap">
-                <input ref={fileRef} type="file" accept=".json,application/json" onChange={onFile} disabled={busy} className="text-sm text-ink-secondary" />
-                <button onClick={() => setShowPaste((s) => !s)} className="text-[12px] font-semibold text-primary-700 j4u-focus rounded">
-                  {showPaste ? 'Hide paste box' : 'Paste JSON instead'}
+            {tab === 'url' && (
+              <div className="space-y-2.5">
+                <p className="text-[13px] text-ink-secondary leading-snug">
+                  Paste your public LinkedIn profile URL — we import the basics instantly.
+                  {IS_CLOUD && ' On the hosted app this is often blocked; Screenshots is more reliable.'}
+                </p>
+                <input
+                  type="url"
+                  inputMode="url"
+                  value={url}
+                  onChange={(e) => setUrl(e.target.value)}
+                  placeholder="https://www.linkedin.com/in/your-name"
+                  className="w-full h-10 rounded-md border border-hair bg-surface text-ink px-3 text-sm j4u-focus"
+                />
+                <button
+                  onClick={() => run(() => importLinkedinUrl(url.trim()))}
+                  disabled={busy !== false || !isLikelyProfileUrl(url)}
+                  className="j4u-press text-[13px] font-semibold text-white bg-primary-700 rounded-md px-4 py-2 disabled:opacity-50"
+                >
+                  Import from URL
                 </button>
               </div>
-              {showPaste && (
-                <div className="mt-2.5 space-y-2">
-                  <textarea
-                    value={pasteText}
-                    onChange={(e) => setPasteText(e.target.value)}
-                    rows={4}
-                    placeholder='Paste the JSON here…'
-                    className="w-full rounded-md border border-hair bg-surface text-ink p-2 text-xs font-mono j4u-focus"
-                  />
-                  <button onClick={onPaste} disabled={busy || !pasteText.trim()} className="j4u-press text-[12.5px] font-semibold text-white bg-primary-700 rounded-md px-3 py-1.5 disabled:opacity-50">
-                    Import pasted JSON
-                  </button>
-                </div>
-              )}
-            </div>
+            )}
 
-            {busy && <p className="text-sm text-primary-700">Reading your profile…</p>}
+            {tab === 'screenshots' && (
+              <div className="space-y-2.5">
+                <p className="text-[13px] text-ink-secondary leading-snug">
+                  Open your profile, click <strong className="text-ink">Show all</strong> on Experience &amp; Skills, then take a few
+                  screenshots covering the whole page. Drop them in — a vision model reads them (nothing is uploaded to LinkedIn).
+                </p>
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={(e) => setFiles(Array.from(e.target.files ?? []))}
+                  className="text-sm text-ink-secondary"
+                />
+                {files.length > 0 && <p className="text-[12px] text-ink-muted">{files.length} image{files.length > 1 ? 's' : ''} selected</p>}
+                <button
+                  onClick={() => run(() => importLinkedinScreenshots(files))}
+                  disabled={busy !== false || files.length === 0}
+                  className="j4u-press text-[13px] font-semibold text-white bg-primary-700 rounded-md px-4 py-2 disabled:opacity-50"
+                >
+                  Read my screenshots
+                </button>
+              </div>
+            )}
+
+            {tab === 'file' && (
+              <div className="space-y-2.5">
+                <p className="text-[13px] text-ink-secondary leading-snug">
+                  Have a CV or a LinkedIn/JSON&nbsp;Resume export? Upload it and we'll structure it into your profile.
+                </p>
+                <input
+                  type="file"
+                  accept=".json,application/json,.pdf,.doc,.docx,.txt"
+                  onChange={(e) => { const f = e.target.files?.[0]; if (f) run(() => importLinkedinFile(f)); }}
+                  className="text-sm text-ink-secondary"
+                />
+              </div>
+            )}
+
+            {busy === 'import' && <p className="text-sm text-primary-700">Reading your profile…</p>}
             {error && <p role="alert" className="text-sm rounded-md p-2.5 bg-danger-soft text-danger-text border border-danger-soft">{error}</p>}
           </div>
         )}
@@ -189,7 +184,7 @@ export default function LinkedinImportModal({
           <div className="p-5 space-y-4">
             {nothingToAdd ? (
               <p className="text-[13.5px] text-ink-secondary">
-                Your profile already has everything from your LinkedIn — nothing new to add. You can still apply to refresh blank fields.
+                Your profile already has everything from this import — nothing new to add.
               </p>
             ) : (
               <>
@@ -199,21 +194,20 @@ export default function LinkedinImportModal({
                     <SummaryRow label="Filled blank fields" items={changes!.filled.map((f) => FIELD_LABELS[f] ?? f)} />
                   )}
                   {addedKeys.map((k) => (
-                    <SummaryRow
-                      key={k}
-                      label={`Added ${changes!.added[k]} ${SECTION_LABELS[k] ?? k}`}
-                      items={changes!.addedItems[k] ?? []}
-                    />
+                    <SummaryRow key={k} label={`Added ${changes!.added[k]} ${SECTION_LABELS[k] ?? k}`} items={changes!.addedItems[k] ?? []} />
                   ))}
                 </div>
               </>
             )}
-            <p className="text-[12px] text-ink-muted">Nothing you already typed is overwritten. Review the full profile after applying, then Save.</p>
+            {result.partial && (
+              <p className="text-[12px] text-ai-700">Imported the basics from your URL. Add a Screenshots import to capture skills &amp; full roles.</p>
+            )}
+            <p className="text-[12px] text-ink-muted">Nothing you already typed is overwritten. We'll draft a baseline summary you can edit, then you Save.</p>
             <div className="flex items-center gap-2.5 pt-1">
-              <button onClick={() => onApply(result.merged)} className="j4u-press text-[13px] font-semibold text-white bg-primary-700 rounded-md px-4 py-2">
-                Apply to my profile
+              <button onClick={apply} disabled={busy !== false} className="j4u-press text-[13px] font-semibold text-white bg-primary-700 rounded-md px-4 py-2 disabled:opacity-50">
+                {busy === 'baseline' ? 'Building your baseline…' : 'Apply & build baseline'}
               </button>
-              <button onClick={() => { setResult(null); setError(null); }} className="j4u-chip text-[13px] font-semibold text-ink-secondary border border-hair rounded-md px-4 py-2">
+              <button onClick={() => { setResult(null); setError(null); }} disabled={busy !== false} className="j4u-chip text-[13px] font-semibold text-ink-secondary border border-hair rounded-md px-4 py-2 disabled:opacity-50">
                 Back
               </button>
             </div>
@@ -224,9 +218,16 @@ export default function LinkedinImportModal({
   );
 }
 
-function Step({ n }: { n: number }) {
+function TabButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
-    <span className="shrink-0 mt-0.5 inline-flex items-center justify-center w-5 h-5 rounded-full bg-ai-soft text-ai-700 text-[11px] font-bold">{n}</span>
+    <button
+      role="tab"
+      aria-selected={active}
+      onClick={onClick}
+      className={`flex-1 h-8 rounded text-[12.5px] font-semibold j4u-focus ${active ? 'bg-surface text-ink-strong border border-hair shadow-sm' : 'text-ink-secondary hover:text-ink'}`}
+    >
+      {children}
+    </button>
   );
 }
 

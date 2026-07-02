@@ -6,6 +6,9 @@ import { parseCvText } from '../profile/parse.js';
 import { assistProfile } from '../profile/assist.js';
 import { normalizeProfile } from '../profile/schema.js';
 import { linkedinToProfile, looksLikeLinkedinExport } from '../profile/linkedin/map.js';
+import { fetchLinkedinJsonLd, isLinkedinProfileUrl } from '../profile/linkedin/fetchPublic.js';
+import { extractProfileFromImages } from '../profile/vision.js';
+import { buildBaseline } from '../profile/baseline.js';
 import { mergeProfile } from '../profile/linkedin/merge.js';
 import { bookmarkletCode } from '../profile/linkedin/bookmarklet.js';
 import { setPending, takePending } from '../profile/linkedin/pending.js';
@@ -104,6 +107,64 @@ export function profileRouter() {
   // The app polls this while the import modal is open; take-once.
   router.get('/linkedin/pending', (req, res) => {
     res.json({ pending: takePending() });
+  });
+
+  // Paste-a-URL "instant prefill": fetch the public profile's JSON-LD and MERGE
+  // it (basics only — the vision path fills the rest). Returns the candidate for
+  // review, does not persist. LinkedIn auth-walls datacenter IPs, so on the cloud
+  // this returns `reason:'blocked'` and the UI offers the screenshot import.
+  router.post('/linkedin/url', async (req, res) => {
+    const url = (req.body?.url ?? '').toString().trim();
+    if (!isLinkedinProfileUrl(url)) {
+      return res.status(422).json({ error: 'Enter your LinkedIn profile URL (linkedin.com/in/…).', reason: 'bad_url' });
+    }
+    try {
+      const result = await fetchLinkedinJsonLd(url);
+      if (!result.ok) {
+        const blocked = result.reason === 'blocked';
+        return res.status(blocked ? 409 : 502).json({
+          reason: result.reason,
+          error: blocked
+            ? "LinkedIn blocked the request (common on the cloud). Import a screenshot of your profile instead."
+            : "Couldn't read that profile. Try importing a screenshot instead.",
+        });
+      }
+      const { merged, changes } = mergeProfile(await loadProfile(req.userId), result.profile);
+      res.json({ merged, changes, partial: true });
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // Screenshot import (works everywhere, incl. cloud): read 1+ profile
+  // screenshots with a vision model, MERGE, return the candidate for review.
+  router.post('/linkedin/vision', upload.array('images', 8), async (req, res) => {
+    const files = req.files ?? [];
+    if (!files.length) return res.status(400).json({ error: 'Attach at least one screenshot of your profile.' });
+    const config = await loadConfig(req.userId);
+    if (!config.setupComplete) return res.status(409).json({ error: 'Please complete the AI setup wizard first.' });
+    try {
+      const engine = createEngine(config);
+      const images = files.map((f) => ({ base64: f.buffer.toString('base64'), mimeType: f.mimetype }));
+      const incoming = await extractProfileFromImages(images, engine);
+      const { merged, changes } = mergeProfile(await loadProfile(req.userId), incoming);
+      res.json({ merged, changes });
+    } catch (e) {
+      res.status(422).json({ error: e.message });
+    }
+  });
+
+  // Auto-build the baseline after an import: fill a blank summary (AI, if set up)
+  // and render a deterministic base CV. Works without setup (skips the AI step).
+  router.post('/baseline', async (req, res) => {
+    try {
+      const incoming = req.body?.profile ?? (await loadProfile(req.userId));
+      const config = await loadConfig(req.userId);
+      const engine = config.setupComplete ? createEngine(config) : null;
+      res.json(await buildBaseline(incoming, engine));
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
   });
 
   // Agentic profile assistant: plain-language request → proposed profile update +

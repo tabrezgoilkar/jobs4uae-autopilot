@@ -8,6 +8,7 @@ import { normalizeProfile } from '../profile/schema.js';
 import { linkedinToProfile, looksLikeLinkedinExport } from '../profile/linkedin/map.js';
 import { fetchLinkedinJsonLd, isLinkedinProfileUrl } from '../profile/linkedin/fetchPublic.js';
 import { extractProfileFromImages } from '../profile/vision.js';
+import { buildBaseline } from '../profile/baseline.js';
 import { mergeProfile } from '../profile/linkedin/merge.js';
 import { bookmarkletCode } from '../profile/linkedin/bookmarklet.js';
 import { setPending, takePending } from '../profile/linkedin/pending.js';
@@ -150,6 +151,19 @@ export function profileRouter() {
       res.json({ merged, changes });
     } catch (e) {
       res.status(422).json({ error: e.message });
+    }
+  });
+
+  // Auto-build the baseline after an import: fill a blank summary (AI, if set up)
+  // and render a deterministic base CV. Works without setup (skips the AI step).
+  router.post('/baseline', async (req, res) => {
+    try {
+      const incoming = req.body?.profile ?? (await loadProfile(req.userId));
+      const config = await loadConfig(req.userId);
+      const engine = config.setupComplete ? createEngine(config) : null;
+      res.json(await buildBaseline(incoming, engine));
+    } catch (e) {
+      res.status(500).json({ error: e.message });
     }
   });
 

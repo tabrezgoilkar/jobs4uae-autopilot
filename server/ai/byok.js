@@ -73,11 +73,14 @@ export function createByoKeyEngine({
     return data?.choices?.[0]?.message?.content ?? '';
   }
 
-  async function generate({ system, prompt }) {
+  function buildMessages(system, userContent) {
     const messages = [];
     if (system) messages.push({ role: 'system', content: system });
-    messages.push({ role: 'user', content: prompt });
+    messages.push({ role: 'user', content: userContent });
+    return messages;
+  }
 
+  async function run(messages) {
     // Fixed-model providers (e.g. OpenAI): one shot, no discovery.
     if (!canRotate) return callModel(model, messages);
 
@@ -102,6 +105,20 @@ export function createByoKeyEngine({
     throw lastErr ?? new Error('No working free model is available right now. Please try again later.');
   }
 
+  async function generate({ system, prompt }) {
+    return run(buildMessages(system, prompt));
+  }
+
+  // OpenAI-compatible multimodal: the user turn is a content array mixing the
+  // text prompt with one image_url part per screenshot (base64 data URLs).
+  async function generateVision({ system, prompt, images = [] }) {
+    const content = [{ type: 'text', text: prompt }];
+    for (const img of images) {
+      content.push({ type: 'image_url', image_url: { url: `data:${img.mimeType || 'image/png'};base64,${img.base64}` } });
+    }
+    return run(buildMessages(system, content));
+  }
+
   async function testConnection() {
     if (!apiKey) return { ok: false, message: 'No API key provided.' };
     try {
@@ -113,5 +130,5 @@ export function createByoKeyEngine({
     }
   }
 
-  return { name: 'byok', testConnection, generate };
+  return { name: 'byok', testConnection, generate, generateVision };
 }

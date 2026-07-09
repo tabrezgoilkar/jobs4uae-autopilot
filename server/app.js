@@ -24,9 +24,9 @@ export function createApp() {
 
   // Public, secret-free endpoints (no auth).
   app.get('/api/health', (req, res) => res.json({ ok: true }));
-  app.get('/linkedin', (req, res) => {
-    res.type('html').send(installPageHtml(`${req.protocol}://${req.get('host')}`));
-  });
+  const installPage = (req, res) => res.type('html').send(installPageHtml(`${req.protocol}://${req.get('host')}`));
+  app.get('/linkedin', installPage);
+  app.get('/api/linkedin-install', installPage); // same page under /api so the cloud (Vercel) can serve it too
 
   // Everything below requires a signed-in user (cloud); local dev → userId 'local'.
   app.use('/api', authMiddleware({ verifyToken: clerkVerifier() }));

@@ -147,7 +147,7 @@ export default function LinkedinImportModal({
                 </button>
                 <p className="text-[12px] text-ink-muted leading-snug">
                   Tip: for the <strong className="text-ink">fullest</strong> import (skills + every role), use the
-                  {' '}<a href="/linkedin" target="_blank" rel="noreferrer" className="text-primary-700 underline">1-click bookmarklet</a>{' '}
+                  {' '}<a href="/api/linkedin-install" target="_blank" rel="noreferrer" className="text-primary-700 underline">1-click bookmarklet</a>{' '}
                   — it reads your own logged-in profile. The URL read only gets the public basics.
                 </p>
               </div>

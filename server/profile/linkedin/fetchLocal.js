@@ -1,16 +1,6 @@
 import { fetchHtml } from '../../lib/browser.js';
 import { extractJsonLd, jsonLdToProfile } from './jsonld.js';
 
-// True when the running process is the LOCAL desktop app (not the cloud function
-// build), so launching a headed Chromium on the user's own machine is safe and
-// meaningful. The cloud build has no display and a datacenter IP, so Tier 2 is
-// skipped there and the cascade falls straight through to bookmarklet/screenshots.
-export function canUseLocalBrowser() {
-  if (process.env.VERCEL) return false;
-  if (process.env.JOBS4UAE_CLOUD === '1') return false;
-  return true;
-}
-
 /**
  * Tier 2 of the URL-import cascade: read the rendered profile from a REAL (headed)
  * browser on the user's own machine — a residential IP with a real fingerprint,
@@ -19,6 +9,10 @@ export function canUseLocalBrowser() {
  *
  * Returns the same shape as fetchPublic's result so the route can MERGE it
  * identically: { ok:true, profile, partial:true } | { ok:false, reason:'blocked' }.
+ *
+ * Whether Tier 2 runs at all is decided at the composition root: the desktop
+ * entry (app.js) injects this fetcher into the route, while the cloud entry
+ * (cloudApp.js) injects none — so no env check is needed here.
  *
  * @param {string} url
  * @param {{ fetchHtmlImpl?: Function }} [opts] inject a mock in tests.

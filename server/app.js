@@ -8,6 +8,7 @@ import { evaluateRouter } from './routes/evaluate.routes.js';
 import { documentsRouter } from './routes/documents.routes.js';
 import { pdfRouter } from './routes/pdf.routes.js';
 import { trackerRouter } from './routes/tracker.routes.js';
+import { upskillRouter } from './routes/upskill.routes.js';
 import { scannerRouter } from './routes/scanner.routes.js';
 import { copilotRouter } from './routes/copilot.routes.js';
 import { applyRouter } from './routes/apply.routes.js';
@@ -55,6 +56,7 @@ export function createApp() {
   app.use('/api', documentsRouter());
   app.use('/api', pdfRouter());
   app.use('/api', trackerRouter());
+  app.use('/api', upskillRouter());
   app.use('/api', scannerRouter());
   app.use('/api', copilotRouter());
   app.use('/api', applyCloudRouter());

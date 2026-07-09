@@ -317,6 +317,25 @@ export async function listEvaluations(): Promise<Evaluation[]> {
   return res.json();
 }
 
+export interface UpskillCell {
+  skill: string;
+  demand: number;
+  avgCost: number;
+  gapScore: number;
+  heat: 'low' | 'med' | 'high';
+  examples: string[];
+}
+export interface UpskillResult {
+  cells: UpskillCell[];
+  totalJobs: number;
+}
+
+/** Prioritized "skills to learn" heatmap from tracked applications + evaluations. */
+export async function getUpskillHeatmap(): Promise<UpskillResult> {
+  const res = await fetch('/api/upskill/heatmap').then(checkOk);
+  return res.json();
+}
+
 export interface DocumentDraft {
   resumeMarkdown: string;
   coverLetterMarkdown: string;

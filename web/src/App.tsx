@@ -11,6 +11,7 @@ import DocumentsPage from './pages/DocumentsPage';
 import TrackerPage from './pages/TrackerPage';
 import ScanPage from './pages/ScanPage';
 import AutoApplyPage from './pages/AutoApplyPage';
+import UpskillPage from './pages/UpskillPage';
 import SettingsPage from './pages/SettingsPage';
 import ComingSoon from './pages/ComingSoon';
 import { useIsMobile } from './mobile/useIsMobile';
@@ -78,6 +79,7 @@ export default function App() {
           <Route path="/tracker" element={IS_CLOUD ? <ComingSoon title="Tracker" kind="soon" /> : <TrackerPage />} />
           <Route path="/scan" element={IS_CLOUD ? <ComingSoon title="Scan GCC boards" kind="companion" /> : <ScanPage />} />
           <Route path="/auto-apply" element={IS_CLOUD ? <ComingSoon title="Auto-apply" kind="companion" /> : <AutoApplyPage />} />
+          <Route path="/upskill" element={IS_CLOUD ? <ComingSoon title="Upskill planner" kind="companion" /> : <UpskillPage />} />
           <Route path="/settings" element={<SettingsPage />} />
         </Routes>
       </AppShell>

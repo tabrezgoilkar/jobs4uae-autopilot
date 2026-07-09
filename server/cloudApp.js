@@ -4,6 +4,7 @@ import { createEngine } from './ai/index.js';
 import { profileRouter } from './routes/profile.routes.js';
 import { documentsRouter } from './routes/documents.routes.js';
 import { copilotRouter } from './routes/copilot.routes.js';
+import { upskillRouter } from './routes/upskill.routes.js';
 import { applyCloudRouter } from './routes/apply-cloud.routes.js';
 import { authMiddleware, assertProdAuthConfig } from './auth/middleware.js';
 import { clerkVerifier } from './auth/clerk.js';
@@ -38,6 +39,7 @@ export function createCloudApp() {
   app.use('/api/profile', profileRouter());
   app.use('/api', documentsRouter());
   app.use('/api', copilotRouter()); // reads per-user profile; evaluations context is best-effort
+  app.use('/api', upskillRouter()); // read-only join of tracker+evaluations; no browser
   app.use('/api', applyCloudRouter());
 
   return app;

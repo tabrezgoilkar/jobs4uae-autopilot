@@ -17,6 +17,7 @@ const WORKSPACE = [
 const FIND_APPLY = [
   { to: '/scan', label: 'Scan GCC boards', Icon: IconSearch },
   { to: '/auto-apply', label: 'Auto-apply', Icon: IconSend },
+  { to: '/upskill', label: 'Upskill planner', Icon: IconSparkle },
 ] as const;
 
 function NavItem({ to, label, Icon, active, onNavigate }: { to: string; label: string; Icon: (p: { size?: number }) => ReactElement; active: boolean; onNavigate: () => void }) {

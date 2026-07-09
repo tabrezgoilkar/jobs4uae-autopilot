@@ -1,3 +1,5 @@
+import { jsonrepair } from 'jsonrepair';
+
 // Repair string-INTERNAL problems that weak models emit inside JSON string
 // literals, leaving the document's structural formatting intact:
 //   1. Raw control chars (real newlines/tabs) -> \n \r \t.
@@ -43,10 +45,29 @@ export function extractJson(text) {
   const end = t.lastIndexOf('}');
   if (start === -1 || end === -1) throw new Error('AI did not return JSON.');
   const slice = t.slice(start, end + 1);
-  try {
-    return JSON.parse(slice);
-  } catch {
-    // Fallback: repair string-internal control chars / bad escapes, retry once.
-    return JSON.parse(repairStringInternals(slice));
+  // Weak models return almost-JSON in many ways. Try increasingly aggressive
+  // repairs, cheapest and most faithful first:
+  //   1. as-is;
+  //   2. repairStringInternals — fixes control chars / bad escapes while
+  //      PRESERVING literal backslashes (e.g. "C:\Users", markdown "\*");
+  //   3. jsonrepair over (2) — also fixes structural junk (JS comments, missing
+  //      commas, single quotes, trailing commas, unquoted values) on top of the
+  //      faithful backslash handling;
+  //   4. jsonrepair over the raw slice — last resort for inputs that step 2's
+  //      quote tracking would mis-handle (e.g. quotes inside a // comment).
+  const attempts = [
+    () => JSON.parse(slice),
+    () => JSON.parse(repairStringInternals(slice)),
+    () => JSON.parse(jsonrepair(repairStringInternals(slice))),
+    () => JSON.parse(jsonrepair(slice)),
+  ];
+  let lastErr;
+  for (const attempt of attempts) {
+    try {
+      return attempt();
+    } catch (e) {
+      lastErr = e;
+    }
   }
+  throw lastErr;
 }

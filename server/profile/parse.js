@@ -42,6 +42,10 @@ export async function parseCvText(cvText, engine) {
   try {
     return extractJson(raw);
   } catch (e) {
+    // Log the raw model output (truncated) so future parse failures are
+    // diagnosable from server logs instead of only the terminal error snippet.
+    const snippet = String(raw ?? '').slice(0, 2000);
+    console.warn('[cv-import] unparseable AI response:', e.message, '\n---raw---\n', snippet);
     throw new Error(`Could not understand the AI response while reading your CV. ${e.message}`);
   }
 }

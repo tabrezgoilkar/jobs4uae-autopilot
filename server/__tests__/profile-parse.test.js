@@ -33,6 +33,25 @@ describe('extractJson', () => {
     const r = extractJson(`{"summary":"line1${BS}nreal quote ${BS}" and stray ${BS}z"}`);
     expect(r.summary).toBe(`line1\nreal quote " and stray ${BS}z`);
   });
+  it('recovers when the model emits a block comment before a value', () => {
+    const r = extractJson(`{"fullName":"Jane", "title": /* note */ "AR Manager"}`);
+    expect(r.fullName).toBe('Jane');
+    expect(r.title).toBe('AR Manager');
+  });
+  it('recovers from a line comment', () => {
+    const r = extractJson(`{"fullName":"Jane",\n// stray comment\n"headline":"Engineer"}`);
+    expect(r.fullName).toBe('Jane');
+    expect(r.headline).toBe('Engineer');
+  });
+  it('recovers from single quotes and a trailing comma', () => {
+    const r = extractJson(`{'skills':['Node','SQL',]}`);
+    expect(r.skills).toEqual(['Node', 'SQL']);
+  });
+  it('recovers from a missing comma between properties', () => {
+    const r = extractJson(`{"fullName":"Jane" "email":"j@x.com"}`);
+    expect(r.fullName).toBe('Jane');
+    expect(r.email).toBe('j@x.com');
+  });
 });
 
 describe('parseCvText', () => {

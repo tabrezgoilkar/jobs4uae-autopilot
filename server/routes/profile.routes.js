@@ -31,7 +31,7 @@ function corsForLinkedin(req, res, next) {
   next();
 }
 
-export function profileRouter() {
+export function profileRouter({ localLinkedinFetcher = null } = {}) {
   const router = Router();
 
   router.get('/', async (req, res) => {
@@ -111,26 +111,35 @@ export function profileRouter() {
 
   // Paste-a-URL "instant prefill": fetch the public profile's JSON-LD and MERGE
   // it (basics only — the vision path fills the rest). Returns the candidate for
-  // review, does not persist. LinkedIn auth-walls datacenter IPs, so on the cloud
-  // this returns `reason:'blocked'` and the UI offers the screenshot import.
+  // review, does not persist. Cascade:
+  //   Tier 1 — server-side JSON-LD (works from residential IPs; LinkedIn
+  //            auth-walls datacenter IPs → reason:'blocked').
+  //   Tier 2 — if a local headed-browser fetcher is injected (desktop app),
+  //            retry from the user's own residential IP (cloud passes null →
+  //            Tier 2 skipped, keeping Playwright out of the Vercel bundle).
+  //   Both blocked → reason:'blocked' + UI offers screenshot/upload import.
   router.post('/linkedin/url', async (req, res) => {
     const url = (req.body?.url ?? '').toString().trim();
     if (!isLinkedinProfileUrl(url)) {
       return res.status(422).json({ error: 'Enter your LinkedIn profile URL (linkedin.com/in/…).', reason: 'bad_url' });
     }
     try {
-      const result = await fetchLinkedinJsonLd(url);
+      let result = await fetchLinkedinJsonLd(url);
+      if (!result.ok && result.reason === 'blocked' && typeof localLinkedinFetcher === 'function') {
+        result = await localLinkedinFetcher(url); // Tier 2: headed browser on desktop
+      }
       if (!result.ok) {
         const blocked = result.reason === 'blocked';
         return res.status(blocked ? 409 : 502).json({
           reason: result.reason,
           error: blocked
-            ? "LinkedIn blocked the request (common on the cloud). Import a screenshot of your profile instead."
+            ? "LinkedIn blocked the request. Import a screenshot of your profile instead, or run the desktop app where a local browser can read it."
             : "Couldn't read that profile. Try importing a screenshot instead.",
+          offerScreenshots: blocked,
         });
       }
       const { merged, changes } = mergeProfile(await loadProfile(req.userId), result.profile);
-      res.json({ merged, changes, partial: true });
+      res.json({ merged, changes, partial: true, via: result.via ?? 'server' });
     } catch (e) {
       res.status(500).json({ error: e.message });
     }

@@ -4,6 +4,7 @@ import path from 'node:path';
 import { loadConfig, saveConfig } from './config/store.js';
 import { createEngine } from './ai/index.js';
 import { profileRouter } from './routes/profile.routes.js';
+import { fetchLinkedinViaLocalBrowser } from './profile/linkedin/fetchLocal.js';
 import { evaluateRouter } from './routes/evaluate.routes.js';
 import { documentsRouter } from './routes/documents.routes.js';
 import { pdfRouter } from './routes/pdf.routes.js';
@@ -50,7 +51,7 @@ export function createApp() {
     }
   });
 
-  app.use('/api/profile', profileRouter());
+  app.use('/api/profile', profileRouter({ localLinkedinFetcher: fetchLinkedinViaLocalBrowser }));
   app.use('/api', evaluateRouter());
   app.use('/api', documentsRouter());
   app.use('/api', pdfRouter());

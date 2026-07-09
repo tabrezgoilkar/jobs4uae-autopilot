@@ -6,6 +6,7 @@ import MobileProfile from './MobileProfile';
 import MobileDocuments from './MobileDocuments';
 import MobileSettings from './MobileSettings';
 import MobileComingSoon from './MobileComingSoon';
+import JoinChannels from '../components/JoinChannels';
 
 export type MobileRoute = 'home' | 'scan' | 'tracker' | 'documents' | 'auto-apply' | 'profile' | 'settings';
 
@@ -51,6 +52,7 @@ export default function MobileApp({ config }: { config: AppConfig }) {
           <span className="text-[17px] font-bold tracking-tight" style={{ color: 'var(--text-strong)' }}>{TITLES[route]}</span>
         )}
         <span className="ml-auto flex items-center gap-2">
+          <JoinChannels variant="mobile" />
           <button onClick={() => setPaletteOpen(true)} aria-label="Ask the market" className="j4u-press w-9 h-9 rounded-[10px] flex items-center justify-center" style={{ border: '1px solid #E0D5FB', background: 'var(--ai-soft)' }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6B45F0" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="7" /><path d="M21 21l-4-4" /></svg>
           </button>

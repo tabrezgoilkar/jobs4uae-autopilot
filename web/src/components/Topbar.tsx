@@ -1,5 +1,6 @@
 import { useLocation } from 'react-router-dom';
 import ThemeToggle from './ThemeToggle';
+import JoinChannels from './JoinChannels';
 import { IconSparkle } from './icons';
 
 // Per-route topbar copy. Matches the page intent in the approved design.
@@ -49,6 +50,10 @@ export default function Topbar({
       {sub && <div className="hidden sm:block text-xs text-ink-muted truncate">{sub}</div>}
 
       <div className="ml-auto flex items-center gap-2 sm:gap-2.5">
+        {/* Join our community channels */}
+        <JoinChannels variant="desktop" />
+        <span className="hidden sm:block w-px h-5 bg-hair-subtle mx-0.5" />
+
         {/* ⌘K command palette — ask the UAE job market */}
         <button
           type="button"

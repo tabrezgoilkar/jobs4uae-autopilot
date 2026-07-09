@@ -299,6 +299,30 @@ export interface Evaluation {
   missingSkills: string[];
 }
 
+export interface FitDimension { name: string; score: number; weight: number; comment: string; }
+export interface FitResult {
+  score: number;
+  verdict: 'Strong' | 'Good' | 'Moderate' | 'Weak' | 'Poor';
+  dealBreaker: boolean;
+  dimensions: FitDimension[];
+  matchedSkills: string[];
+  missingSkills: string[];
+}
+
+/** Instant, deterministic fit score — no AI setup required. */
+export async function scoreJobFit(jobText: string): Promise<FitResult> {
+  const res = await fetch('/api/evaluate/fit', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ jobText }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({ error: `Server error ${res.status}` }));
+    throw new Error(body.error || `Server error ${res.status}`);
+  }
+  return res.json();
+}
+
 export async function runEvaluation(jobText: string): Promise<Evaluation> {
   const res = await fetch('/api/evaluate', {
     method: 'POST',

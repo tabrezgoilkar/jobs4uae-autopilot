@@ -118,7 +118,9 @@ export default function LinkedinImportModal({
           <div className="p-5 space-y-4">
             <div role="tablist" aria-label="Import method" className="flex gap-1 p-1 rounded-md bg-ai-soft/40 border border-hair-subtle">
               <TabButton active={tab === 'url'} onClick={() => { setTab('url'); setError(null); }}>Paste URL</TabButton>
-              <TabButton active={tab === 'screenshots'} onClick={() => { setTab('screenshots'); setError(null); }}>Screenshots</TabButton>
+              <TabButton active={tab === 'screenshots'} onClick={() => { setTab('screenshots'); setError(null); }}>
+                Screenshots{offer.screenshots && <span className="ml-1 text-[10px] text-primary-700 font-semibold">recommended</span>}
+              </TabButton>
               <TabButton active={tab === 'file'} onClick={() => { setTab('file'); setError(null); }}>Upload file</TabButton>
             </div>
 

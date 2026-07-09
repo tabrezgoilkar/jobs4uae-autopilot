@@ -141,7 +141,7 @@ export interface LinkedinChanges {
   added: Record<string, number>;
   addedItems: Record<string, string[]>;
 }
-export interface LinkedinImportResult { merged: Profile; changes: LinkedinChanges; partial?: boolean; }
+export interface LinkedinImportResult { merged: Profile; changes: LinkedinChanges; partial?: boolean; via?: 'server' | 'local'; }
 
 async function readImport(res: Response): Promise<LinkedinImportResult> {
   if (!res.ok) {

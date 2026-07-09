@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import {
   importLinkedinFile,
   importLinkedinUrl,
-  importLinkedinScreenshots,
   buildBaseline,
   isLikelyProfileUrl,
   LinkedinImportError,
@@ -10,8 +9,8 @@ import {
   type Profile,
 } from '../api';
 
-// On the cloud build (Clerk key present) the paste-URL fetch is blocked by
-// LinkedIn's IP wall, so screenshots is the reliable default there.
+// On the cloud build (Clerk key present) the paste-URL fetch is often blocked by
+// LinkedIn's IP wall, so we set expectations in the URL hint.
 const IS_CLOUD = !!import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
 const FIELD_LABELS: Record<string, string> = {
@@ -23,7 +22,7 @@ const SECTION_LABELS: Record<string, string> = {
   languages: 'languages', awards: 'awards', projects: 'projects', skills: 'skills', links: 'links',
 };
 
-type Tab = 'url' | 'screenshots' | 'file';
+type Tab = 'url' | 'file';
 
 function LinkedInMark() {
   return (
@@ -40,15 +39,11 @@ export default function LinkedinImportModal({
   onApply: (merged: Profile) => void;
   onClose: () => void;
 }) {
-  const [tab, setTab] = useState<Tab>(IS_CLOUD ? 'screenshots' : 'url');
+  const [tab, setTab] = useState<Tab>('url');
   const [result, setResult] = useState<LinkedinImportResult | null>(null);
   const [busy, setBusy] = useState<false | 'import' | 'baseline'>(false);
   const [error, setError] = useState<string | null>(null);
   const [url, setUrl] = useState('');
-  const [files, setFiles] = useState<File[]>([]);
-  // When a URL import is blocked, remember whether the server said the bookmarklet
-  // / screenshot fallbacks are worth offering (it tells us per-request).
-  const [offer, setOffer] = useState<{ bookmarklet?: boolean; screenshots?: boolean }>({});
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
@@ -57,19 +52,12 @@ export default function LinkedinImportModal({
   }, [onClose]);
 
   async function run(fn: () => Promise<LinkedinImportResult>) {
-    setBusy('import'); setError(null); setOffer({});
+    setBusy('import'); setError(null);
     try {
       setResult(await fn());
     } catch (err) {
       if (err instanceof LinkedinImportError && err.reason === 'blocked') {
-        // The server already tried the local-browser tier (on the desktop app) and
-        // still failed, so it tells us which fallbacks are worth offering. Show them
-        // instead of a dead-end message.
-        const wantBookmarklet = err.offerBookmarklet ?? true;
-        const wantScreenshots = err.offerScreenshots ?? true;
-        setOffer({ bookmarklet: wantBookmarklet, screenshots: wantScreenshots });
-        setError('LinkedIn blocked the direct read. Pick a fallback below — both run from your own browser.');
-        setTab(wantScreenshots ? 'screenshots' : 'file');
+        setError("LinkedIn blocked the direct read (common on the hosted app). Upload your CV with “Import from a CV file” above — that captures skills & every role.");
       } else {
         setError(err instanceof Error ? err.message : 'Import failed.');
       }
@@ -118,17 +106,14 @@ export default function LinkedinImportModal({
           <div className="p-5 space-y-4">
             <div role="tablist" aria-label="Import method" className="flex gap-1 p-1 rounded-md bg-ai-soft/40 border border-hair-subtle">
               <TabButton active={tab === 'url'} onClick={() => { setTab('url'); setError(null); }}>Paste URL</TabButton>
-              <TabButton active={tab === 'screenshots'} onClick={() => { setTab('screenshots'); setError(null); }}>
-                Screenshots{offer.screenshots && <span className="ml-1 text-[10px] text-primary-700 font-semibold">recommended</span>}
-              </TabButton>
               <TabButton active={tab === 'file'} onClick={() => { setTab('file'); setError(null); }}>Upload file</TabButton>
             </div>
 
             {tab === 'url' && (
               <div className="space-y-2.5">
                 <p className="text-[13px] text-ink-secondary leading-snug">
-                  Paste your public LinkedIn profile URL — we import the basics instantly.
-                  {IS_CLOUD && ' On the hosted app this is often blocked; Screenshots is more reliable.'}
+                  Paste your public LinkedIn profile URL — we import the basics instantly (name, headline, location, employers).
+                  {IS_CLOUD && ' On the hosted app LinkedIn may block this and return only what your profile shows publicly.'}
                 </p>
                 <input
                   type="url"
@@ -146,45 +131,20 @@ export default function LinkedinImportModal({
                   Import from URL
                 </button>
                 <p className="text-[12px] text-ink-muted leading-snug">
-                  Tip: for the <strong className="text-ink">fullest</strong> import (skills + every role), use the
-                  {' '}<a href="/api/linkedin-install" target="_blank" rel="noreferrer" className="text-primary-700 underline">1-click bookmarklet</a>{' '}
-                  — it reads your own logged-in profile. The URL read only gets the public basics.
+                  Tip: the URL read only gets the <strong className="text-ink">public basics</strong>. For skills &amp; every role,
+                  use <strong className="text-ink">Import from a CV file</strong> at the top of the page — it reads your full CV.
                 </p>
-              </div>
-            )}
-
-            {tab === 'screenshots' && (
-              <div className="space-y-2.5">
-                <p className="text-[13px] text-ink-secondary leading-snug">
-                  Open your profile, click <strong className="text-ink">Show all</strong> on Experience &amp; Skills, then take a few
-                  screenshots covering the whole page. Drop them in — a vision model reads them (nothing is uploaded to LinkedIn).
-                </p>
-                <input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={(e) => setFiles(Array.from(e.target.files ?? []))}
-                  className="text-sm text-ink-secondary"
-                />
-                {files.length > 0 && <p className="text-[12px] text-ink-muted">{files.length} image{files.length > 1 ? 's' : ''} selected</p>}
-                <button
-                  onClick={() => run(() => importLinkedinScreenshots(files))}
-                  disabled={busy !== false || files.length === 0}
-                  className="j4u-press text-[13px] font-semibold text-white bg-primary-700 rounded-md px-4 py-2 disabled:opacity-50"
-                >
-                  Read my screenshots
-                </button>
               </div>
             )}
 
             {tab === 'file' && (
               <div className="space-y-2.5">
                 <p className="text-[13px] text-ink-secondary leading-snug">
-                  Have a CV or a LinkedIn/JSON&nbsp;Resume export? Upload it and we'll structure it into your profile.
+                  Have a LinkedIn data export or a JSON&nbsp;Resume file? Upload it and we'll structure it into your profile.
                 </p>
                 <input
                   type="file"
-                  accept=".json,application/json,.pdf,.doc,.docx,.txt"
+                  accept=".json,application/json"
                   onChange={(e) => { const f = e.target.files?.[0]; if (f) run(() => importLinkedinFile(f)); }}
                   className="text-sm text-ink-secondary"
                 />
@@ -217,7 +177,7 @@ export default function LinkedinImportModal({
             )}
             {result.partial && (
               <p className="text-[12px] text-ai-700">
-                Imported the basics{result.via === 'local' ? ' from your browser' : ''}. Add a Screenshots or bookmarklet import to capture skills &amp; full roles.
+                Imported the basics. To add skills &amp; full roles, use <strong>Import from a CV file</strong> at the top of the page.
               </p>
             )}
             <p className="text-[12px] text-ink-muted">Nothing you already typed is overwritten. We'll draft a baseline summary you can edit, then you Save.</p>

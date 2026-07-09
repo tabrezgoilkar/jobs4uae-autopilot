@@ -1,10 +1,27 @@
 import { fetchHtml } from '../lib/browser.js';
 import indeed from './boards/indeed.js';
+import freehire from './boards/freehire.js';
 
 // Active, live-verified boards. Aggregators that need a real headed browser +
 // XHR interception (Bayt, Naukrigulf) are on the roadmap — see
 // docs/superpowers/plans/2026-06-23-NEXT-naukrigulf-bayt-scanner-rework.md.
-export const BOARDS = [indeed];
+// freehire is a plain REST/JSON endpoint (no browser).
+export const BOARDS = [indeed, freehire];
+
+/**
+ * Lightweight JSON fetch for REST boards (no Playwright). Adds a browser-like
+ * UA so endpoints that block default fetch UAs still respond.
+ */
+async function fetchJson(url) {
+  const res = await fetch(url, {
+    headers: {
+      accept: 'application/json',
+      'user-agent': 'Mozilla/5.0 (compatible; jobs4uae-bot/1.0; +https://github.com/tabrezgoilkar/jobs4uae-autopilot)',
+    },
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.text();
+}
 
 /**
  * Scan a job board and return normalized listings.
@@ -24,8 +41,8 @@ export async function scan({ board: boardId, keyword, country, city }) {
 
   try {
     const url = board.buildSearchUrl({ keyword, country, city });
-    const html = await fetchHtml(url);
-    const listings = board.parseListings(html, { country });
+    const raw = board.rest ? await fetchJson(url) : await fetchHtml(url);
+    const listings = board.parseListings(raw, { country });
     return { listings };
   } catch (e) {
     return {

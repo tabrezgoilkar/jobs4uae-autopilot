@@ -4,11 +4,16 @@ import os from 'node:os';
 import fs from 'node:fs';
 import path from 'node:path';
 
-// Mock only the network fetch; keep isLinkedinProfileUrl real.
+// Mock ONLY the network fetchers; keep isLinkedinProfileUrl + the tier logic real.
 const fetchLinkedinJsonLd = vi.fn();
+const fetchLinkedinViaLocalBrowser = vi.fn();
 vi.mock('../profile/linkedin/fetchPublic.js', async (orig) => {
   const actual = await orig();
   return { ...actual, fetchLinkedinJsonLd };
+});
+vi.mock('../profile/linkedin/fetchLocal.js', async (orig) => {
+  const actual = await orig();
+  return { ...actual, fetchLinkedinViaLocalBrowser };
 });
 
 const partialProfile = (over = {}) => ({
@@ -58,10 +63,14 @@ describe('POST /api/profile/linkedin/url', () => {
 
   it('returns 409 with reason "blocked" so the UI can offer the screenshot path', async () => {
     fetchLinkedinJsonLd.mockResolvedValue({ ok: false, reason: 'blocked' });
+    // Tier 2 (local browser) also blocked — so the cascade ends on reason:'blocked'.
+    fetchLinkedinViaLocalBrowser.mockResolvedValue({ ok: false, reason: 'blocked' });
     const { createApp } = await import('../app.js');
     const res = await request(createApp()).post('/api/profile/linkedin/url').send({ url: 'https://www.linkedin.com/in/jane' });
     expect(res.status).toBe(409);
     expect(res.body.reason).toBe('blocked');
     expect(res.body.error).toBeTruthy();
+    expect(res.body.offerScreenshots).toBe(true);
+    expect(res.body.offerBookmarklet).toBe(true);
   });
 });

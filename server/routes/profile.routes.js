@@ -7,6 +7,7 @@ import { assistProfile } from '../profile/assist.js';
 import { normalizeProfile } from '../profile/schema.js';
 import { linkedinToProfile, looksLikeLinkedinExport } from '../profile/linkedin/map.js';
 import { fetchLinkedinJsonLd, isLinkedinProfileUrl } from '../profile/linkedin/fetchPublic.js';
+import { fetchLinkedinViaLocalBrowser, canUseLocalBrowser } from '../profile/linkedin/fetchLocal.js';
 import { extractProfileFromImages } from '../profile/vision.js';
 import { buildBaseline } from '../profile/baseline.js';
 import { mergeProfile } from '../profile/linkedin/merge.js';
@@ -109,28 +110,45 @@ export function profileRouter() {
     res.json({ pending: takePending() });
   });
 
-  // Paste-a-URL "instant prefill": fetch the public profile's JSON-LD and MERGE
-  // it (basics only — the vision path fills the rest). Returns the candidate for
-  // review, does not persist. LinkedIn auth-walls datacenter IPs, so on the cloud
-  // this returns `reason:'blocked'` and the UI offers the screenshot import.
+  // Paste-a-URL "instant prefill": a 3-tier cascade that MERGEs the basics
+  // (name, headline, location, employers + years, education). Returns the candidate
+  // for review, does not persist.
+  //
+  //   Tier 1 — server-side JSON-LD fetch (works from a residential/permissive IP).
+  //   Tier 2 — if Tier 1 is blocked AND this is the LOCAL desktop app, read the
+  //            rendered JSON-LD from a headed Chromium on the user's own machine
+  //            (residential IP, real fingerprint — LinkedIn rarely walls it).
+  //   Tier 3 — bookmarklet / screenshots (the UI offers these when we're blocked).
+  //
+  // LinkedIn auth-walls datacenter IPs (cloud), so there Tier 1→2 is skipped and we
+  // return `reason:'blocked'` for the UI to offer the bookmarklet / screenshots.
   router.post('/linkedin/url', async (req, res) => {
     const url = (req.body?.url ?? '').toString().trim();
     if (!isLinkedinProfileUrl(url)) {
       return res.status(422).json({ error: 'Enter your LinkedIn profile URL (linkedin.com/in/…).', reason: 'bad_url' });
     }
     try {
-      const result = await fetchLinkedinJsonLd(url);
+      let result = await fetchLinkedinJsonLd(url);
+
+      // Tier 2: only on the local desktop app (no display/real browser on cloud).
+      if (!result.ok && result.reason === 'blocked' && canUseLocalBrowser()) {
+        result = await fetchLinkedinViaLocalBrowser(url);
+      }
+
       if (!result.ok) {
         const blocked = result.reason === 'blocked';
         return res.status(blocked ? 409 : 502).json({
           reason: result.reason,
+          // Tell the UI which fallbacks are actually worth offering.
+          offerBookmarklet: true,
+          offerScreenshots: true,
           error: blocked
-            ? "LinkedIn blocked the request (common on the cloud). Import a screenshot of your profile instead."
-            : "Couldn't read that profile. Try importing a screenshot instead.",
+            ? "LinkedIn blocked the request. Use the 1-click bookmarklet (richest) or a screenshot import — both work from your own browser."
+            : "Couldn't read that profile. Try the bookmarklet or a screenshot import.",
         });
       }
       const { merged, changes } = mergeProfile(await loadProfile(req.userId), result.profile);
-      res.json({ merged, changes, partial: true });
+      res.json({ merged, changes, partial: true, via: result.via ?? 'server' });
     } catch (e) {
       res.status(500).json({ error: e.message });
     }

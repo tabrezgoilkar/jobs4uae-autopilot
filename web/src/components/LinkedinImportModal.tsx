@@ -46,6 +46,9 @@ export default function LinkedinImportModal({
   const [error, setError] = useState<string | null>(null);
   const [url, setUrl] = useState('');
   const [files, setFiles] = useState<File[]>([]);
+  // When a URL import is blocked, remember whether the server said the bookmarklet
+  // / screenshot fallbacks are worth offering (it tells us per-request).
+  const [offer, setOffer] = useState<{ bookmarklet?: boolean; screenshots?: boolean }>({});
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
@@ -54,13 +57,19 @@ export default function LinkedinImportModal({
   }, [onClose]);
 
   async function run(fn: () => Promise<LinkedinImportResult>) {
-    setBusy('import'); setError(null);
+    setBusy('import'); setError(null); setOffer({});
     try {
       setResult(await fn());
     } catch (err) {
       if (err instanceof LinkedinImportError && err.reason === 'blocked') {
-        setError('LinkedIn blocked reading that URL (common on the cloud). Use the Screenshots tab instead.');
-        setTab('screenshots');
+        // The server already tried the local-browser tier (on the desktop app) and
+        // still failed, so it tells us which fallbacks are worth offering. Show them
+        // instead of a dead-end message.
+        const wantBookmarklet = err.offerBookmarklet ?? true;
+        const wantScreenshots = err.offerScreenshots ?? true;
+        setOffer({ bookmarklet: wantBookmarklet, screenshots: wantScreenshots });
+        setError('LinkedIn blocked the direct read. Pick a fallback below — both run from your own browser.');
+        setTab(wantScreenshots ? 'screenshots' : 'file');
       } else {
         setError(err instanceof Error ? err.message : 'Import failed.');
       }
@@ -134,6 +143,11 @@ export default function LinkedinImportModal({
                 >
                   Import from URL
                 </button>
+                <p className="text-[12px] text-ink-muted leading-snug">
+                  Tip: for the <strong className="text-ink">fullest</strong> import (skills + every role), use the
+                  {' '}<a href="/linkedin" target="_blank" rel="noreferrer" className="text-primary-700 underline">1-click bookmarklet</a>{' '}
+                  — it reads your own logged-in profile. The URL read only gets the public basics.
+                </p>
               </div>
             )}
 
@@ -200,7 +214,9 @@ export default function LinkedinImportModal({
               </>
             )}
             {result.partial && (
-              <p className="text-[12px] text-ai-700">Imported the basics from your URL. Add a Screenshots import to capture skills &amp; full roles.</p>
+              <p className="text-[12px] text-ai-700">
+                Imported the basics{result.via === 'local' ? ' from your browser' : ''}. Add a Screenshots or bookmarklet import to capture skills &amp; full roles.
+              </p>
             )}
             <p className="text-[12px] text-ink-muted">Nothing you already typed is overwritten. We'll draft a baseline summary you can edit, then you Save.</p>
             <div className="flex items-center gap-2.5 pt-1">

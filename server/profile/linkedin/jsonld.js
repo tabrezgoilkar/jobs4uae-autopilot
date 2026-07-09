@@ -60,6 +60,38 @@ export function jsonLdToProfile(node = {}) {
   });
 }
 
+/**
+ * Recursively find the first schema.org `Person` node in a parsed JSON-LD value.
+ * LinkedIn nests the Person node in different shapes across profiles:
+ *   - top-level `{ "@type": "Person", ... }`
+ *   - inside an `@graph` array: `{ "@graph": [ { "@type": "Person" }, ... ] }`
+ *   - inside a wrapping node: `{ "@type": "ProfilePage", "author": { "@type": "Person" } }`
+ * The original implementation only checked top-level / `@graph` and silently
+ * returned null for the wrapping case — which `fetchPublic.js` then mis-reported
+ * as `reason: 'blocked'` (so the UI wrongly told users to use screenshots).
+ * Depth-capped to avoid runaway traversal of a malformed blob.
+ */
+function findPersonNode(node, depth = 0) {
+  if (!node || typeof node !== 'object' || depth > 6) return null;
+  if (Array.isArray(node)) {
+    for (const v of node) {
+      const r = findPersonNode(v, depth + 1);
+      if (r) return r;
+    }
+    return null;
+  }
+  const t = node['@type'];
+  if (t === 'Person' || (Array.isArray(t) && t.includes('Person'))) return node;
+  for (const key of Object.keys(node)) {
+    const val = node[key];
+    if (val && typeof val === 'object') {
+      const r = findPersonNode(val, depth + 1);
+      if (r) return r;
+    }
+  }
+  return null;
+}
+
 /** Find and return the schema.org Person node in a page's ld+json, or null. */
 export function extractJsonLd(html) {
   if (typeof html !== 'string') return null;
@@ -72,11 +104,8 @@ export function extractJsonLd(html) {
     } catch {
       continue;
     }
-    const candidates = Array.isArray(data) ? data : Array.isArray(data['@graph']) ? data['@graph'] : [data];
-    for (const node of candidates) {
-      const t = node?.['@type'];
-      if (t === 'Person' || (Array.isArray(t) && t.includes('Person'))) return node;
-    }
+    const found = findPersonNode(data);
+    if (found) return found;
   }
   return null;
 }

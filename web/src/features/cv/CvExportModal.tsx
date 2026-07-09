@@ -1,13 +1,15 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import type { Profile } from '../../api';
 import { CvDocument } from './CvTemplates';
 import { CV_TEMPLATES, type CvTemplateId } from './cvTypes';
+import { exportCvToPdf } from './exportPdf';
 
-// Full-screen CV preview + export. Export uses the browser's print → "Save as
-// PDF", which works on mobile and desktop and needs no server. The print CSS in
-// index.css (.cv-print) hides everything except the CV page.
+// Full-screen CV preview + export. Export prints the CV inside an isolated
+// iframe (see exportPdf.ts) so long CVs paginate across multiple pages — the
+// in-modal window.print() clipped everything after page 1.
 export default function CvExportModal({ profile, onClose }: { profile: Profile; onClose: () => void }) {
   const [template, setTemplate] = useState<CvTemplateId>('classic');
+  const cvRef = useRef<HTMLDivElement>(null);
 
   return (
     <div role="dialog" aria-modal="true" aria-label="Export CV" className="fixed inset-0 z-[80] flex flex-col" style={{ background: 'var(--surface-sunken)' }}>
@@ -25,15 +27,15 @@ export default function CvExportModal({ profile, onClose }: { profile: Profile; 
             );
           })}
         </div>
-        <button onClick={() => window.print()} className="j4u-press ml-auto inline-flex items-center gap-2 text-white text-[12.5px] font-semibold rounded-md px-4 h-9" style={{ background: 'var(--ai-600)', border: 'none' }}>
+        <button onClick={() => exportCvToPdf(cvRef.current)} className="j4u-press ml-auto inline-flex items-center gap-2 text-white text-[12.5px] font-semibold rounded-md px-4 h-9" style={{ background: 'var(--ai-600)', border: 'none' }}>
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z" /></svg>
-          Save as PDF
+          Export PDF
         </button>
       </div>
 
       {/* preview */}
       <div className="flex-1 overflow-y-auto p-3 sm:p-6 flex justify-center">
-        <div className="cv-print shadow-lg" style={{ background: '#fff', width: '100%', maxWidth: 794, alignSelf: 'flex-start' }}>
+        <div ref={cvRef} className="cv-print shadow-lg" style={{ background: '#fff', width: '100%', maxWidth: 794, alignSelf: 'flex-start' }}>
           <CvDocument profile={profile} template={template} />
         </div>
       </div>

@@ -7,7 +7,6 @@ import { assistProfile } from '../profile/assist.js';
 import { normalizeProfile } from '../profile/schema.js';
 import { linkedinToProfile, looksLikeLinkedinExport } from '../profile/linkedin/map.js';
 import { fetchLinkedinJsonLd, isLinkedinProfileUrl } from '../profile/linkedin/fetchPublic.js';
-import { fetchLinkedinViaLocalBrowser, canUseLocalBrowser } from '../profile/linkedin/fetchLocal.js';
 import { extractProfileFromImages } from '../profile/vision.js';
 import { buildBaseline } from '../profile/baseline.js';
 import { mergeProfile } from '../profile/linkedin/merge.js';
@@ -32,7 +31,7 @@ function corsForLinkedin(req, res, next) {
   next();
 }
 
-export function profileRouter() {
+export function profileRouter({ localLinkedinFetcher = null } = {}) {
   const router = Router();
 
   router.get('/', async (req, res) => {
@@ -130,9 +129,12 @@ export function profileRouter() {
     try {
       let result = await fetchLinkedinJsonLd(url);
 
-      // Tier 2: only on the local desktop app (no display/real browser on cloud).
-      if (!result.ok && result.reason === 'blocked' && canUseLocalBrowser()) {
-        result = await fetchLinkedinViaLocalBrowser(url);
+      // Tier 2: only on the LOCAL desktop app. The desktop entry injects the
+      // real browser fetcher; the cloud build passes none (no display / Playwright
+      // is intentionally excluded from the serverless bundle), so this is skipped
+      // and we fall straight through to the bookmarklet / screenshots offer.
+      if (!result.ok && result.reason === 'blocked' && localLinkedinFetcher) {
+        result = await localLinkedinFetcher(url);
       }
 
       if (!result.ok) {

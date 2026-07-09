@@ -197,4 +197,19 @@ with a hint to open the bookmarklet / screenshots.
 3. ✅ Modal UX: blocked-reason offers bookmarklet + screenshots, plus a "via" confidence chip on success.
 4. ⬜ Release live-smoke script + CI gating on 5 public profiles (see Section 5 — recommended before next release).
 
-**All four tiers are now implemented and verified by 342 passing tests.**
+**All four tiers are now implemented and verified by 343 passing tests.**
+
+### 7.1 Vercel deploy regression (fixed)
+
+The first cut statically imported `fetchLocal.js` (→ `lib/browser.js` → `playwright`)
+from `profile.routes.js`, which is **mounted in the cloud app** too — so Playwright
+(native, ~150 MB) got traced into the Vercel serverless bundle and the deploy failed.
+
+**Fix:** `profile.routes.js` no longer imports the browser path. Instead `profileRouter`
+takes an injected `localLinkedinFetcher`:
+- `server/app.js` (desktop) injects the **real** `fetchLinkedinViaLocalBrowser` → Tier 2 works locally.
+- `server/cloudApp.js` (Vercel) injects **nothing** → Tier 2 is skipped, and Playwright
+  stays entirely out of the cloud module graph.
+
+Verified by walking the static import graph from `api/index.js`: **0 Playwright
+specifiers reachable.** The cloud build's own rule ("no Playwright") is restored.

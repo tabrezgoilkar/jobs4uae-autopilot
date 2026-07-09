@@ -141,7 +141,7 @@ export interface LinkedinChanges {
   added: Record<string, number>;
   addedItems: Record<string, string[]>;
 }
-export interface LinkedinImportResult { merged: Profile; changes: LinkedinChanges; partial?: boolean; }
+export interface LinkedinImportResult { merged: Profile; changes: LinkedinChanges; partial?: boolean; via?: 'server' | 'local'; }
 
 async function readImport(res: Response): Promise<LinkedinImportResult> {
   if (!res.ok) {
@@ -179,10 +179,14 @@ export async function getPendingLinkedin(): Promise<LinkedinImportResult | null>
 /** Carries the server's `reason` (e.g. 'blocked') so the UI can offer a fallback. */
 export class LinkedinImportError extends Error {
   reason?: string;
-  constructor(message: string, reason?: string) {
+  offerBookmarklet?: boolean;
+  offerScreenshots?: boolean;
+  constructor(message: string, reason?: string, flags: { offerBookmarklet?: boolean; offerScreenshots?: boolean } = {}) {
     super(message);
     this.name = 'LinkedinImportError';
     this.reason = reason;
+    this.offerBookmarklet = flags.offerBookmarklet;
+    this.offerScreenshots = flags.offerScreenshots;
   }
 }
 
@@ -198,7 +202,10 @@ export async function importLinkedinUrl(url: string): Promise<LinkedinImportResu
   });
   if (!res.ok) {
     const b = await res.json().catch(() => ({}));
-    throw new LinkedinImportError(b.error || `Server error ${res.status}`, b.reason);
+    throw new LinkedinImportError(b.error || `Server error ${res.status}`, b.reason, {
+      offerBookmarklet: b.offerBookmarklet,
+      offerScreenshots: b.offerScreenshots,
+    });
   }
   return res.json();
 }

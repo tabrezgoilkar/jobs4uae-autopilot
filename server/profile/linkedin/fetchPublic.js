@@ -45,5 +45,5 @@ export async function fetchLinkedinJsonLd(url, { fetchImpl = fetch } = {}) {
   const node = extractJsonLd(html);
   if (!node) return { ok: false, reason: 'blocked' }; // auth wall serves no Person JSON-LD
 
-  return { ok: true, profile: jsonLdToProfile(node), partial: true };
+  return { ok: true, profile: jsonLdToProfile(node), partial: true, via: 'server' };
 }

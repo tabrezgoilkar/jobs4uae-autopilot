@@ -72,6 +72,18 @@ describe('extractJsonLd', () => {
     expect(extractJsonLd(html)?.name).toBe('Bill Gates');
   });
 
+  // Regression: LinkedIn wraps the Person inside a ProfilePage/author node on
+  // some profiles. The pre-fix extractor only checked top-level / @graph and
+  // returned null → fetchPublic mis-reported it as reason:'blocked'.
+  it('finds a Person nested inside a wrapping node (e.g. ProfilePage.author)', () => {
+    const html = `<script type="application/ld+json">${JSON.stringify({
+      '@context': 'http://schema.org',
+      '@type': 'ProfilePage',
+      author: { '@type': 'Person', name: 'Reid Hoffman', url: 'https://www.linkedin.com/in/reidhoffman' },
+    })}</script>`;
+    expect(extractJsonLd(html)?.name).toBe('Reid Hoffman');
+  });
+
   it('returns null when there is no Person block', () => {
     expect(extractJsonLd('<html><body>no json-ld here</body></html>')).toBeNull();
     expect(extractJsonLd('<script type="application/ld+json">not json</script>')).toBeNull();

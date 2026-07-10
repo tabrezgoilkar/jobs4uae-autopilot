@@ -96,7 +96,7 @@ describe('scanner API', () => {
       const { createApp } = await import('../app.js');
       const res = await request(createApp())
         .post('/api/scanner/scan')
-        .send({ board: 'linkedin', keyword: 'engineer' });
+        .send({ board: 'not-a-real-board', keyword: 'engineer' });
       expect(res.status).toBe(400);
       expect(res.body.error).toBeTruthy();
     });

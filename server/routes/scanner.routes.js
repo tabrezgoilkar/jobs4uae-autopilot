@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { BOARDS, scan } from '../scanner/engine.js';
+import { fetchJobDetail } from '../scanner/boards/linkedin.js';
 import { loadConfig } from '../config/store.js';
 import { createEngine } from '../ai/index.js';
 import { estimateSalary } from '../scanner/salary.js';
@@ -96,6 +97,29 @@ export function scannerRouter() {
       const msg = e?.message === 'BLOCKED'
         ? 'That site blocked the fetch (anti-bot). Open it in your browser and paste the description, or try another link.'
         : 'Could not open that link. Check the URL and try again.';
+      res.status(502).json({ error: msg });
+    }
+  });
+
+  /**
+   * POST /api/scanner/linkedin-detail
+   * Body: { jobId } → fetches a single LinkedIn posting via the jobs-guest API
+   * and returns its normalized detail (description, seniority, etc.).
+   * Used by the "view job" flow. Runs through the headed scanner fetcher.
+   */
+  router.post('/scanner/linkedin-detail', async (req, res) => {
+    const jobId = String(req.body?.jobId ?? '').trim();
+    if (!/^\d{6,}$/.test(jobId)) {
+      return res.status(400).json({ error: 'A numeric LinkedIn job id is required.' });
+    }
+    try {
+      const detail = await fetchJobDetail(jobId, (url) => fetchHtml(url));
+      if (!detail) return res.status(404).json({ error: "Couldn't read that LinkedIn posting." });
+      res.json(detail);
+    } catch (e) {
+      const msg = e?.message === 'BLOCKED'
+        ? 'LinkedIn blocked the fetch (anti-bot). Try again shortly or open the posting in your browser.'
+        : 'Could not open that LinkedIn posting right now.';
       res.status(502).json({ error: msg });
     }
   });

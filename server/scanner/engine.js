@@ -1,10 +1,11 @@
 import { fetchHtml } from '../lib/browser.js';
 import indeed from './boards/indeed.js';
+import linkedin from './boards/linkedin.js';
 
 // Active, live-verified boards. Aggregators that need a real headed browser +
 // XHR interception (Bayt, Naukrigulf) are on the roadmap — see
 // docs/superpowers/plans/2026-06-23-NEXT-naukrigulf-bayt-scanner-rework.md.
-export const BOARDS = [indeed];
+export const BOARDS = [indeed, linkedin];
 
 /**
  * Scan a job board and return normalized listings.

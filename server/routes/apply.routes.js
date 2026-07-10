@@ -9,6 +9,9 @@ import { getBoard } from '../apply/boards/index.js';
 import { autofillJob } from '../apply/autofill.js';
 import { setSession, getSession } from '../apply/session.js';
 import { loadProfile } from '../profile/store.js';
+import { draftApplication } from '../apply/drafter.js';
+import { reviewApplication } from '../apply/reviewer.js';
+import { runAtsCheck } from '../apply/atsCheck.js';
 import { loadConfig } from '../config/store.js';
 import { createEngine } from '../ai/index.js';
 import { getDocument } from '../documents/store.js';
@@ -25,6 +28,33 @@ export function applyRouter() {
   });
   router.post('/application-details', (req, res) => {
     try { res.json(saveDetails(req.body ?? {})); } catch (e) { res.status(400).json({ error: e.message }); }
+  });
+
+  // --- Draft + Review + honest ATS pipeline (Phase 11, server-side) ---
+  // Drafter tailors the CV/cover letter -> Reviewer checks for fabrication ->
+  // honest ATS parse reports present/missing keywords. The USER decides what to
+  // send; nothing is submitted automatically.
+  router.post('/apply/draft', async (req, res) => {
+    try {
+      const jobText = (req.body?.jobText ?? '').trim();
+      if (!jobText) return res.status(400).json({ error: 'Please paste a job description.' });
+
+      const config = await loadConfig(req.userId);
+      if (!config.setupComplete) {
+        return res.status(409).json({ error: 'Complete the AI setup wizard before drafting applications.' });
+      }
+
+      const profile = await loadProfile(req.userId);
+      const engine = createEngine(config);
+
+      const draft = await draftApplication({ profile, jobText, engine });
+      const review = await reviewApplication({ profile, jobText, draft, engine });
+      const ats = runAtsCheck({ resumeMarkdown: draft.resumeMarkdown, jobText });
+
+      res.json({ draft, review, ats });
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
   });
 
   // --- Connections (per-board session) ---

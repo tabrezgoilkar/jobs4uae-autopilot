@@ -319,6 +319,28 @@ export async function runEvaluation(jobText: string): Promise<Evaluation> {
   return res.json();
 }
 
+export interface FitDimension { name: string; score: number; weight: number; comment: string; }
+export interface FitScore { score: number; verdict: string; dealBreaker: boolean; dimensions: FitDimension[]; matchedSkills: string[]; missingSkills: string[]; }
+export async function getFitScore(jobText: string): Promise<FitScore> {
+  const res = await fetch('/api/evaluate/fit', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ jobText }),
+  });
+  if (!res.ok) {
+    const b = await res.json().catch(() => ({ error: `Server error ${res.status}` }));
+    throw new Error(b.error || `Server error ${res.status}`);
+  }
+  return res.json();
+}
+
+export interface UpskillCell { skill: string; demand: number; avgCost: number; gapScore: number; heat: 'low' | 'med' | 'high'; examples: string[]; }
+export interface UpskillHeatmap { cells: UpskillCell[]; totalJobs: number; }
+export async function getUpskillHeatmap(): Promise<UpskillHeatmap> {
+  const res = await fetch('/api/upskill/heatmap').then(checkOk);
+  return res.json();
+}
+
 export async function listEvaluations(): Promise<Evaluation[]> {
   const res = await fetch('/api/evaluations').then(checkOk);
   return res.json();

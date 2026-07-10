@@ -33,6 +33,10 @@ const REC_TONE: Record<string, { label: string; tone: Tone }> = {
   skip: { label: 'Skip', tone: 'danger' },
 };
 
+// The cloud build has no browser, so the "paste a job link" flow (which needs a
+// headed browser to open the URL) is unavailable there.
+const IS_CLOUD = !!import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
+
 interface SalaryState { busy: boolean; data: SalaryEstimate | null; error: string | null; }
 
 export default function ScanPage() {
@@ -227,7 +231,8 @@ export default function ScanPage() {
             </div>
           </form>
 
-          {/* Paste a job link */}
+          {/* Paste a job link — needs a headed browser, unavailable on the cloud build */}
+          {!IS_CLOUD && (
           <form onSubmit={handlePasteLink} aria-label="Paste a job link" className="bg-surface border border-hair-subtle rounded-md p-2 shadow-sm flex items-center gap-2">
             <span className="grid place-items-center w-9 h-9 flex-none rounded-md bg-surface-sunken text-ink-muted">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg>
@@ -249,6 +254,7 @@ export default function ScanPage() {
               {pasteBusy ? (<><span className="inline-block w-3.5 h-3.5 rounded-full border-2 border-white border-t-transparent animate-spin" /> Adding…</>) : (<><IconSparkle size={14} color="#fff" /> Add &amp; evaluate</>)}
             </button>
           </form>
+          )}
 
           {scanError && (
             <div role="alert" className="flex items-start gap-2.5 rounded-md bg-warning-soft border border-warning-soft px-3.5 py-3 text-warning-text text-[12.5px]">

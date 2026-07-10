@@ -7,14 +7,15 @@
 // (a full DOM parser is unnecessary and node-html-parser has nesting bugs on
 // LinkedIn cards — confirmed against the upstream reference implementation).
 //
-// IMPORTANT: runs through the shared scanner fetcher (headed Chromium) like the
-// other boards. The jobs-guest surface is more permissive than profile pages,
-// but LinkedIn still walls heavy/automated volume — keep usage personal/low and
-// prefer a residential IP (the desktop scanner model). Do not mount this on the
-// cloud app (it must stay Playwright-free).
+// CLOUD-SAFE: the jobs-guest surface answers a plain server-side fetch (no
+// browser), so this board is marked `rest: true` and runs on Vercel too. The
+// search/detail helpers default to globalThis.fetch (see fetchJobDetail). Free
+// of Playwright — verified via the cloud import-graph walk.
 
 const SEARCH_URL = 'https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search';
 const DETAIL_URL = 'https://www.linkedin.com/jobs-guest/jobs/api/jobPosting';
+const BROWSER_UA =
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36';
 
 // LinkedIn job-age (days) → f_TPR value (seconds). 0/negative/"all" → no filter.
 function jobAgeToTpr(days) {
@@ -222,13 +223,20 @@ function toListing(card, { country } = {}) {
 
 /**
  * Fetch a single posting's detail (used by the "view job" / paste-link flow).
+ * Uses a plain server-side fetch (cached, browser UA) so it works on cloud too.
  * @param {string} jobId
- * @param {(url:string)=>Promise<string>} fetchHtml
+ * @param {(url:string)=>Promise<string>} [fetchImpl] - injectable for tests
  * @returns {Promise<object|null>}
  */
-export async function fetchJobDetail(jobId, fetchHtml) {
+export async function fetchJobDetail(jobId, fetchImpl) {
   const url = `${DETAIL_URL}/${encodeURIComponent(jobId)}`;
-  const html = await fetchHtml(url);
+  const html = fetchImpl
+    ? await fetchImpl(url)
+    : await cached(`li-detail:${jobId}`, 60_000, async () => {
+        const res = await fetch(url, { headers: { 'user-agent': BROWSER_UA } });
+        if (!res.ok) throw new Error(`Upstream responded ${res.status}`);
+        return res.text();
+      });
   if (!html) return null;
   return parseJobDetail(html, String(jobId));
 }
@@ -236,6 +244,7 @@ export async function fetchJobDetail(jobId, fetchHtml) {
 const linkedin = {
   id: 'linkedin',
   name: 'LinkedIn',
+  rest: true, // jobs-guest answers a plain server-side fetch — cloud-safe
   status: 'experimental', // jobs-guest can rate-limit; verify live before marking verified
 
   buildSearchUrl,

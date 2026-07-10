@@ -26,8 +26,8 @@ describe('scanner board contract', () => {
   });
 
   test('scan() resolves linkedin through the engine', async () => {
-    const { BOARDS } = await import('../scanner/engine.js');
-    expect(BOARDS.find((b) => b.id === 'linkedin')).toBe(linkedin);
+    const { REST_BOARDS } = await import('../scanner/engine.js');
+    expect(REST_BOARDS.find((b) => b.id === 'linkedin')).toBe(linkedin);
   });
 });
 

@@ -34,6 +34,23 @@ describe('cloud app', () => {
     expect(res.status).toBe(404);
   });
 
+  it('mounts the cloud-safe scanner (rest boards only, no browser)', async () => {
+    const { createCloudApp } = await import('../cloudApp.js');
+    const res = await request(createCloudApp()).get('/api/scanner/boards');
+    expect(res.status).toBe(200);
+    const ids = res.body.map((b) => b.id);
+    expect(ids).toContain('linkedin');
+    expect(ids).toContain('freehire');
+    // indeed requires a headed browser and must NOT be exposed on cloud.
+    expect(ids).not.toContain('indeed');
+  });
+
+  it('raw fetch-job link is 501 on cloud (needs the desktop browser)', async () => {
+    const { createCloudApp } = await import('../cloudApp.js');
+    const res = await request(createCloudApp()).post('/api/scanner/fetch-job').send({ url: 'https://example.com/job' });
+    expect(res.status).toBe(501);
+  });
+
   it('exposes the cloud-safe email-compose route', async () => {
     const { createCloudApp } = await import('../cloudApp.js');
     // 422 (no recruiter email) proves the route exists and ran, without needing AI.

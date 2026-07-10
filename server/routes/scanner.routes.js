@@ -1,22 +1,22 @@
 import { Router } from 'express';
-import { BOARDS, scan } from '../scanner/engine.js';
+import { CLOUD_BOARDS, allBoards, scan } from '../scanner/engine.js';
 import { fetchJobDetail } from '../scanner/boards/linkedin.js';
 import { loadConfig } from '../config/store.js';
 import { createEngine } from '../ai/index.js';
 import { estimateSalary } from '../scanner/salary.js';
-import { fetchHtml } from '../lib/browser.js';
 import { htmlToJobText } from '../scanner/extract.js';
 import { assertFetchableUrl } from '../lib/ssrf.js';
 
-export function scannerRouter() {
+export function scannerRouter({ cloud = false } = {}) {
   const router = Router();
 
   /**
    * GET /api/scanner/boards
-   * Returns list of supported boards [{id, name}]
+   * Returns list of supported boards [{id, name, status}]
    */
-  router.get('/scanner/boards', (req, res) => {
-    res.json(BOARDS.map(({ id, name, status }) => ({ id, name, status: status ?? 'experimental' })));
+  router.get('/scanner/boards', async (req, res) => {
+    const list = cloud ? CLOUD_BOARDS : await allBoards();
+    res.json(list.map(({ id, name, status }) => ({ id, name, status: status ?? 'experimental' })));
   });
 
   /**
@@ -32,12 +32,16 @@ export function scannerRouter() {
         return res.status(400).json({ error: 'Please enter a keyword to search for.' });
       }
 
-      const knownBoard = BOARDS.find((b) => b.id === board);
-      if (!board || !knownBoard) {
-        return res.status(400).json({ error: `Unknown board. Valid options: ${BOARDS.map((b) => b.id).join(', ')}.` });
+      const valid = cloud ? CLOUD_BOARDS : await allBoards();
+      const validIds = valid.map((b) => b.id).join(', ');
+      if (!board) {
+        return res.status(400).json({ error: `Unknown board. Valid options: ${validIds}.` });
+      }
+      if (!valid.some((b) => b.id === board)) {
+        return res.status(400).json({ error: `Unknown board "${board}". Valid options: ${validIds}.` });
       }
 
-      const result = await scan({ board, keyword: String(keyword).trim(), country, city });
+      const result = await scan({ board, keyword: String(keyword).trim(), country, city, req, cloud });
       res.json(result);
     } catch (e) {
       res.status(500).json({ error: e.message });
@@ -70,8 +74,12 @@ export function scannerRouter() {
    * POST /api/scanner/fetch-job
    * Body: { url } → fetches the job page (headed browser) and returns its text.
    * Used by the "paste a job link" flow; the client then evaluates the text.
+   * On the cloud app this needs a browser, so it is unavailable there.
    */
   router.post('/scanner/fetch-job', async (req, res) => {
+    if (cloud) {
+      return res.status(501).json({ error: 'Opening a raw job link needs the local desktop app (a browser). Use the LinkedIn or FreeHire board search on the web app instead.' });
+    }
     const url = (req.body?.url ?? '').toString().trim();
     if (!/^https?:\/\/\S+$/i.test(url)) {
       return res.status(400).json({ error: 'Please paste a valid job link (starting with http).' });
@@ -84,6 +92,8 @@ export function scannerRouter() {
       return res.status(400).json({ error: "That link points to a private or internal address and can't be fetched. Paste a public job URL." });
     }
     try {
+      // Dynamic import keeps Playwright out of the cloud bundle (desktop-only path).
+      const { fetchHtml } = await import('../lib/browser.js');
       // Pin DNS to the validated IP (anti-rebinding) and re-validate every redirect hop.
       const html = await fetchHtml(url, { validateUrl: assertFetchableUrl, hostRules: `MAP ${pin.host} ${pin.ip}` });
       const jobText = htmlToJobText(html);
@@ -105,7 +115,7 @@ export function scannerRouter() {
    * POST /api/scanner/linkedin-detail
    * Body: { jobId } → fetches a single LinkedIn posting via the jobs-guest API
    * and returns its normalized detail (description, seniority, etc.).
-   * Used by the "view job" flow. Runs through the headed scanner fetcher.
+   * Used by the "view job" flow. Plain server-side fetch (cloud-safe).
    */
   router.post('/scanner/linkedin-detail', async (req, res) => {
     const jobId = String(req.body?.jobId ?? '').trim();
@@ -113,12 +123,13 @@ export function scannerRouter() {
       return res.status(400).json({ error: 'A numeric LinkedIn job id is required.' });
     }
     try {
-      const detail = await fetchJobDetail(jobId, (url) => fetchHtml(url));
+      // fetchJobDetail defaults to a plain server-side fetch (cloud-safe).
+      const detail = await fetchJobDetail(jobId);
       if (!detail) return res.status(404).json({ error: "Couldn't read that LinkedIn posting." });
       res.json(detail);
     } catch (e) {
-      const msg = e?.message === 'BLOCKED'
-        ? 'LinkedIn blocked the fetch (anti-bot). Try again shortly or open the posting in your browser.'
+      const msg = /responded 4|responded 5/i.test(e?.message || '')
+        ? 'LinkedIn blocked or rate-limited the fetch. Try again shortly or open the posting in your browser.'
         : 'Could not open that LinkedIn posting right now.';
       res.status(502).json({ error: msg });
     }

@@ -4,9 +4,22 @@ import { createEngine } from '../ai/index.js';
 import { loadProfile } from '../profile/store.js';
 import { evaluateJob } from '../evaluate/engine.js';
 import { addEvaluation, listEvaluations, getEvaluation } from '../evaluate/store.js';
+import { scoreFit } from '../evaluate/scoreFit.js';
 
 export function evaluateRouter() {
   const router = Router();
+
+  // Deterministic, no-AI fit score — safe on cloud (no engine/keys needed).
+  router.post('/evaluate/fit', async (req, res) => {
+    try {
+      const jobText = (req.body?.jobText ?? '').trim();
+      if (!jobText) return res.status(400).json({ error: 'Please paste a job description.' });
+      const profile = await loadProfile(req.userId);
+      res.json(scoreFit({ jobText, profile }));
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
+  });
 
   router.post('/evaluate', async (req, res) => {
     try {

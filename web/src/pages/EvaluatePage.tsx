@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { runEvaluation, listEvaluations, type Evaluation } from '../api';
+import { runEvaluation, listEvaluations, getFitScore, type Evaluation, type FitScore } from '../api';
 import { Card, PageHeader, Button, Badge, GradeBadge, type Tone } from '../components/ui';
 
 const REC: Record<string, { label: string; tone: Tone }> = {
@@ -8,6 +8,15 @@ const REC: Record<string, { label: string; tone: Tone }> = {
   maybe: { label: '🤔 Maybe', tone: 'warning' },
   skip: { label: '🚫 Skip', tone: 'danger' },
 };
+
+// Map a 0–100 fit score to the A–F grade scale used elsewhere in the UI.
+function gradeForFit(score: number): string {
+  if (score >= 90) return 'A';
+  if (score >= 80) return 'B';
+  if (score >= 60) return 'C';
+  if (score >= 40) return 'D';
+  return 'F';
+}
 
 function ResultCard({ ev }: { ev: Evaluation }) {
   const rec = REC[ev.recommendation] ?? { label: ev.recommendation, tone: 'neutral' as Tone };
@@ -60,12 +69,50 @@ function ResultCard({ ev }: { ev: Evaluation }) {
   );
 }
 
+function FitCard({ fit }: { fit: FitScore }) {
+  const grade = gradeForFit(fit.score);
+  return (
+    <Card>
+      <div className="flex items-center gap-4">
+        <GradeBadge grade={grade} />
+        <div>
+          <h2 className="text-lg font-bold text-ink-strong">{fit.verdict} fit · {fit.score}/100</h2>
+          <p className="text-sm text-ink-muted">
+            Instant, deterministic score — no AI needed. {fit.dealBreaker && <span className="text-danger-text font-semibold">Location deal-breaker detected.</span>}
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-2 sm:grid-cols-2">
+        {fit.dimensions.map((d, i) => (
+          <div key={i} className="border border-hair-subtle rounded-md p-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-ink-secondary">{d.name}</span>
+              <GradeBadge grade={gradeForFit(d.score)} size="sm" />
+            </div>
+            {d.comment && <p className="mt-1 text-xs text-ink-muted">{d.comment}</p>}
+          </div>
+        ))}
+      </div>
+
+      {fit.missingSkills.length > 0 && (
+        <div className="mt-3">
+          <p className="text-xs font-semibold text-ink-muted uppercase tracking-wide">Skills to strengthen</p>
+          <p className="text-sm text-ink-secondary">{fit.missingSkills.join(', ')}</p>
+        </div>
+      )}
+    </Card>
+  );
+}
+
 export default function EvaluatePage() {
   const [jobText, setJobText] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<Evaluation | null>(null);
   const [recent, setRecent] = useState<Evaluation[]>([]);
+  const [fit, setFit] = useState<FitScore | null>(null);
+  const [fitBusy, setFitBusy] = useState(false);
 
   useEffect(() => {
     listEvaluations().then(setRecent).catch(() => {});
@@ -75,6 +122,12 @@ export default function EvaluatePage() {
     if (!jobText.trim()) return;
     setBusy(true);
     setError(null);
+    setFitBusy(true);
+    // Instant deterministic fit — no AI keys needed, runs in parallel with the AI eval.
+    getFitScore(jobText)
+      .then(setFit)
+      .catch(() => {})
+      .finally(() => setFitBusy(false));
     try {
       const ev = await runEvaluation(jobText);
       setResult(ev);
@@ -109,6 +162,12 @@ export default function EvaluatePage() {
       </Card>
 
       {result && <ResultCard ev={result} />}
+
+      {fit && <FitCard fit={fit} />}
+
+      {!fit && !result && (fitBusy || busy) && (
+        <Card><p className="text-sm text-ink-muted">Scoring fit…</p></Card>
+      )}
 
       {!result && recent.length > 0 && (
         <Card title="Recent evaluations">

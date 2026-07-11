@@ -14,6 +14,13 @@ const WORKSPACE = [
   { to: '/tracker', label: 'Tracker', Icon: IconBars, cloud: false },
 ] as const;
 
+// Cloud-safe pages (no browser / per-user data the cloud build lacks).
+const CLOUD_PAGES = [
+  { to: '/evaluate', label: 'Evaluate', Icon: IconSparkle },
+  { to: '/scan', label: 'Scan GCC boards', Icon: IconSearch },
+  { to: '/upskill', label: 'Upskill plan', Icon: IconBars },
+] as const;
+
 const FIND_APPLY = [
   { to: '/scan', label: 'Scan GCC boards', Icon: IconSearch },
   { to: '/auto-apply', label: 'Auto-apply', Icon: IconSend },
@@ -77,6 +84,9 @@ export default function Sidebar({ engine, open = false, onClose }: { engine: str
               ))}
             </>
           )}
+          {IS_CLOUD && CLOUD_PAGES.map(({ to, label, Icon }) => (
+            <NavItem key={to} to={to} label={label} Icon={Icon} active={isActive(to)} onNavigate={closeOnMobile} />
+          ))}
           <div style={{ margin: '12px 10px 6px', fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>Workspace</div>
           <NavItem to="/settings" label="Settings" Icon={IconSettings} active={isActive('/settings')} onNavigate={closeOnMobile} />
         </nav>

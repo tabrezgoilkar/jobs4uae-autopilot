@@ -19,6 +19,7 @@ const CLOUD_PAGES = [
   { to: '/evaluate', label: 'Evaluate', Icon: IconSparkle },
   { to: '/scan', label: 'Scan GCC boards', Icon: IconSearch },
   { to: '/upskill', label: 'Upskill plan', Icon: IconBars },
+  { to: '/auto-apply', label: 'Auto-apply', Icon: IconSend },
 ] as const;
 
 const FIND_APPLY = [

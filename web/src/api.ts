@@ -291,6 +291,17 @@ export async function composeEmail(body: { jobText: string; recruiterEmail?: str
   return readApply(await fetch('/api/apply/email/compose', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }));
 }
 
+export interface AtsCheck { atsReadable: boolean; sections: string[]; presentKeywords: string[]; missingKeywords: string[]; warnings: string[]; }
+export interface ApplyDraft {
+  draft: { resumeMarkdown: string; coverLetterMarkdown: string; rationale: string };
+  review: { honestyScore: number; approved: boolean; issues: string[] };
+  ats: AtsCheck;
+}
+/** Drafter -> Reviewer -> honest ATS. Returns all three so the user decides what to send. */
+export async function draftApplication(jobText: string): Promise<ApplyDraft> {
+  return readApply(await fetch('/api/apply/draft', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ jobText }) }));
+}
+
 export interface Dimension { name: string; score: string; comment: string; }
 export interface Evaluation {
   id: string;

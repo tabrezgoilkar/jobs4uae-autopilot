@@ -48,9 +48,6 @@ export default function ScanPage() {
     listBoards()
       .then((live) => {
         setBoards(live);
-        // If the current selection isn't a live board (e.g. cloud build, where
-        // indeed needs a browser), default to the first live board so "Scan new"
-        // never submits an invalid board.
         const isLive = (id: string) => live.some((b) => b.id === id && (b.status === 'verified' || b.status === 'production'));
         if (!isLive(selectedBoard)) {
           const first = live.find((b) => b.status === 'verified' || b.status === 'production');
@@ -59,6 +56,12 @@ export default function ScanPage() {
       })
       .catch(() => {});
   }, []);
+
+  // On the cloud build, boards that need a headed browser (indeed, bayt, …) are
+  // not available. Clicking one shows an instructive "run locally" panel instead
+  // of submitting an invalid board and erroring.
+  const selectedIsLocalOnly = IS_CLOUD && !boards.some((b) => b.id === selectedBoard && (b.status === 'verified' || b.status === 'production'));
+  const selectedBoardName = CHIP_BOARDS.find((b) => b.id === selectedBoard)?.name ?? selectedBoard;
   const [keyword, setKeyword] = useState(initial.keyword);
   const [country, setCountry] = useState(initial.country);
   const [city] = useState(initial.city);
@@ -92,6 +95,7 @@ export default function ScanPage() {
   async function handleScan(e: React.FormEvent) {
     e.preventDefault();
     if (!keyword.trim() || scanning) return;
+    if (selectedIsLocalOnly) return; // local-only boards are blocked on cloud; the notice explains why
     setScanning(true); setScanError(null); setListings([]); setRows({}); setSelected(null); setHasScanned(false); setPicked(new Set());
     try {
       const result = await scan({ board: selectedBoard, keyword: keyword.trim(), country, city: city.trim() || undefined });
@@ -212,7 +216,7 @@ export default function ScanPage() {
                 <select id="scan-country" aria-label="GCC country" value={country} onChange={(e) => setCountry(e.target.value)} disabled={scanning} className={`${FIELD} flex-1 sm:w-36`}>
                   {GCC_COUNTRIES.map((c) => <option key={c} value={c}>{c}</option>)}
                 </select>
-                <Button type="submit" disabled={!canScan}>
+                <Button type="submit" disabled={!canScan || selectedIsLocalOnly}>
                   {scanning ? (<><span className="inline-block w-3.5 h-3.5 rounded-full border-2 border-white border-t-transparent animate-spin" /> Scanning…</>) : 'Scan new'}
                 </Button>
               </div>
@@ -223,27 +227,52 @@ export default function ScanPage() {
               {CHIP_BOARDS.map((b) => {
                 const live = boards.some((x) => x.id === b.id && (x.status === 'verified' || x.status === 'production'));
                 const active = selectedBoard === b.id;
+                const isLocalOnly = IS_CLOUD && !live;
                 return (
                   <button
                     key={b.id}
                     type="button"
-                    onClick={() => live && setSelectedBoard(b.id)}
-                    disabled={!live}
+                    onClick={() => setSelectedBoard(b.id)}
                     aria-pressed={active}
-                    title={live ? `Search ${b.name}` : `${b.name} — coming soon`}
+                    title={live ? `Search ${b.name}` : `${b.name} — local app only`}
                     className={`inline-flex items-center gap-1.5 rounded-pill border px-3 py-1 text-[12px] font-semibold transition-colors j4u-focus ${
                       active ? 'border-primary-600 bg-primary-50 text-primary-700'
                       : live ? 'border-hair bg-surface text-ink-secondary hover:border-border-strong'
+                      : isLocalOnly ? 'border-amber-300 bg-amber-50 text-amber-700 hover:border-amber-400'
                       : 'border-hair-subtle bg-surface-sunken text-ink-muted cursor-not-allowed'
                     }`}
                   >
                     {b.name}
-                    {!live && <span className="text-[10px] font-medium text-ink-muted">soon</span>}
+                    {isLocalOnly && <span className="text-[10px] font-medium">local</span>}
+                    {!IS_CLOUD && !live && <span className="text-[10px] font-medium text-ink-muted">soon</span>}
                   </button>
                 );
               })}
             </div>
           </form>
+
+          {selectedIsLocalOnly && (
+            <div className="rounded-md border border-amber-300 bg-amber-50 p-4 text-[13px] leading-relaxed text-amber-900">
+              <div className="flex items-start gap-2">
+                <span className="mt-0.5 grid place-items-center w-5 h-5 flex-none rounded-full bg-amber-200 text-amber-800 text-[11px] font-bold">!</span>
+                <div>
+                  <div className="font-bold">“{selectedBoardName}” scanning is a local-app feature</div>
+                  <p className="mt-1">
+                    Scanning {selectedBoardName} needs a headed browser, which can’t run on the hosted cloud.
+                    To use it, run Jobs4UAE on your own PC:
+                  </p>
+                  <pre className="mt-2 overflow-x-auto rounded bg-white/70 p-2 text-[12px] text-ink"><code>{`git clone https://github.com/tabrezgoilkar/jobs4uae-autopilot.git
+cd jobs4uae-autopilot
+npm install
+npm run dev          # opens http://localhost:5173
+npx playwright install chromium   # for Indeed/Bayt scanning`}</code></pre>
+                  <p className="mt-2 text-amber-800">
+                    On the cloud you can still scan <strong>LinkedIn</strong> and <strong>FreeHire</strong> directly above.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Paste a job link — needs a headed browser, unavailable on the cloud build */}
           {!IS_CLOUD && (

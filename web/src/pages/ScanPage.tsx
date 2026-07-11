@@ -62,6 +62,18 @@ export default function ScanPage() {
   // of submitting an invalid board and erroring.
   const selectedIsLocalOnly = IS_CLOUD && !boards.some((b) => b.id === selectedBoard && (b.status === 'verified' || b.status === 'production'));
   const selectedBoardName = CHIP_BOARDS.find((b) => b.id === selectedBoard)?.name ?? selectedBoard;
+
+  // Chips = the boards the API reports as available (LinkedIn/FreeHire on cloud,
+  // all on desktop) PLUS the known browser-only boards (Indeed/Bayt/…) shown as
+  // "local" so users know they exist and how to get them. Deduped by id, live
+  // boards first.
+  const chips = useMemo(() => {
+    const known: Board[] = [...boards];
+    for (const b of CHIP_BOARDS) {
+      if (!known.some((x) => x.id === b.id)) known.push({ id: b.id, name: b.name, status: 'experimental' });
+    }
+    return known;
+  }, [boards]);
   const [keyword, setKeyword] = useState(initial.keyword);
   const [country, setCountry] = useState(initial.country);
   const [city] = useState(initial.city);
@@ -221,11 +233,12 @@ export default function ScanPage() {
                 </Button>
               </div>
             </div>
-            {/* Board chips — Indeed live, others coming soon */}
+            {/* Board chips — live boards (LinkedIn/FreeHire on cloud) are selectable;
+                browser-only boards (Indeed/Bayt/…) show as "local" with run-locally steps. */}
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-[11px] font-semibold uppercase tracking-wide text-ink-muted">Boards</span>
-              {CHIP_BOARDS.map((b) => {
-                const live = boards.some((x) => x.id === b.id && (x.status === 'verified' || x.status === 'production'));
+              {chips.map((b) => {
+                const live = b.status === 'verified' || b.status === 'production';
                 const active = selectedBoard === b.id;
                 const isLocalOnly = IS_CLOUD && !live;
                 return (

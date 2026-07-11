@@ -4,6 +4,7 @@ import { createEngine } from './ai/index.js';
 import { profileRouter } from './routes/profile.routes.js';
 import { installPageHtml } from './profile/linkedin/bookmarklet.js';
 import { documentsRouter } from './routes/documents.routes.js';
+import { pdfRouter } from './routes/pdf.routes.js';
 import { copilotRouter } from './routes/copilot.routes.js';
 import { applyCloudRouter } from './routes/apply-cloud.routes.js';
 import { scannerRouter } from './routes/scanner.routes.js';
@@ -51,6 +52,7 @@ export function createCloudApp() {
 
   app.use('/api/profile', profileRouter());
   app.use('/api', documentsRouter());
+  app.use('/api', pdfRouter()); // resume/cover-letter PDF download (cloud-safe, no browser)
   app.use('/api', copilotRouter()); // reads per-user profile; evaluations context is best-effort
   app.use('/api', applyCloudRouter());
   // Cloud-safe, no-browser features:

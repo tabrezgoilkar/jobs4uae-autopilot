@@ -79,7 +79,7 @@ export default function App() {
           <Route path="/tracker" element={IS_CLOUD ? <ComingSoon title="Tracker" kind="soon" /> : <TrackerPage />} />
           <Route path="/scan" element={<ScanPage />} />
           <Route path="/upskill" element={<UpskillPage />} />
-          <Route path="/auto-apply" element={IS_CLOUD ? <ComingSoon title="Auto-apply" kind="companion" /> : <AutoApplyPage />} />
+          <Route path="/auto-apply" element={<AutoApplyPage />} />
           <Route path="/settings" element={<SettingsPage />} />
         </Routes>
       </AppShell>

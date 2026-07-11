@@ -11,10 +11,12 @@ import {
   applyStart,
   applyAnswer,
   composeEmail,
+  draftApplication,
   type Connection,
   type ApplicationFields,
   type PendingQuestion,
   type EmailDraft,
+  type ApplyDraft,
 } from '../api';
 import { PageHeader, Badge } from '../components/ui';
 import { IconSparkle } from '../components/icons';
@@ -179,6 +181,24 @@ export default function AutoApplyPage() {
   const gmailOf = (d: EmailDraft) => `https://mail.google.com/mail/?view=cm&fs=1&to=${enc(d.to)}&su=${enc(d.subject)}&body=${enc(d.body)}`;
   const patchDraft = (patch: Partial<EmailDraft>) => setDraft((d) => (d ? { ...d, ...patch } : d));
 
+  // tailor-cv workspace (drafter -> reviewer -> honest ATS)
+  const [tailorText, setTailorText] = useState('');
+  const [tailoring, setTailoring] = useState(false);
+  const [tailorResult, setTailorResult] = useState<ApplyDraft | null>(null);
+  const [tailorError, setTailorError] = useState<string | null>(null);
+
+  async function onTailor() {
+    if (!tailorText.trim()) return;
+    setTailoring(true); setTailorError(null); setTailorResult(null);
+    try {
+      setTailorResult(await draftApplication(tailorText.trim()));
+    } catch (e) {
+      setTailorError(e instanceof Error ? e.message : 'Could not draft the application.');
+    } finally {
+      setTailoring(false);
+    }
+  }
+
   return (
     <div className="space-y-6 j4u-rise">
       <PageHeader title="Auto-apply" subtitle="Assisted applications — the copilot prepares everything; you always click Submit." />
@@ -322,6 +342,83 @@ export default function AutoApplyPage() {
                 <Link to="/documents" className="text-[12px] font-semibold text-primary-700 hover:underline j4u-focus rounded ml-auto">Attach your CV — download it from Documents →</Link>
               </div>
               <p className="text-[11.5px] text-ink-muted">Review before sending — the draft opens in your email, you attach the CV PDF and click Send. Nothing is sent automatically.</p>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* Tailor a CV for a job — drafter -> reviewer -> honest ATS */}
+      <section className="space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-sm font-bold text-ink-strong">Tailor a CV for a job</h2>
+          <span className="text-[11.5px] text-ink-muted">draft · honesty review · ATS check</span>
+        </div>
+        <div className="rounded-md border border-hair-subtle bg-surface p-4 shadow-sm space-y-3">
+          <label className="block">
+            <span className={LABEL}>Paste the job description</span>
+            <textarea className={FIELD} rows={4} placeholder="Paste the full job posting…" value={tailorText} onChange={(e) => setTailorText(e.target.value)} />
+          </label>
+          <button onClick={onTailor} disabled={tailoring || !tailorText.trim()} className="inline-flex items-center justify-center gap-2 h-[38px] px-4 rounded-md bg-primary-600 text-white text-[12.5px] font-semibold j4u-press disabled:opacity-60">
+            {tailoring ? 'Drafting & reviewing…' : 'Tailor my CV'}
+          </button>
+
+          {tailorError && <p role="alert" className="text-sm rounded-md p-2.5 bg-danger-soft text-danger-text border border-danger-soft">{tailorError}</p>}
+
+          {tailorResult && (
+            <div className="space-y-4 pt-1 border-t border-hair-subtle">
+              {/* Reviewer verdict */}
+              <div className={`rounded-md border p-3 ${tailorResult.review.approved ? 'border-success-soft bg-success-soft text-success-text' : 'border-warning-soft bg-warning-soft text-warning-text'}`}>
+                <div className="flex items-center justify-between">
+                  <span className="text-[12.5px] font-semibold">Honesty review: {tailorResult.review.approved ? 'Approved' : 'Needs review'}</span>
+                  <span className="text-[12px] tabular-nums">score {tailorResult.review.honestyScore}/100</span>
+                </div>
+                {tailorResult.review.issues.length > 0 && (
+                  <ul className="mt-1.5 list-disc pl-4 text-[12px] space-y-0.5">
+                    {tailorResult.review.issues.map((iss, i) => <li key={i}>{iss}</li>)}
+                  </ul>
+                )}
+              </div>
+
+              {/* Honest ATS check */}
+              <div className="rounded-md border border-hair-subtle p-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-[12.5px] font-semibold text-ink-strong">ATS parse check</span>
+                  <span className={`text-[11px] font-semibold rounded-full px-2 py-0.5 ${tailorResult.ats.atsReadable ? 'bg-success-soft text-success-text' : 'bg-warning-soft text-warning-text'}`}>
+                    {tailorResult.ats.atsReadable ? 'Parser-safe' : 'Parser may drop parts'}
+                  </span>
+                </div>
+                <div className="mt-2 grid gap-2 sm:grid-cols-2 text-[12px]">
+                  <div>
+                    <p className="text-ink-muted font-medium">Keywords present ({tailorResult.ats.presentKeywords.length})</p>
+                    <p className="text-ink-secondary">{tailorResult.ats.presentKeywords.length ? tailorResult.ats.presentKeywords.join(', ') : '—'}</p>
+                  </div>
+                  <div>
+                    <p className="text-ink-muted font-medium">Missing from CV ({tailorResult.ats.missingKeywords.length})</p>
+                    <p className="text-ink-secondary">{tailorResult.ats.missingKeywords.length ? tailorResult.ats.missingKeywords.join(', ') : '—'}</p>
+                  </div>
+                </div>
+                {tailorResult.ats.warnings.length > 0 && (
+                  <ul className="mt-2 list-disc pl-4 text-[11.5px] text-ink-muted space-y-0.5">
+                    {tailorResult.ats.warnings.map((w, i) => <li key={i}>{w}</li>)}
+                  </ul>
+                )}
+              </div>
+
+              {/* Drafted documents */}
+              <div className="space-y-3">
+                <div>
+                  <p className="text-[12.5px] font-semibold text-ink-strong">Tailored resume (Markdown)</p>
+                  <pre className="mt-1 max-h-64 overflow-auto whitespace-pre-wrap rounded-md border border-hair-subtle bg-surface-sunken p-3 text-[11.5px] text-ink-secondary">{tailorResult.draft.resumeMarkdown}</pre>
+                </div>
+                <div>
+                  <p className="text-[12.5px] font-semibold text-ink-strong">Cover letter</p>
+                  <pre className="mt-1 max-h-48 overflow-auto whitespace-pre-wrap rounded-md border border-hair-subtle bg-surface-sunken p-3 text-[11.5px] text-ink-secondary">{tailorResult.draft.coverLetterMarkdown}</pre>
+                </div>
+                {tailorResult.draft.rationale && (
+                  <p className="text-[11.5px] text-ink-muted"><b className="text-ink-secondary">Why:</b> {tailorResult.draft.rationale}</p>
+                )}
+              </div>
+              <p className="text-[11.5px] text-ink-muted">Review and copy into your Documents, then submit via the job board yourself. Nothing is sent automatically.</p>
             </div>
           )}
         </div>

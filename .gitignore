@@ -21,6 +21,7 @@ config/secrets.json
 config/local.json
 .env
 .env.*
+!.env.example
 
 # Playwright
 /test-results/

@@ -48,9 +48,10 @@ export default function ScanPage() {
     listBoards()
       .then((live) => {
         setBoards(live);
-        const isLive = (id: string) => live.some((b) => b.id === id && (b.status === 'verified' || b.status === 'production'));
-        if (!isLive(selectedBoard)) {
-          const first = live.find((b) => b.status === 'verified' || b.status === 'production');
+        // On cloud, `live` contains only the cloud-safe boards. If the current
+        // selection isn't among them, fall back to the first returned board.
+        if (!live.some((b) => b.id === selectedBoard)) {
+          const first = live[0];
           if (first) setSelectedBoard(first.id);
         }
       })
@@ -60,7 +61,11 @@ export default function ScanPage() {
   // On the cloud build, boards that need a headed browser (indeed, bayt, …) are
   // not available. Clicking one shows an instructive "run locally" panel instead
   // of submitting an invalid board and erroring.
-  const selectedIsLocalOnly = IS_CLOUD && !boards.some((b) => b.id === selectedBoard && (b.status === 'verified' || b.status === 'production'));
+  // On the cloud, listBoards() returns ONLY the cloud-safe boards (LinkedIn,
+  // FreeHire). So "live/selectable" means "present in the boards the server
+  // returned" — not a hardcoded status string. A board the server didn't return
+  // (indeed, bayt, …) is local-only on cloud.
+  const selectedIsLocalOnly = IS_CLOUD && !boards.some((b) => b.id === selectedBoard);
   const selectedBoardName = CHIP_BOARDS.find((b) => b.id === selectedBoard)?.name ?? selectedBoard;
 
   // Chips = the boards the API reports as available (LinkedIn/FreeHire on cloud,
@@ -238,7 +243,9 @@ export default function ScanPage() {
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-[11px] font-semibold uppercase tracking-wide text-ink-muted">Boards</span>
               {chips.map((b) => {
-                const live = b.status === 'verified' || b.status === 'production';
+                // A board is selectable if it's in the server's returned list
+                // (on cloud that's only LinkedIn/FreeHire; on desktop it's all).
+                const live = boards.some((x) => x.id === b.id);
                 const active = selectedBoard === b.id;
                 const isLocalOnly = IS_CLOUD && !live;
                 return (

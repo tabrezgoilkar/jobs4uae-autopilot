@@ -43,8 +43,22 @@ export default function ScanPage() {
   const initial = useMemo(() => loadScanState(defaultScanState(BOARDS_STATIC[0].id, GCC_COUNTRIES[0])), []);
 
   const [boards, setBoards] = useState<Board[]>(BOARDS_STATIC);
-  useEffect(() => { listBoards().then(setBoards).catch(() => {}); }, []);
   const [selectedBoard, setSelectedBoard] = useState(initial.board);
+  useEffect(() => {
+    listBoards()
+      .then((live) => {
+        setBoards(live);
+        // If the current selection isn't a live board (e.g. cloud build, where
+        // indeed needs a browser), default to the first live board so "Scan new"
+        // never submits an invalid board.
+        const isLive = (id: string) => live.some((b) => b.id === id && (b.status === 'verified' || b.status === 'production'));
+        if (!isLive(selectedBoard)) {
+          const first = live.find((b) => b.status === 'verified' || b.status === 'production');
+          if (first) setSelectedBoard(first.id);
+        }
+      })
+      .catch(() => {});
+  }, []);
   const [keyword, setKeyword] = useState(initial.keyword);
   const [country, setCountry] = useState(initial.country);
   const [city] = useState(initial.city);

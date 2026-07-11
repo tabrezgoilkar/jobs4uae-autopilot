@@ -57,4 +57,14 @@ describe('cloud app', () => {
     const res = await request(createCloudApp()).post('/api/apply/email/compose').send({ jobText: 'no email here' });
     expect(res.status).toBe(422);
   });
+
+  it('mounts the resume/cover-letter PDF route (cloud-safe, no browser)', async () => {
+    const { createCloudApp } = await import('../cloudApp.js');
+    // A mounted handler returns our JSON 404 ("Document not found"), NOT a missing
+    // route. This guards against the regression where pdfRouter wasn't mounted on
+    // the cloud app (documents page 404'd on the hosted deploy).
+    const res = await request(createCloudApp()).post('/api/documents/does-not-exist/pdf?kind=resume');
+    expect(res.status).toBe(404);
+    expect(res.body.error).toMatch(/document not found/i);
+  });
 });

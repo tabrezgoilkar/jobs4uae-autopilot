@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { assistProfile, saveProfile, type Profile } from '../api';
 import { IconSparkle } from './icons';
+import ProfileDiff from './ProfileDiff';
 
 interface Msg {
   role: 'user' | 'assistant';
@@ -17,7 +18,7 @@ const QUICK = [
   'Rewrite my experience bullets to lead with impact',
 ];
 
-export default function ProfileAssistant({ onApplied, onClose }: { onApplied: (p: Profile) => void; onClose: () => void }) {
+export default function ProfileAssistant({ current, onApplied, onClose }: { current: Profile; onApplied: (p: Profile) => void; onClose: () => void }) {
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
@@ -95,14 +96,17 @@ export default function ProfileAssistant({ onApplied, onClose }: { onApplied: (p
                   <ul className="list-disc pl-4 mt-1.5 space-y-0.5 text-ink-strong">{m.questions.map((q, j) => <li key={j}>{q}</li>)}</ul>
                 )}
                 {m.proposed && (
-                  m.applied ? (
-                    <div className="mt-2 text-[12px] font-semibold text-success-text">✓ Applied to your profile</div>
-                  ) : (
-                    <button onClick={() => apply(i, m.proposed as Profile)} disabled={applyingIdx === i}
-                      className="j4u-press mt-2 inline-flex items-center gap-1.5 h-8 px-3 rounded-md bg-ai-600 text-white text-[12px] font-semibold disabled:opacity-60">
-                      {applyingIdx === i ? 'Applying…' : '✓ Apply these changes'}
-                    </button>
-                  )
+                  <>
+                    <ProfileDiff current={current} proposed={m.proposed as Profile} />
+                    {m.applied ? (
+                      <div className="mt-2 text-[12px] font-semibold text-success-text">✓ Applied to your profile</div>
+                    ) : (
+                      <button onClick={() => apply(i, m.proposed as Profile)} disabled={applyingIdx === i}
+                        className="j4u-press mt-2 inline-flex items-center gap-1.5 h-8 px-3 rounded-md bg-ai-600 text-white text-[12px] font-semibold disabled:opacity-60">
+                        {applyingIdx === i ? 'Applying…' : '✓ Apply these changes'}
+                      </button>
+                    )}
+                  </>
                 )}
               </div>
             </div>

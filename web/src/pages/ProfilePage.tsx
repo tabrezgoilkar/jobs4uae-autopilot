@@ -187,6 +187,7 @@ export default function ProfilePage() {
       {linkedinOpen && <LinkedinImportModal onApply={onLinkedinApply} onClose={() => setLinkedinOpen(false)} />}
       {assistantOpen && (
         <ProfileAssistant
+          current={profile}
           onClose={() => setAssistantOpen(false)}
           onApplied={(p) => { setProfile(p); setMessage({ ok: true, text: 'Assistant updated your profile.' }); }}
         />

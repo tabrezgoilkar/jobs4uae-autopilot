@@ -25,7 +25,7 @@ export function renderProfileCvPdf(profile) {
       if (item.body) doc.text(item.body, { size: 9.5, gap: 2 });
       if (item.bullets?.length) {
         for (const b of item.bullets) {
-          doc.text(`•  ${b}`, { size: 9.5, indent: 10, gap: 1 });
+          doc.bullet(b, { size: 9.5, indent: 10, gap: 1 });
         }
       }
       doc.space(3);

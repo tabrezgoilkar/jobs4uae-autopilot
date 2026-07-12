@@ -46,6 +46,19 @@ function escPdf(s) {
   return String(s).replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)');
 }
 
+// Filled circle path (4 Bézier arcs) — used for PDF bullets so we don't depend
+// on a font glyph for the "•" (which mis-encodes under WinAnsiEncoding).
+function dotPath(cx, cy, r) {
+  const k = 0.5523;
+  return (
+    `q 0 0 0 rg ${cx.toFixed(2)} ${(cy - r).toFixed(2)} m ` +
+    `${(cx + r * k).toFixed(2)} ${(cy - r).toFixed(2)} ${cx + r.toFixed(2)} ${(cy - r * k).toFixed(2)} ${(cx + r).toFixed(2)} ${cy.toFixed(2)} c ` +
+    `${(cx + r).toFixed(2)} ${(cy + r * k).toFixed(2)} ${(cx + r * k).toFixed(2)} ${(cy + r).toFixed(2)} ${cx.toFixed(2)} ${(cy + r).toFixed(2)} c ` +
+    `${(cx - r * k).toFixed(2)} ${(cy + r).toFixed(2)} ${(cx - r).toFixed(2)} ${(cy + r * k).toFixed(2)} ${(cx - r).toFixed(2)} ${cy.toFixed(2)} c ` +
+    `${(cx - r).toFixed(2)} ${(cy - r * k).toFixed(2)} ${(cx - r * k).toFixed(2)} ${(cy - r).toFixed(2)} ${cx.toFixed(2)} ${(cy - r).toFixed(2)} c f Q`
+  );
+}
+
 export class PdfDoc {
   constructor() {
     this.pages = [[]]; // each page: array of content-op strings
@@ -94,6 +107,30 @@ export class PdfDoc {
     const yLine = this.y;
     this._content().push(`q 0.30 0.30 0.35 RG 0.8 w ${MARGIN_X.toFixed(2)} ${yLine.toFixed(2)} m ${(PAGE_W - MARGIN_X).toFixed(2)} ${yLine.toFixed(2)} l S Q`);
     this.y -= 8;
+  }
+  /**
+   * A bullet line with a small drawn dot (not a font glyph) so it renders as a
+   * real "•" in every viewer. Text is wrapped and indented past the dot.
+   */
+  bullet(str, { size = 9.5, bold = false, indent = 10, gap = 1 } = {}) {
+    const maxWidth = PAGE_W - MARGIN_X - (MARGIN_X + indent + 8);
+    const lines = wrap(str, size, bold, maxWidth);
+    for (const ln of lines) {
+      this._ensure(size + gap);
+      this.y -= size;
+      const textY = this.y;
+      // dot, vertically centered on the cap height
+      const cx = MARGIN_X + indent + 2.5;
+      const cy = textY + size * 0.34;
+      const r = Math.max(0.9, size * 0.11);
+      this._content().push(dotPath(cx, cy, r));
+      const tx = MARGIN_X + indent + 8;
+      this._content().push(
+        `q BT /${bold ? 'F2' : 'F1'} ${size} Tf 1 0 0 1 ${tx.toFixed(2)} ${textY.toFixed(2)} Tm (${escPdf(ln)}) Tj ET Q`,
+      );
+      this.y -= gap;
+    }
+    return this.y;
   }
   space(h = 6) { this.y -= h; }
 

@@ -16,7 +16,25 @@ const page = { width: '100%', maxWidth: 794, margin: '0 auto', background: '#fff
 export function CvDocument({ profile, template }: { profile: Profile; template: CvTemplateId }) {
   if (template === 'modern') return <Modern p={profile} />;
   if (template === 'minimal') return <Minimal p={profile} />;
+  if (template === 'executive') return <Executive p={profile} />;
   return <Classic p={profile} />;
+}
+
+// Small circular/rounded photo used by templates that surface a headshot.
+// `profile.photo` is a client-side object URL (data: or blob:) — it is shown in
+// the live on-screen preview only. The downloaded PDF/Word is content-only by
+// design (GCC ATS parsers strip photos anyway — see CvExportModal note).
+function Photo({ src, size = 84 }: { src?: string; size?: number }) {
+  if (!src) return null;
+  return (
+    <img
+      src={src}
+      alt=""
+      width={size}
+      height={size}
+      style={{ width: size, height: size, objectFit: 'cover', borderRadius: '50%', border: '2px solid #1a1a1a', flex: 'none' }}
+    />
+  );
 }
 
 /* ---------------- Classic — traditional GCC/UAE ---------------- */
@@ -105,3 +123,46 @@ function Minimal({ p }: { p: Profile }) {
     </div>
   );
 }
+
+/* ---------------- Executive — compact header w/ photo + tight columns ---------------- */
+function Executive({ p }: { p: Profile }) {
+  const ink = '#10243f';
+  const H = { fontSize: 10.5, fontWeight: 700, letterSpacing: '0.13em', textTransform: 'uppercase' as const, color: ink, margin: '16px 0 7px' };
+  return (
+    <div style={{ ...page, fontFamily: '"Helvetica Neue", Arial, sans-serif', padding: '44px 48px', fontSize: 11.5, lineHeight: 1.5, color: '#1a1a1a' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 20, borderBottom: `2px solid ${ink}`, paddingBottom: 16, marginBottom: 16 }}>
+        <Photo src={p.photo} size={88} />
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 25, fontWeight: 700, letterSpacing: '0.01em' }}>{p.fullName || 'Your Name'}</div>
+          {p.headline && <div style={{ fontSize: 13, color: '#3a4a5e', marginTop: 3 }}>{p.headline}</div>}
+          {contactLine(p) && <div style={{ fontSize: 11, color: '#444', marginTop: 7 }}>{contactLine(p)}</div>}
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', gap: 26 }}>
+        <div style={{ width: 220, flex: 'none' }}>
+          {p.skills.length > 0 && (<><div style={H}>Core Skills</div><div>{p.skills.map((s, i) => <div key={i} style={{ padding: '1px 0' }}>{s}</div>)}</div></>)}
+          {p.languages.length > 0 && (<><div style={H}>Languages</div><div>{p.languages.map((l, i) => <div key={i} style={{ fontSize: 11.5 }}>{l.name}{l.level ? ` (${l.level})` : ''}</div>)}</div></>)}
+          {p.certifications.length > 0 && (<><div style={H}>Certifications</div><div>{p.certifications.map((x, i) => <div key={i} style={{ fontSize: 11.5, marginBottom: 3 }}>{x.name}{x.issuer ? ` — ${x.issuer}` : ''}</div>)}</div></>)}
+        </div>
+        <div style={{ flex: 1 }}>
+          {p.summary?.trim() && (<><div style={H}>Profile</div><div className="cv-md" dangerouslySetInnerHTML={{ __html: html(p.summary) }} /></>)}
+          {p.experience.length > 0 && (<><div style={H}>Experience</div>{p.experience.map((x, i) => (
+            <div key={i} style={{ marginBottom: 10 }}>
+              <div style={{ fontWeight: 700 }}>{x.title}{x.company ? `, ${x.company}` : ''}</div>
+              <div style={{ color: '#555', fontSize: 10.5 }}>{dates(x.startDate, x.endDate)}</div>
+              {x.description?.trim() && <div className="cv-md" style={{ marginTop: 3 }} dangerouslySetInnerHTML={{ __html: html(x.description) }} />}
+            </div>
+          ))}</>)}
+          {p.education.length > 0 && (<><div style={H}>Education</div>{p.education.map((x, i) => (
+            <div key={i} style={{ marginBottom: 4 }}><b>{[x.degree, x.field].filter(Boolean).join(', ')}</b>{x.institution ? ` — ${x.institution}` : ''}{x.year ? ` · ${x.year}` : ''}</div>
+          ))}</>)}
+          {p.projects.length > 0 && (<><div style={H}>Selected Projects</div>{p.projects.map((x, i) => (
+            <div key={i} style={{ marginBottom: 4 }}><b>{x.name}</b>{x.tech?.length ? ` — ${x.tech.join(', ')}` : ''}</div>
+          ))}</>)}
+        </div>
+      </div>
+    </div>
+  );
+}
+

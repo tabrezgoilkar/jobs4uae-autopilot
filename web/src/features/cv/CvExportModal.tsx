@@ -62,6 +62,7 @@ export default function CvExportModal({ profile, onClose }: { profile: Profile; 
 
       <div className="flex-none px-3 sm:px-5 py-2.5 border-t text-[12px] text-ink-muted flex items-center gap-3" style={{ background: 'var(--surface)', borderColor: 'var(--border-subtle)' }}>
         <span>Download uses a real, formatted file (no print dialog).</span>
+        <span className="text-ink-muted/80">Photos appear in the on-screen preview only — GCC ATS parsers strip them from PDF/Word.</span>
         <button onClick={() => exportCvToPdf(cvRef.current)} className="j4u-chip ml-auto inline-flex items-center gap-1.5 text-ink-secondary font-semibold rounded-md px-3 h-8" style={{ border: '1px solid var(--border)' }}>
           Print to PDF…
         </button>

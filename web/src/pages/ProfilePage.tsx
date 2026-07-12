@@ -478,14 +478,15 @@ function AwardsCard(c: EditorCtx) {
 
 /* ---------- Copilot rail ---------- */
 function ProfileRail({ profile, onFix, onImprove }: { profile: Profile; onFix: (s: ProfileSection) => void; onImprove: () => void }) {
-  const { score, quality, completeness, factors, suggestions } = useMemo(() => analyzeProfile(profile), [profile]);
+  const { score, sections, subtotals, gradeBand, mode, keywordSet, suggestions } = useMemo(() => analyzeProfile(profile), [profile]);
   const [showBreakdown, setShowBreakdown] = useState(false);
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
   const visible = suggestions.filter((s) => !dismissed.has(s.title));
-  const label = score >= 85 ? 'Excellent — strong across the board.'
-    : score >= 65 ? 'Strong — a few tweaks lift your match.'
-    : score >= 40 ? 'Getting there — fill the gaps below.'
-    : 'Just started — add the basics.';
+  const label = score >= 90 ? 'Interview-ready.'
+    : score >= 80 ? 'Strong — minor fixes.'
+    : score >= 65 ? 'Competitive risk — targeted rework.'
+    : score >= 50 ? 'Major rework needed.'
+    : 'Rebuild recommended.';
   return (
     <aside className="lg:sticky lg:top-[18px] bg-surface border border-ai-soft rounded-md overflow-hidden shadow-sm">
       <div className="flex items-center gap-2.5 px-4 py-3.5 j4u-grad-ai border-b border-ai-soft">
@@ -494,22 +495,29 @@ function ProfileRail({ profile, onFix, onImprove }: { profile: Profile; onFix: (
       </div>
       <div className="p-4">
         <div className="flex items-center gap-3">
-          <RadialGauge value={score} size={56} stroke={6} color="var(--ai-600)"><span className="text-sm font-bold text-ink-strong">{score}%</span></RadialGauge>
+          <RadialGauge value={score} size={56} stroke={6} color="var(--ai-600)"><span className="text-sm font-bold text-ink-strong">{score}</span></RadialGauge>
           <div>
-            <div className="text-[13px] font-bold text-ink-strong">Profile strength</div>
+            <div className="text-[13px] font-bold text-ink-strong">CV score (ATS)</div>
             <div className="text-[11.5px] text-ink-secondary mt-0.5 leading-snug">{label}</div>
+            <div className="text-[10.5px] text-ink-muted mt-0.5 leading-snug">{gradeBand}{mode === 'UNTARGETED_85' ? ' · role-not-set' : ''}</div>
           </div>
         </div>
-        <div className="mt-2.5 flex items-center gap-2">
-          <div className="flex-1 grid grid-cols-2 gap-1.5">
-            <div className="rounded-md bg-surface-sunken px-2 py-1.5">
-              <div className="text-[10px] uppercase tracking-wide text-ink-muted">Completeness</div>
-              <div className="text-[13px] font-bold text-ink-strong">{completeness}<span className="text-[10px] font-normal text-ink-muted">/46</span></div>
-            </div>
-            <div className="rounded-md bg-surface-sunken px-2 py-1.5">
-              <div className="text-[10px] uppercase tracking-wide text-ink-muted">Quality</div>
-              <div className="text-[13px] font-bold text-ink-strong">{quality}<span className="text-[10px] font-normal text-ink-muted">/54</span></div>
-            </div>
+        <div className="mt-2.5 grid grid-cols-2 gap-1.5">
+          <div className="rounded-md bg-surface-sunken px-2 py-1.5">
+            <div className="text-[10px] uppercase tracking-wide text-ink-muted">Parseability</div>
+            <div className="text-[13px] font-bold text-ink-strong">{subtotals.parseability}<span className="text-[10px] font-normal text-ink-muted">/30</span></div>
+          </div>
+          <div className="rounded-md bg-surface-sunken px-2 py-1.5">
+            <div className="text-[10px] uppercase tracking-wide text-ink-muted">Completeness</div>
+            <div className="text-[13px] font-bold text-ink-strong">{subtotals.completeness}<span className="text-[10px] font-normal text-ink-muted">/20</span></div>
+          </div>
+          <div className="rounded-md bg-surface-sunken px-2 py-1.5">
+            <div className="text-[10px] uppercase tracking-wide text-ink-muted">Content</div>
+            <div className="text-[13px] font-bold text-ink-strong">{subtotals.content}<span className="text-[10px] font-normal text-ink-muted">/35</span></div>
+          </div>
+          <div className="rounded-md bg-surface-sunken px-2 py-1.5">
+            <div className="text-[10px] uppercase tracking-wide text-ink-muted">Targeting</div>
+            <div className="text-[13px] font-bold text-ink-strong">{subtotals.targeting}<span className="text-[10px] font-normal text-ink-muted">/15</span></div>
           </div>
         </div>
         <button onClick={() => setShowBreakdown((v) => !v)} className="j4u-chip mt-2 w-full inline-flex items-center justify-between gap-1 text-[11px] font-semibold text-ai-700 rounded-md px-2.5 py-1.5 border border-ai-soft bg-ai-soft">
@@ -517,24 +525,40 @@ function ProfileRail({ profile, onFix, onImprove }: { profile: Profile; onFix: (
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" style={{ transform: showBreakdown ? 'rotate(180deg)' : 'none' }}><path d="M6 9l6 6 6-6" /></svg>
         </button>
         {showBreakdown && (
-          <ul className="mt-2 flex flex-col gap-1.5">
-            {factors.map((f) => {
-              const pct = f.max ? Math.round((f.earned / f.max) * 100) : 0;
-              const color = pct >= 75 ? 'var(--success)' : pct >= 40 ? 'var(--ai-600)' : 'var(--danger)';
-              return (
-                <li key={f.key} className="text-[11px]">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-semibold text-ink-strong truncate">{f.label}</span>
-                    <span className="text-ink-muted tabular-nums whitespace-nowrap">{f.earned}/{f.max}</span>
-                  </div>
-                  <div className="h-1.5 rounded-full bg-surface-sunken mt-1 overflow-hidden">
-                    <div className="h-full rounded-full" style={{ width: `${pct}%`, background: color }} />
-                  </div>
-                  <div className="text-[10.5px] text-ink-muted mt-0.5 leading-snug">{f.note}</div>
-                </li>
-              );
-            })}
-          </ul>
+          <div className="mt-2 flex flex-col gap-3">
+            {sections.map((sec) => (
+              <div key={sec.id}>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[11px] font-bold text-ink-strong">{sec.id}. {sec.label}</span>
+                  <span className="text-[10.5px] font-semibold text-ink-muted tabular-nums">{sec.earned}/{sec.max}</span>
+                </div>
+                <ul className="mt-1 flex flex-col gap-1.5">
+                  {sec.criteria.map((f) => {
+                    const pct = f.max ? Math.round((f.earned / f.max) * 100) : 0;
+                    const color = pct >= 75 ? 'var(--success)' : pct >= 40 ? 'var(--ai-600)' : 'var(--danger)';
+                    return (
+                      <li key={f.key} className="text-[11px]">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-semibold text-ink-strong truncate">{f.label}</span>
+                          <span className="text-ink-muted tabular-nums whitespace-nowrap">{f.earned}/{f.max}</span>
+                        </div>
+                        <div className="h-1.5 rounded-full bg-surface-sunken mt-1 overflow-hidden">
+                          <div className="h-full rounded-full" style={{ width: `${pct}%`, background: color }} />
+                        </div>
+                        <div className="text-[10.5px] text-ink-muted mt-0.5 leading-snug">{f.note}</div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            ))}
+            {mode === 'ROLE_ONLY' && keywordSet.length > 0 && (
+              <div className="text-[10.5px] text-ink-muted leading-snug">
+                <span className="font-semibold text-ink-secondary">Role keywords scored: </span>
+                {keywordSet.slice(0, 8).join(', ')}{keywordSet.length > 8 ? '…' : ''}
+              </div>
+            )}
+          </div>
         )}
         <button onClick={onImprove} className="j4u-press mt-3 w-full inline-flex items-center justify-center gap-2 h-9 rounded-md bg-ai-600 text-white text-[12.5px] font-semibold">
           <IconSparkle size={14} color="#fff" /> Improve with AI

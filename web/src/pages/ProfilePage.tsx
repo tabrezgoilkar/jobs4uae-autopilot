@@ -11,6 +11,8 @@ import { Card, PageHeader } from '../components/ui';
 import { IconSparkle } from '../components/icons';
 import { RadialGauge } from '../components/charts';
 import { analyzeProfile, type ProfileSection } from '../lib/profileStrength';
+import { extractSkills } from '../lib/skillsExtract';
+import { formatBullets } from '../lib/bullets';
 import LinkedinImportModal from '../components/LinkedinImportModal';
 import ProfileAssistant from '../components/ProfileAssistant';
 import CvExportModal from '../features/cv/CvExportModal';
@@ -31,6 +33,7 @@ export default function ProfilePage() {
   const [linkedinOpen, setLinkedinOpen] = useState(false);
   const [assistantOpen, setAssistantOpen] = useState(false);
   const [cvOpen, setCvOpen] = useState(false);
+  const [suggest, setSuggest] = useState<string[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { getProfile().then(setProfile).catch(() => setLoadError(true)); }, []);
@@ -143,7 +146,7 @@ export default function ProfilePage() {
   }
   if (!profile) return <div className="text-ink-muted text-sm">Loading…</div>;
 
-  const editor = { editKey, startEdit, cancelEdit, saveEdit, saving, patch, patchItem, addItem, removeItem, profile };
+  const editor = { editKey, startEdit, cancelEdit, saveEdit, saving, patch, patchItem, addItem, removeItem, profile, suggest, setSuggest };
 
   return (
     <div className="space-y-6">
@@ -272,6 +275,8 @@ interface EditorCtx {
   addItem: (section: 'experience' | 'education' | 'projects' | 'certifications' | 'languages' | 'awards', blank: unknown, prefix: string) => void;
   removeItem: (section: 'experience' | 'education' | 'projects' | 'certifications' | 'languages' | 'awards', i: number) => void;
   profile: Profile;
+  suggest: string[];
+  setSuggest: (s: string[]) => void;
 }
 
 /* ---------- Basics ---------- */
@@ -301,7 +306,27 @@ function BasicsCard(c: EditorCtx) {
             <label className="block"><span className={LABEL}>Phone</span><input className={FIELD} value={p.phone} onChange={(e) => c.patch({ phone: e.target.value })} /></label>
             <label className="block sm:col-span-2"><span className={LABEL}>Location</span><input className={FIELD} value={p.location} onChange={(e) => c.patch({ location: e.target.value })} /></label>
             <label className="block sm:col-span-2"><span className={LABEL}>Professional summary</span><textarea className={FIELD} rows={3} value={p.summary} onChange={(e) => c.patch({ summary: e.target.value })} /></label>
-            <label className="block sm:col-span-2"><span className={LABEL}>Skills (comma separated)</span><input className={FIELD} value={p.skills.join(', ')} onChange={(e) => c.patch({ skills: e.target.value.split(',').map((s) => s.trim()).filter(Boolean) })} /></label>
+            <label className="block sm:col-span-2"><span className={LABEL}>Skills (comma separated)</span>
+              <div className="flex items-center justify-between mt-1">
+                <input className={FIELD} value={p.skills.join(', ')} onChange={(e) => c.patch({ skills: e.target.value.split(',').map((s) => s.trim()).filter(Boolean) })} />
+                <button type="button" onClick={() => c.setSuggest(extractSkills(p))} className="j4u-chip ml-2 inline-flex items-center gap-1 h-9 px-2.5 rounded-md border border-ai-soft bg-ai-soft text-[11.5px] font-semibold text-ai-700 shrink-0">
+                  <IconSparkle size={12} color="var(--ai-600)" /> Suggest
+                </button>
+              </div>
+              {c.suggest.length > 0 && (
+                <div className="mt-2 rounded-md border border-hair bg-surface-sunken p-2.5">
+                  <div className="text-[11px] font-bold uppercase tracking-wide text-ink-muted mb-1.5">Suggested from your experience — click to add</div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {c.suggest.map((s) => (
+                      <button key={s} type="button" onClick={() => { const next = [...p.skills, s]; c.patch({ skills: next }); c.setSuggest(c.suggest.filter((x) => x !== s)); }} className="inline-flex items-center gap-1 rounded-full border border-ai-soft bg-ai-soft px-2.5 py-0.5 text-xs text-ai-700 hover:bg-ai-600 hover:text-white">
+                        + {s}
+                      </button>
+                    ))}
+                  </div>
+                  {c.suggest.length === 0 && <div className="text-[12px] text-ink-muted">All detected skills are already in your list. 🎉</div>}
+                </div>
+              )}
+            </label>
             <div className="sm:col-span-2"><EditActions onSave={c.saveEdit} onCancel={c.cancelEdit} saving={c.saving} /></div>
           </div>
         )}
@@ -318,14 +343,7 @@ function ExperienceCard(c: EditorCtx) {
       <div id="sec-experience" className="space-y-4 scroll-mt-20">
         {items.length === 0 && <p className="text-sm text-ink-muted">No experience yet — click + Add.</p>}
         {items.map((x, i) => c.editKey === `exp:${i}` ? (
-          <div key={i} className="border border-hair-subtle rounded-md p-4 grid gap-3 sm:grid-cols-2">
-            <input className={FIELD} aria-label="Job title" placeholder="Job title" value={x.title} onChange={(e) => c.patchItem('experience', i, { title: e.target.value })} />
-            <input className={FIELD} aria-label="Company" placeholder="Company" value={x.company} onChange={(e) => c.patchItem('experience', i, { company: e.target.value })} />
-            <div><span className={LABEL}>Start</span><MonthYear value={x.startDate} onChange={(v) => c.patchItem('experience', i, { startDate: v })} /></div>
-            <div><span className={LABEL}>End</span><MonthYear value={x.endDate} onChange={(v) => c.patchItem('experience', i, { endDate: v })} allowPresent /></div>
-            <textarea className={`${FIELD} sm:col-span-2`} rows={4} aria-label="What you did" placeholder="What you did — one bullet per line; you can use - and **bold**" value={x.description} onChange={(e) => c.patchItem('experience', i, { description: e.target.value })} />
-            <div className="sm:col-span-2"><EditActions onSave={c.saveEdit} onCancel={c.cancelEdit} onRemove={() => c.removeItem('experience', i)} saving={c.saving} /></div>
-          </div>
+          <ExperienceEditor key={i} c={c} x={x} i={i} />
         ) : (
           <div key={i} className="flex items-start justify-between gap-3 border-l-2 border-hair pl-3">
             <div className="min-w-0">
@@ -338,6 +356,49 @@ function ExperienceCard(c: EditorCtx) {
         ))}
       </div>
     </Card>
+  );
+}
+
+function ExperienceEditor({ c, x, i }: { c: EditorCtx; x: import('../api').Experience; i: number }) {
+  const [preview, setPreview] = useState<{ before: string; after: string; changed: number } | null>(null);
+  const runFormat = () => {
+    const res = formatBullets(x.description);
+    if (res.changed === 0) { setPreview(null); return; }
+    setPreview({ before: x.description, after: res.text, changed: res.changed });
+  };
+  const applyFormat = () => {
+    if (preview) { c.patchItem('experience', i, { description: preview.after }); setPreview(null); }
+  };
+  return (
+    <div className="border border-hair-subtle rounded-md p-4 grid gap-3 sm:grid-cols-2">
+      <input className={FIELD} aria-label="Job title" placeholder="Job title" value={x.title} onChange={(e) => c.patchItem('experience', i, { title: e.target.value })} />
+      <input className={FIELD} aria-label="Company" placeholder="Company" value={x.company} onChange={(e) => c.patchItem('experience', i, { company: e.target.value })} />
+      <div><span className={LABEL}>Start</span><MonthYear value={x.startDate} onChange={(v) => c.patchItem('experience', i, { startDate: v })} /></div>
+      <div><span className={LABEL}>End</span><MonthYear value={x.endDate} onChange={(v) => c.patchItem('experience', i, { endDate: v })} allowPresent /></div>
+      <div className="sm:col-span-2">
+        <div className="flex items-center justify-between">
+          <span className={LABEL}>What you did — one bullet per line; you can use - and **bold**</span>
+          <button type="button" onClick={runFormat} className="j4u-chip inline-flex items-center gap-1 h-7 px-2 rounded-md border border-ai-soft bg-ai-soft text-[11px] font-semibold text-ai-700">
+            <IconSparkle size={12} color="var(--ai-600)" /> Format bullets
+          </button>
+        </div>
+        <textarea className={`${FIELD} mt-1`} rows={4} aria-label="What you did" placeholder="What you did — one bullet per line; you can use - and **bold**" value={x.description} onChange={(e) => { c.patchItem('experience', i, { description: e.target.value }); setPreview(null); }} />
+        {preview && (
+          <div className="mt-2 rounded-md border border-hair bg-surface-sunken p-2.5">
+            <div className="text-[11px] font-bold uppercase tracking-wide text-ink-muted mb-1">Preview formatting — {preview.changed} line(s) changed</div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div className="rounded border border-danger-soft bg-danger-soft/40 p-2 text-[12px] text-danger-text whitespace-pre-wrap max-h-40 overflow-auto line-through decoration-danger-text/50">{preview.before}</div>
+              <div className="rounded border border-success-soft bg-success-soft/40 p-2 text-[12px] text-success-text whitespace-pre-wrap max-h-40 overflow-auto">{preview.after}</div>
+            </div>
+            <div className="flex items-center gap-2 mt-2">
+              <button type="button" onClick={applyFormat} className="j4u-press text-[12px] font-semibold text-white bg-primary-600 rounded-md px-3 h-8">Apply formatting</button>
+              <button type="button" onClick={() => setPreview(null)} className="j4u-chip text-[12px] font-semibold text-ink-secondary border border-hair rounded-md px-3 h-8">Cancel</button>
+            </div>
+          </div>
+        )}
+      </div>
+      <div className="sm:col-span-2"><EditActions onSave={c.saveEdit} onCancel={c.cancelEdit} onRemove={() => c.removeItem('experience', i)} saving={c.saving} /></div>
+    </div>
   );
 }
 

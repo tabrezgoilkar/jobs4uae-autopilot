@@ -9,6 +9,8 @@ import { linkedinToProfile, looksLikeLinkedinExport } from '../profile/linkedin/
 import { fetchLinkedinJsonLd, isLinkedinProfileUrl } from '../profile/linkedin/fetchPublic.js';
 import { extractProfileFromImages } from '../profile/vision.js';
 import { buildBaseline } from '../profile/baseline.js';
+import { renderProfileCvPdf } from '../profile/cvPdf.js';
+import { renderProfileCvDocx } from '../profile/cvDocx.js';
 import { mergeProfile } from '../profile/linkedin/merge.js';
 import { bookmarkletCode } from '../profile/linkedin/bookmarklet.js';
 import { setPending, takePending } from '../profile/linkedin/pending.js';
@@ -37,6 +39,35 @@ export function profileRouter({ localLinkedinFetcher = null } = {}) {
   router.get('/', async (req, res) => {
     try {
       res.json(await loadProfile(req.userId));
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // Real one-click CV download as PDF — dependency-free (no browser engine), so
+  // it is safe on the cloud build. Selectable text, auto-paginated.
+  router.get('/pdf', async (req, res) => {
+    try {
+      const profile = await loadProfile(req.userId);
+      const buf = renderProfileCvPdf(profile);
+      const safe = (profile.fullName || 'cv').replace(/[^\w.-]+/g, '_');
+      res.set('Content-Type', 'application/pdf');
+      res.set('Content-Disposition', `attachment; filename="${safe}.pdf"`);
+      res.send(buf);
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // Real one-click CV download as Word (.docx) — dependency-free OOXML zip.
+  router.get('/docx', async (req, res) => {
+    try {
+      const profile = await loadProfile(req.userId);
+      const buf = renderProfileCvDocx(profile);
+      const safe = (profile.fullName || 'cv').replace(/[^\w.-]+/g, '_');
+      res.set('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+      res.set('Content-Disposition', `attachment; filename="${safe}.docx"`);
+      res.send(buf);
     } catch (e) {
       res.status(500).json({ error: e.message });
     }

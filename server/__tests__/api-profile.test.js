@@ -67,4 +67,35 @@ describe('profile API', () => {
     expect(res.status).toBe(409);
     expect(res.body.error).toBeTruthy();
   });
+
+  it('GET /api/profile/pdf returns a real PDF attachment', async () => {
+    const { createApp } = await import('../app.js');
+    const app = createApp();
+    await request(app).post('/api/profile').send({ fullName: 'Jane Doe', email: 'j@x.com' });
+    const res = await request(app).get('/api/profile/pdf');
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toContain('application/pdf');
+    expect(res.headers['content-disposition']).toContain('attachment');
+    expect(res.body.slice(0, 8).toString('latin1')).toBe('%PDF-1.4');
+  });
+
+  it('GET /api/profile/docx returns a real Word attachment', async () => {
+    const { createApp } = await import('../app.js');
+    const app = createApp();
+    await request(app).post('/api/profile').send({ fullName: 'Jane Doe' });
+    const res = await request(app)
+      .get('/api/profile/docx')
+      .buffer(true)
+      .parse((r, cb) => {
+        const chunks = [];
+        r.on('data', (c) => chunks.push(c));
+        r.on('end', () => cb(null, Buffer.concat(chunks)));
+      });
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toContain('officedocument.wordprocessingml');
+    expect(res.headers['content-disposition']).toContain('.docx');
+    // EOCD signature of a valid zip
+    const buf = Buffer.from(res.body);
+    expect(buf.lastIndexOf(Buffer.from([0x50, 0x4b, 0x05, 0x06]))).toBeGreaterThan(0);
+  });
 });

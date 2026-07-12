@@ -34,7 +34,7 @@ export function evaluateRouter() {
       const engine = createEngine(config);
       const profile = await loadProfile(req.userId);
       const result = await evaluateJob(profile, jobText, engine);
-      const saved = addEvaluation({ ...result, jobText });
+      const saved = await addEvaluation(req.userId, { ...result, jobText });
       res.json(saved);
     } catch (e) {
       // Input errors return 400 above; anything reaching here is a server/AI failure.
@@ -42,17 +42,17 @@ export function evaluateRouter() {
     }
   });
 
-  router.get('/evaluations', (req, res) => {
+  router.get('/evaluations', async (req, res) => {
     try {
-      res.json(listEvaluations());
+      res.json(await listEvaluations(req.userId));
     } catch (e) {
       res.status(500).json({ error: e.message });
     }
   });
 
-  router.get('/evaluations/:id', (req, res) => {
+  router.get('/evaluations/:id', async (req, res) => {
     try {
-      const found = getEvaluation(req.params.id);
+      const found = await getEvaluation(req.userId, req.params.id);
       if (!found) return res.status(404).json({ error: 'Evaluation not found.' });
       res.json(found);
     } catch (e) {

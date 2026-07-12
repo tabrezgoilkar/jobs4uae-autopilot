@@ -125,6 +125,23 @@ export async function saveProfile(profile: Profile): Promise<Profile> {
   return res.json();
 }
 
+/** Trigger a real server-generated file download (PDF or DOCX) for the CV. */
+async function downloadProfileFile(kind: 'pdf' | 'docx'): Promise<void> {
+  const res = await fetch(`/api/profile/${kind}`, { method: 'GET' });
+  if (!res.ok) throw new ApiError(res.status);
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `cv.${kind}`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+export async function downloadProfilePdf(): Promise<void> { return downloadProfileFile('pdf'); }
+export async function downloadProfileDocx(): Promise<void> { return downloadProfileFile('docx'); }
+
 export async function importCv(file: File): Promise<Profile> {
   const fd = new FormData();
   fd.append('cv', file);

@@ -13,10 +13,10 @@ import { loadProfile } from '../profile/store.js';
 export function upskillRouter() {
   const router = Router();
 
-  router.get('/upskill/heatmap', (req, res) => {
+  router.get('/upskill/heatmap', async (req, res) => {
     try {
-      const apps = listApplications();
-      const evalsById = new Map(listEvaluations().map((e) => [e.id, e]));
+      const apps = await listApplications(req.userId);
+      const evalsById = new Map((await listEvaluations(req.userId)).map((e) => [e.id, e]));
       let profile;
       try { profile = loadProfile(req.userId); } catch { profile = {}; }
 

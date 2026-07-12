@@ -23,7 +23,7 @@ export function documentsRouter() {
       const evaluationId = req.body?.evaluationId ?? null;
 
       if (evaluationId) {
-        const ev = getEvaluation(evaluationId);
+        const ev = await getEvaluation(req.userId, evaluationId);
         if (!ev) return res.status(404).json({ error: 'Evaluation not found.' });
         // Fall back to the request body's jobText for evaluations saved before jobText was persisted.
         jobText = (ev.jobText ?? jobText ?? '').trim();

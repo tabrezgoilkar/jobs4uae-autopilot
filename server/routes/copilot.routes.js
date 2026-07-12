@@ -23,7 +23,7 @@ export function copilotRouter() {
       const profile = await loadProfile(req.userId);
       let evaluations = [];
       try {
-        evaluations = listEvaluations();
+        evaluations = await listEvaluations(req.userId);
       } catch {
         // context is best-effort; never fail the answer over it
       }

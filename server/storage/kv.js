@@ -10,14 +10,13 @@ import { dataDir } from '../config/paths.js';
 //   await getJson(userId, key) -> parsed value | null
 //   await setJson(userId, key, value) -> value
 
+export function usingPostgres() {
+  return !!process.env.DATABASE_URL?.trim();
+}
 const safe = (s, fallback) => {
   const cleaned = String(s ?? '').replace(/[^a-zA-Z0-9_.-]/g, '_');
   return cleaned && cleaned !== '.' && cleaned !== '..' ? cleaned : fallback;
 };
-
-function usingPostgres() {
-  return !!process.env.DATABASE_URL?.trim();
-}
 
 // --- Filesystem impl (local dev) ---
 function userDir(userId) {

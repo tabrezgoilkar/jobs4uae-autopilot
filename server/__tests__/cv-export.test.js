@@ -81,20 +81,24 @@ describe('renderProfileCvDocx', () => {
   it('includes a real bullet numbering definition (no auto-number fallback)', () => {
     // Regression: without word/numbering.xml Word numbered every bullet 1,2,3…
     const buf = renderProfileCvDocx(sampleProfile);
-    const dz = buf.toString('latin1');
-    expect(dz).toContain('word/numbering.xml');
-    // The part is deflated in the zip; extract + inflate to read it.
+    // document.xml MUST reference numbering.xml via a relationship, otherwise
+    // Word cannot resolve numId=1 and falls back to auto-numbering.
+    expect(buf.toString('latin1')).toContain('word/_rels/document.xml.rels');
+    // The parts are deflated in the zip; extract + inflate to read them.
     const sig = Buffer.from([0x50, 0x4b, 0x03, 0x04]);
-    // locate the part by scanning for the name then back up to its header
-    const nameIdx = buf.indexOf('word/numbering.xml');
-    const headerStart = buf.lastIndexOf(sig, nameIdx);
-    expect(headerStart).toBeGreaterThan(0);
-    const compSize = buf.readUInt32LE(headerStart + 18);
-    const nameLen = buf.readUInt16LE(headerStart + 26);
-    const dataStart = headerStart + 30 + nameLen;
-    const raw = zlib.inflateRawSync(buf.subarray(dataStart, dataStart + compSize));
-    const xml = raw.toString('latin1');
-    expect(xml).toMatch(/<w:num w:numId="1">/);
-    expect(xml).toMatch(/<w:numFmt w:val="bullet"\/>/);
+    const readPart = (partName) => {
+      const nameIdx = buf.indexOf(partName);
+      const headerStart = buf.lastIndexOf(sig, nameIdx);
+      expect(headerStart).toBeGreaterThan(0);
+      const compSize = buf.readUInt32LE(headerStart + 18);
+      const nameLen = buf.readUInt16LE(headerStart + 26);
+      const dataStart = headerStart + 30 + nameLen;
+      return zlib.inflateRawSync(buf.subarray(dataStart, dataStart + compSize)).toString('latin1');
+    };
+    const rels = readPart('word/_rels/document.xml.rels');
+    expect(rels).toContain('relationships/numbering');
+    const numXml = readPart('word/numbering.xml');
+    expect(numXml).toMatch(/<w:num w:numId="1">/);
+    expect(numXml).toMatch(/<w:numFmt w:val="bullet"\/>/);
   });
 });

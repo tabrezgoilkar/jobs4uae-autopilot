@@ -96,6 +96,19 @@ export function renderProfileCvDocx(profile) {
       ),
     },
     {
+      // CRITICAL: document.xml must reference numbering.xml via a relationship
+      // of type "numbering". Without word/_rels/document.xml.rels Word cannot
+      // resolve <w:numId w:val="1"/> and silently falls back to auto-numbering
+      // (1, 2, 3…) instead of rendering the bullet dot. This is the actual fix
+      // for "Word shows numbers instead of bullets".
+      name: 'word/_rels/document.xml.rels',
+      data: Buffer.from(
+        `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering" Target="numbering.xml"/></Relationships>`,
+        'utf8',
+      ),
+    },
+    {
       name: 'word/numbering.xml',
       data: Buffer.from(NUMBERING_XML, 'utf8'),
     },

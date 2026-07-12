@@ -7,8 +7,8 @@ import { IconSparkle } from './icons';
 const META: Record<string, { title: string; sub: string }> = {
   '/': { title: 'Home', sub: 'Your job-search copilot' },
   '/profile': { title: 'My profile', sub: 'Your CV, skills and details' },
-  '/evaluate': { title: 'Evaluate a job', sub: 'Honest A–F fit score' },
-  '/documents': { title: 'Documents', sub: 'Tailored CVs & cover letters' },
+  '/evaluate': { title: 'Evaluate a job', sub: 'Fit score + tailored CV & cover letter' },
+  '/documents': { title: 'Evaluate a job', sub: 'Fit score + tailored CV & cover letter' },
   '/tracker': { title: 'Tracker', sub: 'Every application in one place' },
   '/scan': { title: 'Scan GCC boards', sub: 'Find roles across the Gulf' },
   '/auto-apply': { title: 'Auto-apply', sub: 'Assisted applications — you submit' },

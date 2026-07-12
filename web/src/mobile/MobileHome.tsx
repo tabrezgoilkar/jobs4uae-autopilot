@@ -61,7 +61,7 @@ export default function MobileHome({ go }: { go: (r: MobileRoute) => void }) {
         </p>
         <div className="flex gap-2 mt-3">
           <button onClick={() => go('profile')} className="j4u-press flex-1 h-[38px] rounded-[10px] text-[12.5px] font-semibold text-white" style={{ background: 'var(--ai-600)', border: 'none' }}>Improve my profile →</button>
-          <button onClick={() => go('documents')} className="j4u-press h-[38px] px-3.5 rounded-[10px] text-[12.5px] font-semibold" style={{ background: '#fff', border: '1px solid #E0D5FB', color: 'var(--ai-700)' }}>Tailor a CV</button>
+          <button onClick={() => go('evaluate')} className="j4u-press h-[38px] px-3.5 rounded-[10px] text-[12.5px] font-semibold" style={{ background: '#fff', border: '1px solid #E0D5FB', color: 'var(--ai-700)' }}>Tailor a CV</button>
         </div>
       </div>
 
@@ -79,7 +79,7 @@ export default function MobileHome({ go }: { go: (r: MobileRoute) => void }) {
       <div className="rounded-2xl overflow-hidden" style={cardStyle}>
         <div className="flex items-center justify-between px-4 py-3.5 border-b" style={{ borderColor: 'var(--border-subtle)' }}>
           <div className="text-[13.5px] font-bold" style={{ color: 'var(--text-strong)' }}>Ready to review</div>
-          <span onClick={() => go('documents')} className="text-[12px] font-semibold" style={{ color: 'var(--primary-700)' }}>Documents →</span>
+          <span onClick={() => go('evaluate')} className="text-[12px] font-semibold" style={{ color: 'var(--primary-700)' }}>Documents →</span>
         </div>
         {toReview.length === 0 ? (
           <div className="px-4 py-5 text-[12.5px]" style={{ color: 'var(--text-muted)' }}>No evaluated jobs yet. Tailor a CV from a job description in Documents to see fit scores here.</div>

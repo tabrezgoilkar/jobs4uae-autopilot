@@ -339,7 +339,7 @@ export default function AutoApplyPage() {
               <div className="flex gap-2 flex-wrap items-center">
                 <a href={gmailOf(draft)} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center h-9 px-4 rounded-md bg-primary-600 text-white text-[12.5px] font-semibold j4u-press">Open in Gmail</a>
                 <a href={mailtoOf(draft)} className="j4u-chip inline-flex items-center justify-center h-9 px-4 rounded-md border border-hair text-ink-secondary text-[12.5px] font-semibold">Open mail app</a>
-                <Link to="/documents" className="text-[12px] font-semibold text-primary-700 hover:underline j4u-focus rounded ml-auto">Attach your CV — download it from Documents →</Link>
+                <Link to="/evaluate" className="text-[12px] font-semibold text-primary-700 hover:underline j4u-focus rounded ml-auto">Attach your CV — download it from Documents →</Link>
               </div>
               <p className="text-[11.5px] text-ink-muted">Review before sending — the draft opens in your email, you attach the CV PDF and click Send. Nothing is sent automatically.</p>
             </div>

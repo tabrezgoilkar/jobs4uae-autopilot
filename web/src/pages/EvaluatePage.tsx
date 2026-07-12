@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { runEvaluation, listEvaluations, getFitScore, type Evaluation, type FitScore } from '../api';
+import DocumentsPanel from '../features/documents/DocumentsPanel';
 import { Card, PageHeader, Button, Badge, GradeBadge, type Tone } from '../components/ui';
 
 const REC: Record<string, { label: string; tone: Tone }> = {
@@ -18,7 +19,7 @@ function gradeForFit(score: number): string {
   return 'F';
 }
 
-function ResultCard({ ev }: { ev: Evaluation }) {
+function ResultCard({ ev, onTailor }: { ev: Evaluation; onTailor: () => void }) {
   const rec = REC[ev.recommendation] ?? { label: ev.recommendation, tone: 'neutral' as Tone };
   return (
     <Card>
@@ -58,12 +59,7 @@ function ResultCard({ ev }: { ev: Evaluation }) {
             <p className="text-sm text-ink-secondary">{ev.missingSkills.length ? ev.missingSkills.join(', ') : '—'}</p>
           </div>
         </div>
-        <Link
-          to={`/documents?eval=${ev.id}`}
-          className="inline-flex items-center gap-2 h-10 px-4 rounded-md bg-primary-600 text-white text-sm font-semibold j4u-press"
-        >
-          Tailor resume &amp; cover letter →
-        </Link>
+        <Button variant="ai" onClick={onTailor}><span>✨</span> Tailor resume &amp; cover letter for this job</Button>
       </div>
     </Card>
   );
@@ -106,6 +102,7 @@ function FitCard({ fit }: { fit: FitScore }) {
 }
 
 export default function EvaluatePage() {
+  const [params] = useSearchParams();
   const [jobText, setJobText] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -113,6 +110,10 @@ export default function EvaluatePage() {
   const [recent, setRecent] = useState<Evaluation[]>([]);
   const [fit, setFit] = useState<FitScore | null>(null);
   const [fitBusy, setFitBusy] = useState(false);
+  // Deep link ?eval=… (from Dashboard "Tailor your top match", Scan, etc.)
+  // opens directly into the tailoring panel for that evaluated job.
+  const [tailorEvalId, setTailorEvalId] = useState<string | null>(params.get('eval'));
+  const [showTailor, setShowTailor] = useState<boolean>(!!params.get('eval'));
 
   useEffect(() => {
     listEvaluations().then(setRecent).catch(() => {});
@@ -132,6 +133,9 @@ export default function EvaluatePage() {
       const ev = await runEvaluation(jobText);
       setResult(ev);
       setRecent((r) => [ev, ...r]);
+      // After evaluating, surface the tailoring panel pre-wired to this job.
+      setTailorEvalId(ev.id);
+      setShowTailor(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Evaluation failed.');
     } finally {
@@ -139,9 +143,13 @@ export default function EvaluatePage() {
     }
   }
 
+  function startTailor() {
+    setShowTailor(true);
+  }
+
   return (
     <div className="space-y-6">
-      <PageHeader title="Evaluate a job" subtitle="Paste a job description and get an honest A–F fit score based on your profile." />
+      <PageHeader title="Evaluate a job" subtitle="Paste a job description and get an honest A–F fit score based on your profile — then tailor your CV & cover letter for it, all in one place." />
 
       <Card>
         <label className="block">
@@ -161,7 +169,7 @@ export default function EvaluatePage() {
         {error && <div role="alert" className="mt-3 text-sm rounded-md p-3 bg-danger-soft text-danger-text border border-danger-soft">{error}</div>}
       </Card>
 
-      {result && <ResultCard ev={result} />}
+      {result && <ResultCard ev={result} onTailor={startTailor} />}
 
       {fit && <FitCard fit={fit} />}
 
@@ -180,6 +188,10 @@ export default function EvaluatePage() {
             ))}
           </ul>
         </Card>
+      )}
+
+      {showTailor && (
+        <DocumentsPanel evaluationId={tailorEvalId ?? undefined} />
       )}
     </div>
   );

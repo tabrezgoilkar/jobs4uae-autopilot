@@ -126,7 +126,7 @@ export default function MobileProfile({ onOpenSettings }: { onOpenSettings: () =
 
       {toast && <div className="j4u-rise" style={{ position: 'fixed', bottom: 88, left: '50%', transform: 'translateX(-50%)', zIndex: 90, background: 'var(--text-strong)', color: '#fff', padding: '10px 16px', borderRadius: 11, fontSize: 12.5, fontWeight: 500, boxShadow: 'var(--shadow-overlay)' }}>{toast}</div>}
       {linkedinOpen && <LinkedinImportModal onApply={async (m) => { setLinkedinOpen(false); try { setProfile(await saveProfile(m)); flash('LinkedIn merged & saved'); } catch { setProfile(m); } }} onClose={() => setLinkedinOpen(false)} />}
-      {assistantOpen && <ProfileAssistant onClose={() => setAssistantOpen(false)} onApplied={(p) => { setProfile(p); flash('Profile updated'); }} />}
+      {assistantOpen && <ProfileAssistant current={profile} onClose={() => setAssistantOpen(false)} onApplied={(p) => { setProfile(p); flash('Profile updated'); }} />}
       {cvOpen && <CvExportModal profile={profile} onClose={() => setCvOpen(false)} />}
     </div>
   );

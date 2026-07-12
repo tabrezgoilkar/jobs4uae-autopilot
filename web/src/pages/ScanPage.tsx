@@ -16,8 +16,20 @@ import { PageHeader, Button, Badge, GradeBadge, type Tone } from '../components/
 import { learningLinks } from '../lib/skills';
 import { IconSparkle } from '../components/icons';
 
+// The cloud build has no browser, so the "paste a job link" flow (which needs a
+// headed browser to open the URL) is unavailable there.
+const IS_CLOUD = !!import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
+
 const GCC_COUNTRIES = ['UAE', 'Saudi Arabia', 'Qatar', 'Kuwait', 'Bahrain', 'Oman'];
-const BOARDS_STATIC: Board[] = [{ id: 'indeed', name: 'Indeed', status: 'verified' }];
+// Boards the cloud app actually supports (no browser needed). Used as the
+// default board list on cloud so LinkedIn/FreeHire render as selectable
+// immediately — chip rendering must not depend on the auth-gated /boards call
+// succeeding (it 401s when the session cookie isn't sent yet).
+const CLOUD_BOARDS: Board[] = [
+  { id: 'linkedin', name: 'LinkedIn', status: 'experimental' },
+  { id: 'freehire', name: 'FreeHire', status: 'experimental' },
+];
+const BOARDS_STATIC: Board[] = IS_CLOUD ? CLOUD_BOARDS : [{ id: 'indeed', name: 'Indeed', status: 'verified' }];
 // Board chips shown in the design — Indeed is live; the rest are coming soon.
 const CHIP_BOARDS = [
   { id: 'indeed', name: 'Indeed' },
@@ -32,10 +44,6 @@ const REC_TONE: Record<string, { label: string; tone: Tone }> = {
   maybe: { label: 'Maybe', tone: 'warning' },
   skip: { label: 'Skip', tone: 'danger' },
 };
-
-// The cloud build has no browser, so the "paste a job link" flow (which needs a
-// headed browser to open the URL) is unavailable there.
-const IS_CLOUD = !!import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
 interface SalaryState { busy: boolean; data: SalaryEstimate | null; error: string | null; }
 

@@ -306,6 +306,24 @@ function BasicsCard(c: EditorCtx) {
             <label className="block"><span className={LABEL}>Email</span><input className={FIELD} value={p.email} onChange={(e) => c.patch({ email: e.target.value })} /></label>
             <label className="block"><span className={LABEL}>Phone</span><input className={FIELD} value={p.phone} onChange={(e) => c.patch({ phone: e.target.value })} /></label>
             <label className="block sm:col-span-2"><span className={LABEL}>Location</span><input className={FIELD} value={p.location} onChange={(e) => c.patch({ location: e.target.value })} /></label>
+            <label className="block sm:col-span-2"><span className={LABEL}>Photo (preview only)</span>
+              <div className="flex items-center gap-3 mt-1">
+                {p.photo && <img src={p.photo} alt="" width={56} height={56} style={{ width: 56, height: 56, objectFit: 'cover', borderRadius: '50%', border: '1px solid var(--border)' }} />}
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="text-[12.5px]"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (!f) return;
+                    const url = URL.createObjectURL(f);
+                    c.patch({ photo: url });
+                  }}
+                />
+                {p.photo && <button type="button" onClick={() => c.patch({ photo: undefined })} className="j4u-chip h-8 px-2.5 rounded-md border border-hair text-[12px]">Remove</button>}
+              </div>
+              <span className="block mt-1 text-[11px] text-ink-muted">Shown in the on-screen CV preview (Executive template). Not embedded in the downloaded PDF/Word — GCC ATS parsers strip photos.</span>
+            </label>
             <label className="block sm:col-span-2"><span className={LABEL}>Professional summary</span><textarea className={FIELD} rows={3} value={p.summary} onChange={(e) => c.patch({ summary: e.target.value })} /></label>
             <label className="block sm:col-span-2"><span className={LABEL}>Skills (comma separated)</span>
               <div className="flex items-center justify-between mt-1">

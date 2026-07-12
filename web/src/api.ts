@@ -99,6 +99,10 @@ export interface Profile {
   phone: string;
   location: string;
   headline: string;
+  // Optional headshot shown in the on-screen CV preview (Executive template).
+  // Client-side object URL (data:/blob:) only — NOT sent to the server export,
+  // since the downloaded PDF/Word is content-only (GCC ATS strips photos).
+  photo?: string;
   summary: string;
   skills: string[];
   experience: Experience[];
@@ -117,10 +121,14 @@ export async function getProfile(): Promise<Profile> {
 }
 
 export async function saveProfile(profile: Profile): Promise<Profile> {
+  // `photo` is a session-local object URL (blob:/data:) shown only in the
+  // on-screen preview — never persisted, since a stored blob: URL is dead on
+  // reload and the export is content-only anyway.
+  const { photo: _photo, ...persisted } = profile;
   const res = await fetch('/api/profile', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(profile),
+    body: JSON.stringify(persisted),
   }).then(checkOk);
   return res.json();
 }

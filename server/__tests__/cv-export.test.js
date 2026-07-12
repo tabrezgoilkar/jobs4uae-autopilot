@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import zlib from 'node:zlib';
 import { renderProfileCvPdf } from '../profile/cvPdf.js';
 import { renderProfileCvDocx } from '../profile/cvDocx.js';
 import { profileToCvSections } from '../profile/cvSections.js';
@@ -52,6 +53,15 @@ describe('renderProfileCvPdf', () => {
     const buf = renderProfileCvPdf({});
     expect(buf.slice(0, 8).toString('latin1')).toBe('%PDF-1.4');
   });
+
+  it('renders bullets as drawn dots, not a mis-encoded quote glyph', () => {
+    const buf = renderProfileCvPdf(sampleProfile);
+    const ps = buf.toString('latin1');
+    // Regression: bullets used to be `•  text` which mis-encoded to a leading
+    // double-quote under WinAnsiEncoding. Now bullets are filled-circle ops.
+    expect(ps).not.toMatch(/\("\s/); // no leading-quote bullet marker
+    expect(ps).toMatch(/c .* f Q/); // filled-circle (bullet dot) drawing ops exist
+  });
 });
 
 describe('renderProfileCvDocx', () => {
@@ -66,5 +76,25 @@ describe('renderProfileCvDocx', () => {
     const name = buf.slice(lh + 30, lh + 30 + nlen).toString('utf8');
     expect(name).toBe('[Content_Types].xml');
     expect(buf.toString('latin1')).toContain('word/document.xml');
+  });
+
+  it('includes a real bullet numbering definition (no auto-number fallback)', () => {
+    // Regression: without word/numbering.xml Word numbered every bullet 1,2,3…
+    const buf = renderProfileCvDocx(sampleProfile);
+    const dz = buf.toString('latin1');
+    expect(dz).toContain('word/numbering.xml');
+    // The part is deflated in the zip; extract + inflate to read it.
+    const sig = Buffer.from([0x50, 0x4b, 0x03, 0x04]);
+    // locate the part by scanning for the name then back up to its header
+    const nameIdx = buf.indexOf('word/numbering.xml');
+    const headerStart = buf.lastIndexOf(sig, nameIdx);
+    expect(headerStart).toBeGreaterThan(0);
+    const compSize = buf.readUInt32LE(headerStart + 18);
+    const nameLen = buf.readUInt16LE(headerStart + 26);
+    const dataStart = headerStart + 30 + nameLen;
+    const raw = zlib.inflateRawSync(buf.subarray(dataStart, dataStart + compSize));
+    const xml = raw.toString('latin1');
+    expect(xml).toMatch(/<w:num w:numId="1">/);
+    expect(xml).toMatch(/<w:numFmt w:val="bullet"\/>/);
   });
 });

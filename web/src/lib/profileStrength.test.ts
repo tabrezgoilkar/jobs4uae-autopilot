@@ -1,80 +1,66 @@
 import { describe, it, expect } from 'vitest';
 import { analyzeProfile } from './profileStrength';
 
-describe('analyzeProfile — honest score', () => {
-  it('a bare-bones CV (the reported "91% basic" case) no longer scores ~91', () => {
-    const basic = {
-      fullName: 'Jane Doe', headline: 'Accountant', email: 'j@x.com', phone: '050', location: 'Dubai, UAE',
-      summary: 'Accountant with some experience.', // ~33 chars, no metric
-      skills: ['Excel', 'SAP', 'VAT', 'IFRS', 'Word'], // 5 skills
-      experience: [{ title: 'Accountant', company: 'ACME', startDate: '2019', endDate: '2022', description: 'Did accounting tasks.' }], // 1 vague bullet
-      education: [{ institution: 'Uni', degree: 'BSc', field: 'Accounting', year: '2012' }],
-      // NOTE: no projects / certifications / awards / languages
-    };
+describe('analyzeProfile — ATS rubric (100-pt)', () => {
+  const basic = {
+    fullName: 'FAHAD SAIN', headline: 'Architectural Draftsman', email: 'f@x.com', phone: '+97150', location: 'Dubai, UAE',
+    summary: 'Architectural Draftsman with experience in 2D/3D drawings and BIM modeling across residential and commercial projects.',
+    skills: ['AUTOCAD', 'REVIT', 'NAVISWORK', 'RHINO', 'EXCEL', 'SKETCHUP'],
+    experience: [{ title: 'Architectural Draftsman', company: 'C&B LLC', startDate: 'Aug 2023', endDate: 'Present', description: '- Creating Floor Layout.\n- Finalizing Flooring layout.\n- Preparing GFC drawings.' }],
+    education: [{ institution: 'MSBTE', degree: 'Diploma', field: 'Civil Engineering' }],
+    links: ['https://linkedin.com/in/fahad'],
+  };
+
+  it('a basic CV cannot hit 100 — it lands in the competitive-risk band', () => {
     const a = analyzeProfile(basic as any);
-    // Old logic gave 91%. New logic must be materially lower because the content
-    // is weak AND there is no credibility section (completeness caps at 45/60).
     expect(a.score).toBeLessThan(80);
-    expect(a.completeness).toBeLessThan(60); // missing credibility section caps completeness
-    expect(a.quality).toBeLessThan(40); // weak content
+    expect(a.gradeBand).not.toBe('Interview-ready');
+    // every point is accounted for by the four rubric sections
+    const sectionSum = a.sections.reduce((s, x) => s + x.earned, 0);
+    expect(sectionSum).toBe(a.completeness + a.quality + (a.subtotals.targeting || 0));
   });
 
-  it('padding a basic CV with more plain bullets still cannot reach 100', () => {
-    // Same basic shell but many bullet points and a long summary — no metrics,
-    // no credibility sections. A real "very basic but looks filled" CV.
-    const padded = {
-      fullName: 'Jane Doe', headline: 'Accountant', email: 'j@x.com', phone: '050', location: 'Dubai, UAE',
-      summary: 'x'.repeat(320),
-      skills: ['Excel', 'SAP', 'VAT', 'IFRS', 'Word', 'PowerPoint'],
-      experience: [
-        { title: 'Accountant', company: 'ACME', description: Array.from({ length: 12 }, (_, i) => `- Task ${i} done`).join('\n') },
-      ],
-      education: [{ institution: 'Uni', degree: 'BSc', field: 'Accounting' }],
-    };
-    const a = analyzeProfile(padded as any);
-    expect(a.score).toBeLessThan(80); // capped by missing credibility section
+  it('a basic CV scores 0 on quantified achievements (C1) — the core gap', () => {
+    const a = analyzeProfile(basic as any);
+    const c1 = a.sections.find((s) => s.id === 'C')!.criteria.find((c) => c.key === 'C1')!;
+    expect(c1.earned).toBe(0);
   });
 
-  it('a CV strong on content but missing certs/awards caps below 85', () => {
-    const strongNoCred = {
-      fullName: 'Aisha', headline: 'Snr Accountant', email: 'a@x.com', phone: '+97150', location: 'Dubai, UAE',
-      summary: 'Finance leader across the GCC; cut close time 30%.',
-      skills: ['Excel', 'SAP', 'VAT', 'IFRS', 'Forecasting', 'Power BI'],
-      experience: [{ title: 'Snr Accountant', company: 'ACME', description: '- Led the monthly close\n- Cut close time 30%\n- Saved $1.2M via automation' }],
-      education: [{ institution: 'Uni', degree: 'BSc' }],
-      projects: [{ name: 'Billing revamp' }],
-      languages: [{ name: 'Arabic' }],
-    };
-    const a = analyzeProfile(strongNoCred as any);
-    expect(a.completeness).toBeLessThan(60);
-    expect(a.score).toBeLessThan(85);
+  it('missing certifications costs the education/cert completeness point (B4)', () => {
+    const noCert = analyzeProfile({ ...basic, certifications: [] } as any);
+    const b4 = noCert.sections.find((s) => s.id === 'B')!.criteria.find((c) => c.key === 'B4')!;
+    expect(b4.earned).toBeLessThan(4);
   });
 
-  it('a fully complete + quantified CV can reach the top band', () => {
+  it('a strong, quantified, complete CV reaches the top band', () => {
     const strong = {
       fullName: 'Aisha Rahman', headline: 'Senior Accountant', email: 'a@x.com', phone: '+97150', location: 'Dubai, UAE',
-      summary: 'Finance leader with 8 years across the GCC; cut close time 30% and saved $1.2M.',
-      skills: ['Excel', 'SAP', 'VAT', 'IFRS', 'Forecasting', 'Power BI', 'Audit'],
+      summary: 'Finance leader with 8 years across the GCC; cut close time 30% and saved $1.2M for a team of 12.',
+      skills: ['VAT', 'IFRS', 'SAP', 'Excel', 'Forecasting', 'Power BI', 'Audit', 'Reconciliation', 'Payroll', 'Tax', 'Ledger', 'Reporting'],
       experience: [
-        { title: 'Senior Accountant', company: 'ACME', description: '- Led the monthly close\n- Cut close time 30%\n- Saved $1.2M via automation' },
-        { title: 'Accountant', company: 'X', description: '- Built the VAT reporting process\n- Improved accuracy 25%' },
+        { title: 'Senior Accountant', company: 'ACME', startDate: 'Jan 2019', endDate: 'Present', description: '- Led the monthly close for a team of 12\n- Cut close time 30%\n- Saved $1.2M via automation across GCC' },
+        { title: 'Accountant', company: 'X', startDate: 'Jan 2015', endDate: 'Dec 2018', description: '- Built the VAT reporting process\n- Improved accuracy 25%' },
       ],
       education: [{ institution: 'Uni', degree: 'BSc', field: 'Accounting', year: '2012' }],
-      projects: [{ name: 'Billing revamp' }],
-      certifications: [{ name: 'CPA' }],
+      certifications: [{ name: 'CPA', issuer: 'AICPA', year: '2015' }],
       languages: [{ name: 'Arabic' }],
       awards: [{ title: 'Employee of year' }],
+      links: ['https://linkedin.com/in/aisha'],
     };
     const a = analyzeProfile(strong as any);
     expect(a.score).toBeGreaterThanOrEqual(85);
-    expect(a.quality).toBeGreaterThan(25);
-    expect(a.completeness).toBe(60);
+    expect(a.gradeBand).toBe('Interview-ready');
   });
 
-  it('returns a transparent factor breakdown that sums to the score', () => {
-    const a = analyzeProfile({ fullName: 'X' } as any);
-    expect(a.factors.length).toBeGreaterThan(5);
-    const total = a.factors.reduce((s, f) => s + f.earned, 0);
-    expect(total).toBe(a.score); // factors explain the whole score
+  it('runs deterministically — same input, same score', () => {
+    const a1 = analyzeProfile(basic as any);
+    const a2 = analyzeProfile(basic as any);
+    expect(a1.score).toBe(a2.score);
+    expect(JSON.stringify(a1.sections)).toBe(JSON.stringify(a2.sections));
+  });
+
+  it('factors (flat) sum to the reported score', () => {
+    const a = analyzeProfile(basic as any);
+    expect(a.factors.reduce((s, f) => s + f.earned, 0)).toBe(a.score);
   });
 });

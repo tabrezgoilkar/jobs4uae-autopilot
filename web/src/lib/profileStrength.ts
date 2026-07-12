@@ -51,7 +51,7 @@ function countMetric(text: string): number {
 
 function analyzeExperienceQuality(profile: Profile): { earned: number; max: number; note: string } {
   const exps = (profile.experience ?? []).filter((x) => clean(x?.description) || clean(x?.title));
-  if (exps.length === 0) return { earned: 0, max: 26, note: 'No experience added yet' };
+  if (exps.length === 0) return { earned: 0, max: 16, note: 'No experience added yet' };
 
   let bulletCount = 0;
   let actionVerb = 0;
@@ -68,76 +68,90 @@ function analyzeExperienceQuality(profile: Profile): { earned: number; max: numb
       if (countMetric(l) > 0) withMetric++;
     }
   }
-  // reward: at least 2 bullets/role, action-led bullets, and quantified results
-  const earned = Math.min(26, Math.round(bulletCount * 1.5) + Math.min(8, actionVerb * 2) + Math.min(8, withMetric * 3));
+  // Two independent caps so padding plain bullets can't earn the top score:
+  //   • up to 8 for simply having bullets (base)
+  //   • up to 8 ONLY for quantified / action-led results (so metrics are required for "excellent")
+  const base = Math.min(8, bulletCount * 1.0);
+  const impact = Math.min(8, actionVerb * 1.5 + withMetric * 4);
+  const earned = Math.round(base + impact);
   const note = bulletCount === 0
     ? 'Add bullet points describing what you did'
-    : `$${bulletCount} bullets, ${actionVerb} action-led${withMetric ? `, ${withMetric} with a metric` : ''}`;
-  return { earned, max: 26, note };
+    : `$${bulletCount} bullets${actionVerb ? `, ${actionVerb} action-led` : ''}${withMetric ? `, ${withMetric} with a metric` : ', none quantified'}`;
+  return { earned, max: 16, note };
 }
 
 function analyzeSummaryQuality(profile: Profile): { earned: number; max: number; note: string } {
   const s = clean(profile.summary);
-  if (!s) return { earned: 0, max: 12, note: 'No summary yet' };
+  if (!s) return { earned: 0, max: 8, note: 'No summary yet' };
   const len = s.length;
   const metric = countMetric(s);
-  // good summary: 120–600 chars, ideally with at least one metric
-  let earned = Math.min(12, Math.round((Math.min(len, 400) / 400) * 8) + (metric ? 4 : 0));
+  // good summary: 120–400 chars, ideally with at least one metric
+  let earned = Math.min(8, Math.round((Math.min(len, 320) / 320) * 5) + (metric ? 3 : 0));
   const note = len < 60 ? 'Summary is very short' : metric ? 'Includes a concrete result' : 'Add a metric or result';
-  return { earned, max: 12, note };
+  return { earned, max: 8, note };
 }
 
 function analyzeSkillsQuality(profile: Profile): { earned: number; max: number; note: string } {
   const sk = (profile.skills ?? []).map(clean).filter(Boolean);
-  if (sk.length === 0) return { earned: 0, max: 12, note: 'No skills listed' };
-  const earned = Math.min(12, sk.length * 2);
-  return { earned, max: 12, note: `${sk.length} skills listed` };
+  if (sk.length === 0) return { earned: 0, max: 10, note: 'No skills listed' };
+  const earned = Math.min(10, sk.length * 2);
+  return { earned, max: 10, note: `${sk.length} skills listed` };
 }
 
 /**
  * Deterministic, honest profile-strength score (0–100).
  *
- * It combines TWO independent dimensions so a bare-bones CV can no longer score
- * ~91% on completeness alone:
- *   • Completeness (0–46): does every section exist? (identity, contact, history)
- *   • Quality (0–54): is the *content* strong? (action-led, quantified experience;
- *     a real summary; a healthy skills list; breadth of extra sections)
+ * Two dimensions:
+ *   • Completeness (0–60): is the CV *whole*? Identity + core sections + at least
+ *     one credibility section (project / certification / award / language). A CV
+ *     with no credibility section is structurally incomplete and caps out below 80.
+ *   • Quality (0–40): is the *content* strong? Action-led, quantified experience;
+ *     a real summary; a healthy skills list; and rounding out 2+ extra sections.
  *
- * No AI is involved — the quality checks are transparent heuristics the UI shows
- * back to the user as a breakdown ("why this score").
+ * A "very basic" CV (identity + summary + plain-task experience + a few skills,
+ * but NO certs/awards/projects/languages and no metrics) scores in the 60s — not 100.
+ * Only a CV that is both complete AND has quantified impact can reach the top.
  */
 export function analyzeProfile(p: Profile): ProfileAnalysis {
-  // ---------- Completeness (46) ----------
+  // ---------- Completeness (60) ----------
   let completeness = 0;
   const cFactors: ScoreFactor[] = [];
   const c = (key: string, label: string, cond: boolean, pts: number, note: string) => {
     if (cond) completeness += pts;
     cFactors.push({ key, label, earned: cond ? pts : 0, max: pts, note: cond ? note : 'Missing' });
   };
+  // Identity (26)
   c('name', 'Full name', has(p.fullName), 6, 'Added');
   c('headline', 'Headline / title', has(p.headline), 6, 'Added');
-  c('email', 'Email', has(p.email), 4, 'Added');
-  c('phone', 'Phone', has(p.phone), 4, 'Added');
+  c('email', 'Email', has(p.email), 5, 'Added');
+  c('phone', 'Phone', has(p.phone), 5, 'Added');
   c('location', 'Location', has(p.location), 4, 'Added');
-  c('exp', 'Work experience', any(p.experience), 10, 'Added');
-  c('edu', 'Education', any(p.education), 6, 'Added');
+  // Core sections (19)
+  c('exp', 'Work experience', any(p.experience), 8, 'Added');
+  c('edu', 'Education', any(p.education), 5, 'Added');
   c('summary', 'Summary present', has(p.summary), 6, 'Added');
+  // Credibility (15) — at least one of these makes a CV "complete"; none caps completeness at 45/60
+  const hasProject = any(p.projects);
+  const hasCert = any(p.certifications);
+  const hasAward = any(p.awards);
+  const hasLang = any(p.languages);
+  const credPts = (hasProject ? 5 : 0) + (hasCert ? 5 : 0) + (hasAward ? 5 : 0) + (hasLang ? 3 : 0);
+  const credibility = Math.min(15, credPts);
+  c('credibility', 'Credibility section', credPts > 0, credibility, credPts > 0 ? 'Added' : 'Missing — add a project / cert / award / language');
 
-  // ---------- Quality (54) ----------
+  // ---------- Quality (40) ----------
   const expQ = analyzeExperienceQuality(p);
   const sumQ = analyzeSummaryQuality(p);
   const skQ = analyzeSkillsQuality(p);
-  // breadth: extra sections that show a well-rounded candidate
-  const breadth = Math.min(12, (
-    (any(p.projects) ? 3 : 0) + (any(p.certifications) ? 3 : 0) +
-    (any(p.languages) ? 2 : 0) + (any(p.awards) ? 2 : 0) + (any(p.links) ? 2 : 0)
-  ));
-  const quality = expQ.earned + sumQ.earned + skQ.earned + breadth;
+  // Polish: extra rounding (2+ credibility sections, or links/photo) — small, not a gap-filler
+  const extraCount = [hasProject, hasCert, hasAward, hasLang].filter(Boolean).length;
+  const polish = Math.min(6, extraCount >= 2 ? 6 : extraCount === 1 ? 3 : 0);
+  const quality = expQ.earned + sumQ.earned + skQ.earned + polish;
   const qFactors: ScoreFactor[] = [
     { key: 'experience', label: 'Experience impact', earned: expQ.earned, max: expQ.max, note: expQ.note },
     { key: 'summary', label: 'Summary strength', earned: sumQ.earned, max: sumQ.max, note: sumQ.note },
     { key: 'skills', label: 'Skills depth', earned: skQ.earned, max: skQ.max, note: skQ.note },
-    { key: 'breadth', label: 'Profile breadth', earned: breadth, max: 12, note: breadth ? 'Extra sections filled in' : 'Add projects/certs/languages' },
+    { key: 'polish', label: 'Extra polish', earned: polish, max: 6, note: polish ? 'Rounded out with extra sections' : 'Add 2+ of projects/certs/awards/languages' },
   ];
 
   const total = Math.max(0, Math.min(100, completeness + quality));
@@ -148,13 +162,13 @@ export function analyzeProfile(p: Profile): ProfileAnalysis {
   if (!has(p.headline)) suggestions.push({ title: 'Add a headline', detail: 'A current title (e.g. "Senior Accountant") helps employers place you instantly.', section: 'basics' });
   if ((p.summary?.trim().length ?? 0) < 120) suggestions.push({ title: 'Strengthen your summary', detail: 'Aim for 2–3 sentences covering your strongest, most relevant experience — and add a concrete result.', section: 'basics' });
   if ((p.skills?.length ?? 0) < 6) suggestions.push({ title: 'Add more skills', detail: 'List at least 6 relevant skills — they drive your job-match score.', section: 'basics' });
-  if (expQ.earned < expQ.max && (p.experience?.some((x) => !x.description?.trim()) || expQ.earned < 14)) {
-    suggestions.push({ title: 'Make experience bullet-driven', detail: 'Lead each bullet with an action verb (Led, Built, Cut) and add a number — e.g. "cut checkout drop-off 18%".', section: 'experience' });
+  if (expQ.earned < expQ.max) {
+    suggestions.push({ title: 'Make experience bullet-driven & quantified', detail: 'Lead each bullet with an action verb (Led, Built, Cut) and add a number — e.g. "cut checkout drop-off 18%".', section: 'experience' });
   }
-  if (!any(p.projects)) suggestions.push({ title: 'Add a project', detail: 'A standout project shows impact beyond your job titles.', section: 'projects' });
-  if (!any(p.certifications)) suggestions.push({ title: 'Add certifications', detail: 'Relevant certs (e.g. PMP, AWS, ISO) strengthen credibility.', section: 'certifications' });
-  if (!any(p.languages)) suggestions.push({ title: 'Add languages', detail: 'Languages matter in the GCC — list those you speak.', section: 'languages' });
-  if (!any(p.awards)) suggestions.push({ title: 'Add awards', detail: 'Recognition and awards help you stand out.', section: 'awards' });
+  if (!hasProject) suggestions.push({ title: 'Add a project', detail: 'A standout project shows impact beyond your job titles.', section: 'projects' });
+  if (!hasCert) suggestions.push({ title: 'Add certifications', detail: 'Relevant certs (e.g. PMP, AWS, ISO) strengthen credibility — and unlock a higher strength score.', section: 'certifications' });
+  if (!hasAward) suggestions.push({ title: 'Add awards', detail: 'Recognition and awards help you stand out.', section: 'awards' });
+  if (!hasLang) suggestions.push({ title: 'Add languages', detail: 'Languages matter in the GCC — list those you speak.', section: 'languages' });
   if (!has(p.phone)) suggestions.push({ title: 'Add a phone number', detail: 'So employers can reach you quickly.', section: 'basics' });
   if (!has(p.location)) suggestions.push({ title: 'Add your location', detail: 'City and country (e.g. "Dubai, UAE").', section: 'basics' });
 

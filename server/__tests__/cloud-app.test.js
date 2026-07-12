@@ -67,4 +67,21 @@ describe('cloud app', () => {
     expect(res.status).toBe(404);
     expect(res.body.error).toMatch(/document not found/i);
   });
+
+  it('persists evaluations on serverless without crashing (no DATABASE_URL, VERCEL env)', async () => {
+    // Reproduces the ENOENT "/var/task/data" bug: on Vercel, DATABASE_URL is
+    // often unset, so storage falls back to the filesystem. The cwd (/var/task)
+    // is read-only; dataDir() must pick a writable dir (/tmp) instead.
+    vi.stubEnv('JOBS4UAE_DATA_DIR', '');
+    vi.stubEnv('DATABASE_URL', '');
+    vi.stubEnv('VERCEL', '1');
+    const { createCloudApp } = await import('../cloudApp.js');
+    const app = createCloudApp();
+    const res = await request(app)
+      .post('/api/evaluate')
+      .send({ jobText: 'Senior Accountant at ACME Dubai. 5 years experience required.', userId: 'local' });
+    // 200 (scored+persisted) or a clean 4xx — but NOT a 500 ENOENT.
+    expect(res.status).toBeLessThan(500);
+    vi.unstubAllEnvs();
+  });
 });

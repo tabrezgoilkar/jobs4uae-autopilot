@@ -29,12 +29,12 @@ function Classic({ p }: { p: Profile }) {
         {p.headline && <div style={{ fontSize: 13, color: '#444', marginTop: 3 }}>{p.headline}</div>}
         {contactLine(p) && <div style={{ fontSize: 11.5, color: '#555', marginTop: 6 }}>{contactLine(p)}</div>}
       </div>
-      {p.summary?.trim() && (<><div style={H}>Profile</div><div dangerouslySetInnerHTML={{ __html: html(p.summary) }} /></>)}
+      {p.summary?.trim() && (<><div style={H}>Profile</div><div className="cv-md" dangerouslySetInnerHTML={{ __html: html(p.summary) }} /></>)}
       {p.skills.length > 0 && (<><div style={H}>Core Skills</div><div>{p.skills.join('  ·  ')}</div></>)}
       {p.experience.length > 0 && (<><div style={H}>Experience</div>{p.experience.map((x, i) => (
         <div key={i} style={{ marginBottom: 10 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}><b>{x.title}{x.company ? `, ${x.company}` : ''}</b><span style={{ color: '#555', whiteSpace: 'nowrap' }}>{dates(x.startDate, x.endDate)}</span></div>
-          {x.description?.trim() && <div style={{ marginTop: 3 }} dangerouslySetInnerHTML={{ __html: html(x.description) }} />}
+          {x.description?.trim() && <div className="cv-md" style={{ marginTop: 3 }} dangerouslySetInnerHTML={{ __html: html(x.description) }} />}
         </div>
       ))}</>)}
       {p.education.length > 0 && (<><div style={H}>Education</div>{p.education.map((x, i) => (
@@ -64,12 +64,12 @@ function Modern({ p }: { p: Profile }) {
           {p.languages.length > 0 && (<><div style={sideH}>Languages</div><div>{p.languages.map((l, i) => <div key={i} style={{ fontSize: 11.5, padding: '2px 0' }}>{l.name}{l.level ? ` — ${l.level}` : ''}</div>)}</div></>)}
         </div>
         <div style={{ flex: 1, padding: '24px 30px' }}>
-          {p.summary?.trim() && (<div style={{ marginBottom: 16 }}><div style={H}>Profile</div><div dangerouslySetInnerHTML={{ __html: html(p.summary) }} /></div>)}
+          {p.summary?.trim() && (<div style={{ marginBottom: 16 }}><div style={H}>Profile</div><div className="cv-md" dangerouslySetInnerHTML={{ __html: html(p.summary) }} /></div>)}
           {p.experience.length > 0 && (<div style={{ marginBottom: 16 }}><div style={H}>Experience</div>{p.experience.map((x, i) => (
             <div key={i} style={{ marginBottom: 11 }}>
               <div style={{ fontWeight: 700 }}>{x.title}</div>
               <div style={{ color: accent, fontSize: 11.5 }}>{[x.company, dates(x.startDate, x.endDate)].filter(Boolean).join(' · ')}</div>
-              {x.description?.trim() && <div style={{ marginTop: 3 }} dangerouslySetInnerHTML={{ __html: html(x.description) }} />}
+              {x.description?.trim() && <div className="cv-md" style={{ marginTop: 3 }} dangerouslySetInnerHTML={{ __html: html(x.description) }} />}
             </div>
           ))}</div>)}
           {p.education.length > 0 && (<div style={{ marginBottom: 16 }}><div style={H}>Education</div>{p.education.map((x, i) => (
@@ -90,12 +90,12 @@ function Minimal({ p }: { p: Profile }) {
       <div style={{ fontSize: 28, fontWeight: 300, letterSpacing: '0.01em' }}>{p.fullName || 'Your Name'}</div>
       {p.headline && <div style={{ fontSize: 13.5, color: '#333', marginTop: 2 }}>{p.headline}</div>}
       {contactLine(p) && <div style={{ fontSize: 11.5, color: '#777', marginTop: 8 }}>{contactLine(p)}</div>}
-      {p.summary?.trim() && (<><div style={H}>Summary</div><div dangerouslySetInnerHTML={{ __html: html(p.summary) }} /></>)}
+      {p.summary?.trim() && (<><div style={H}>Summary</div><div className="cv-md" dangerouslySetInnerHTML={{ __html: html(p.summary) }} /></>)}
       {p.experience.length > 0 && (<><div style={H}>Experience</div>{p.experience.map((x, i) => (
         <div key={i} style={{ marginBottom: 12 }}>
           <div style={{ fontWeight: 600 }}>{x.title}{x.company ? ` · ${x.company}` : ''}</div>
           {dates(x.startDate, x.endDate) && <div style={{ color: '#999', fontSize: 11.5 }}>{dates(x.startDate, x.endDate)}</div>}
-          {x.description?.trim() && <div style={{ marginTop: 4 }} dangerouslySetInnerHTML={{ __html: html(x.description) }} />}
+          {x.description?.trim() && <div className="cv-md" style={{ marginTop: 4 }} dangerouslySetInnerHTML={{ __html: html(x.description) }} />}
         </div>
       ))}</>)}
       {p.education.length > 0 && (<><div style={H}>Education</div>{p.education.map((x, i) => <div key={i} style={{ marginBottom: 4 }}>{[x.degree, x.field].filter(Boolean).join(', ')}{x.institution ? ` · ${x.institution}` : ''}{x.year ? ` · ${x.year}` : ''}</div>)}</>)}

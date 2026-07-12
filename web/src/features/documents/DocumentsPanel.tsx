@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import {
@@ -10,13 +9,13 @@ import {
   listEvaluations,
   type DocumentRecord,
   type Evaluation,
-} from '../api';
-import { gradeToStars, learningLinks } from '../lib/skills';
-import { diffSections, type ChangeSegment } from '../lib/wordDiff';
-import DownloadButtons from '../features/pdf/DownloadButtons';
-import { Card, PageHeader, Button } from '../components/ui';
-import { RadialGauge } from '../components/charts';
-import { IconSparkle } from '../components/icons';
+} from '../../api';
+import { gradeToStars, learningLinks } from '../../lib/skills';
+import { diffSections, type ChangeSegment } from '../../lib/wordDiff';
+import DownloadButtons from '../pdf/DownloadButtons';
+import { Card, Button } from '../../components/ui';
+import { RadialGauge } from '../../components/charts';
+import { IconSparkle } from '../../components/icons';
 
 type CvView = 'final' | 'edit' | 'diff';
 
@@ -93,10 +92,16 @@ function renderMd(md: string): string {
   return DOMPurify.sanitize(html);
 }
 
-export default function DocumentsPage() {
-  const [params] = useSearchParams();
+/**
+ * The CV/cover-letter tailoring experience, extracted so it can be embedded
+ * inline (e.g. beneath an evaluation on the unified Evaluate page) rather than
+ * living on its own route. When `evaluationId` is provided it auto-tailors for
+ * that evaluated job on mount; otherwise the user picks an evaluated job or
+ * pastes a description.
+ */
+export default function DocumentsPanel({ evaluationId }: { evaluationId?: string }) {
   const [evals, setEvals] = useState<Evaluation[]>([]);
-  const [evalId, setEvalId] = useState<string>(params.get('eval') ?? '');
+  const [evalId, setEvalId] = useState<string>(evaluationId ?? '');
   const [jobText, setJobText] = useState('');
   const [jobTitle, setJobTitle] = useState('');
   const [company, setCompany] = useState('');
@@ -119,12 +124,12 @@ export default function DocumentsPage() {
     listDocuments().then(setRecent).catch(() => {});
   }, []);
 
-  // Arriving from "Tailor my CV for this job" (?eval=…) should immediately tailor,
-  // not drop the user on the picker. Auto-run generation once on mount.
+  // Arriving with an evaluationId (deep link / just-evaluated job) should
+  // immediately tailor, not drop the user on the picker.
   const autoRan = useRef(false);
   useEffect(() => {
     if (autoRan.current) return;
-    if (params.get('eval')) {
+    if (evaluationId) {
       autoRan.current = true;
       onGenerate();
     }
@@ -205,43 +210,40 @@ export default function DocumentsPage() {
   const effectiveView: CvView = view === 'diff' && !canDiff ? 'final' : view;
 
   return (
-    <div className="space-y-6">
-      <PageHeader title="Documents" subtitle="Your copilot tailors a CV and cover letter for the job — with its reasoning — then you fine-tune and download." />
-
+    <Card title="Tailor your CV & cover letter">
+      <p className="text-sm text-ink-muted -mt-1 mb-3">Your copilot rewrites your CV + cover letter for this job, with its reasoning — then you fine-tune and download.</p>
       {/* Generator */}
-      <Card>
-        <div className="space-y-3">
-          {evals.length > 0 && (
-            <label className="block">
-              <span className="text-sm font-medium text-ink-secondary">Use an evaluated job</span>
-              <select className={FIELD} value={evalId} onChange={(e) => setEvalId(e.target.value)}>
-                <option value="">— Paste a job instead —</option>
-                {evals.map((ev) => (
-                  <option key={ev.id} value={ev.id}>{(ev.jobTitle || 'Job')}{ev.company ? ` · ${ev.company}` : ''} ({ev.grade})</option>
-                ))}
-              </select>
-            </label>
-          )}
-          {!evalId && (
-            <label className="block">
-              <span className="text-sm font-medium text-ink-secondary">Or paste a job description</span>
-              <textarea className="mt-1 w-full rounded-md border border-hair bg-surface text-ink p-3 text-sm j4u-focus placeholder:text-ink-muted" rows={4} value={jobText} disabled={busy} onChange={(e) => setJobText(e.target.value)} placeholder="Paste the job posting here…" />
-            </label>
-          )}
-          <Button onClick={onGenerate} disabled={busy || (!evalId && !jobText.trim())}>
-            {busy ? 'Coaching your CV…' : hasContent ? 'Re-tailor' : 'Tailor my CV'}
-          </Button>
-        </div>
-      </Card>
+      <div className="space-y-3">
+        {evals.length > 0 && (
+          <label className="block">
+            <span className="text-sm font-medium text-ink-secondary">Use an evaluated job</span>
+            <select className={FIELD} value={evalId} onChange={(e) => setEvalId(e.target.value)}>
+              <option value="">— Paste a job instead —</option>
+              {evals.map((ev) => (
+                <option key={ev.id} value={ev.id}>{(ev.jobTitle || 'Job')}{ev.company ? ` · ${ev.company}` : ''} ({ev.grade})</option>
+              ))}
+            </select>
+          </label>
+        )}
+        {!evalId && (
+          <label className="block">
+            <span className="text-sm font-medium text-ink-secondary">Or paste a job description</span>
+            <textarea className="mt-1 w-full rounded-md border border-hair bg-surface text-ink p-3 text-sm j4u-focus placeholder:text-ink-muted" rows={4} value={jobText} disabled={busy} onChange={(e) => setJobText(e.target.value)} placeholder="Paste the job posting here…" />
+          </label>
+        )}
+        <Button onClick={onGenerate} disabled={busy || (!evalId && !jobText.trim())}>
+          {busy ? 'Coaching your CV…' : hasContent ? 'Re-tailor' : 'Tailor my CV'}
+        </Button>
+      </div>
 
       {message && (
-        <div role="status" className={`text-sm rounded-md p-3 border ${message.ok ? 'bg-success-soft text-success-text border-success-soft' : 'bg-danger-soft text-danger-text border-danger-soft'}`}>
+        <div role="status" className={`mt-3 text-sm rounded-md p-3 border ${message.ok ? 'bg-success-soft text-success-text border-success-soft' : 'bg-danger-soft text-danger-text border-danger-soft'}`}>
           {message.text}
         </div>
       )}
 
       {hasContent && (
-        <div className="grid lg:grid-cols-[1fr_300px] gap-[18px] items-start">
+        <div className="mt-4 grid lg:grid-cols-[1fr_300px] gap-[18px] items-start">
           {/* Document preview / editor */}
           <Card padding={false}>
             <div className="flex flex-wrap items-center gap-2 p-3 border-b border-hair-subtle">
@@ -335,7 +337,8 @@ export default function DocumentsPage() {
       )}
 
       {recent.length > 0 && (
-        <Card title="Saved documents">
+        <div className="mt-4">
+          <div className="text-[11px] font-bold tracking-wide uppercase text-ink-muted mb-2">Saved documents</div>
           <ul className="divide-y divide-hair-subtle -my-1">
             {recent.map((d) => (
               <li key={d.id} className="py-2.5 flex items-center justify-between gap-3">
@@ -344,8 +347,8 @@ export default function DocumentsPage() {
               </li>
             ))}
           </ul>
-        </Card>
+        </div>
       )}
-    </div>
+    </Card>
   );
 }

@@ -18,9 +18,6 @@ export function IconUser({ size }: P) {
 export function IconTarget({ size }: P) {
   return (<svg {...base(size)}><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="4" /></svg>);
 }
-export function IconDoc({ size }: P) {
-  return (<svg {...base(size)}><path d="M14 3H6v18h12V8z" /><path d="M14 3v5h5" /></svg>);
-}
 export function IconBars({ size }: P) {
   return (<svg {...base(size)}><rect x="3" y="4" width="5" height="16" rx="1" /><rect x="10" y="4" width="5" height="11" rx="1" /><rect x="17" y="4" width="4" height="7" rx="1" /></svg>);
 }

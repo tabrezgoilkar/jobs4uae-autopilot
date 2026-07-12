@@ -1,6 +1,6 @@
 import type { ReactElement } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { IconHome, IconUser, IconDoc, IconBars, IconSearch, IconSend, IconSparkle, IconSettings } from './icons';
+import { IconHome, IconUser, IconBars, IconSearch, IconSend, IconSparkle, IconSettings } from './icons';
 
 // In the cloud build, hide features that aren't online yet (Tracker, Scan,
 // Auto-apply need per-user data / a real browser — see Phase B). Detected by the
@@ -10,13 +10,12 @@ const IS_CLOUD = !!import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 const WORKSPACE = [
   { to: '/', label: 'Home', Icon: IconHome },
   { to: '/profile', label: 'My profile', Icon: IconUser },
-  { to: '/documents', label: 'Documents', Icon: IconDoc },
+  { to: '/evaluate', label: 'Evaluate', Icon: IconSparkle },
   { to: '/tracker', label: 'Tracker', Icon: IconBars, cloud: false },
 ] as const;
 
 // Cloud-safe pages (no browser / per-user data the cloud build lacks).
 const CLOUD_PAGES = [
-  { to: '/evaluate', label: 'Evaluate', Icon: IconSparkle },
   { to: '/scan', label: 'Scan GCC boards', Icon: IconSearch },
   { to: '/upskill', label: 'Upskill plan', Icon: IconBars },
   { to: '/auto-apply', label: 'Auto-apply', Icon: IconSend },

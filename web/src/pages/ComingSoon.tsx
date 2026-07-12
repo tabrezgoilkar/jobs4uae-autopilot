@@ -21,7 +21,7 @@ export default function ComingSoon({ title, kind }: { title: string; kind: 'comp
           </p>
           <div className="mt-5 flex items-center justify-center gap-2">
             <Link to="/profile" className="inline-flex items-center h-9 px-4 rounded-md bg-primary-600 text-white text-[12.5px] font-semibold j4u-press">Go to My Profile</Link>
-            <Link to="/documents" className="j4u-chip inline-flex items-center h-9 px-4 rounded-md border border-hair text-ink-secondary text-[12.5px] font-semibold">Documents</Link>
+            <Link to="/evaluate" className="j4u-chip inline-flex items-center h-9 px-4 rounded-md border border-hair text-ink-secondary text-[12.5px] font-semibold">Evaluate &amp; tailor</Link>
           </div>
         </div>
       </Card>

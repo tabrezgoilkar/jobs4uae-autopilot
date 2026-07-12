@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { getConfig, ApiError, type AppConfig } from './api';
 import SetupWizard from './pages/SetupWizard';
 import AppShell from './components/AppShell';
@@ -7,7 +7,6 @@ import Button from './components/ui/Button';
 import Dashboard from './pages/Dashboard';
 import ProfilePage from './pages/ProfilePage';
 import EvaluatePage from './pages/EvaluatePage';
-import DocumentsPage from './pages/DocumentsPage';
 import TrackerPage from './pages/TrackerPage';
 import ScanPage from './pages/ScanPage';
 import AutoApplyPage from './pages/AutoApplyPage';
@@ -75,7 +74,8 @@ export default function App() {
           <Route path="/" element={<Dashboard config={config} />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/evaluate" element={<EvaluatePage />} />
-          <Route path="/documents" element={<DocumentsPage />} />
+          {/* Documents was merged into Evaluate; redirect old links. */}
+          <Route path="/documents/*" element={<Navigate to="/evaluate" replace />} />
           <Route path="/tracker" element={IS_CLOUD ? <ComingSoon title="Tracker" kind="soon" /> : <TrackerPage />} />
           <Route path="/scan" element={<ScanPage />} />
           <Route path="/upskill" element={<UpskillPage />} />

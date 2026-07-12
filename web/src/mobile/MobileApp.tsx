@@ -8,18 +8,18 @@ import MobileSettings from './MobileSettings';
 import MobileComingSoon from './MobileComingSoon';
 import JoinChannels from '../components/JoinChannels';
 
-export type MobileRoute = 'home' | 'scan' | 'tracker' | 'documents' | 'auto-apply' | 'profile' | 'settings';
+export type MobileRoute = 'home' | 'scan' | 'tracker' | 'evaluate' | 'auto-apply' | 'profile' | 'settings';
 
 const TABS: { route: MobileRoute; label: string; icon: React.ReactNode }[] = [
   { route: 'home', label: 'Home', icon: <path d="M3 11l9-8 9 8M5 10v10h14V10" /> },
   { route: 'scan', label: 'Scan', icon: <><circle cx="11" cy="11" r="7" /><path d="M21 21l-4-4" /></> },
   { route: 'tracker', label: 'Tracker', icon: <><rect x="3" y="4" width="5" height="16" rx="1" /><rect x="10" y="4" width="5" height="11" rx="1" /><rect x="17" y="4" width="4" height="7" rx="1" /></> },
-  { route: 'documents', label: 'Docs', icon: <><path d="M14 3H6v18h12V8z" /><path d="M14 3v5h5" /></> },
+  { route: 'evaluate', label: 'Tailor', icon: <><path d="M14 3H6v18h12V8z" /><path d="M14 3v5h5" /></> },
   { route: 'auto-apply', label: 'Apply', icon: <><path d="M22 2L11 13" /><path d="M22 2l-7 20-4-9-9-4z" /></> },
 ];
 
 const TITLES: Record<MobileRoute, string> = {
-  home: '', scan: 'Scan GCC boards', tracker: 'Tracker', documents: 'Documents',
+  home: '', scan: 'Scan GCC boards', tracker: 'Tracker', evaluate: 'Tailor CV',
   'auto-apply': 'Auto-apply', profile: 'My profile', settings: 'Settings',
 };
 
@@ -68,7 +68,7 @@ export default function MobileApp({ config }: { config: AppConfig }) {
         <div className="px-4 pt-4" style={{ paddingBottom: 96 }}>
           {route === 'home' && <MobileHome go={go} />}
           {route === 'profile' && <MobileProfile onOpenSettings={() => go('settings')} />}
-          {route === 'documents' && <MobileDocuments />}
+          {route === 'evaluate' && <MobileDocuments />}
           {route === 'settings' && <MobileSettings />}
           {comingSoon && <MobileComingSoon route={route} />}
         </div>

@@ -503,7 +503,7 @@ function ScanCopilot({ sel, salary, onEvaluate }: { sel: { listing?: Listing; ro
           </div>
 
           <div className="flex flex-col gap-2 pt-1">
-            <Link to={`/documents?eval=${result.id}`} className="inline-flex items-center justify-center gap-1.5 h-10 rounded-md bg-ai-600 text-white text-[13px] font-semibold j4u-press j4u-focus hover:bg-ai-700 transition-colors"><IconSparkle size={15} color="#fff" />Open tailored CV &amp; cover letter</Link>
+            <Link to={`/evaluate?eval=${result.id}`} className="inline-flex items-center justify-center gap-1.5 h-10 rounded-md bg-ai-600 text-white text-[13px] font-semibold j4u-press j4u-focus hover:bg-ai-700 transition-colors"><IconSparkle size={15} color="#fff" />Open tailored CV &amp; cover letter</Link>
             <Link to="/auto-apply" className="inline-flex items-center justify-center gap-1.5 h-10 rounded-md bg-primary-600 text-white text-[13px] font-semibold j4u-press j4u-focus hover:bg-primary-700 transition-colors">Apply now on Auto-apply →</Link>
             {listing.url && !listing.url.startsWith('pasted:') && <a href={listing.url} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center h-9 rounded-md border border-hair text-ink-strong text-xs font-semibold j4u-press j4u-focus hover:bg-surface-sunken transition-colors">Open the listing ↗</a>}
           </div>

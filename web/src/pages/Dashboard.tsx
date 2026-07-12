@@ -148,7 +148,7 @@ export default function Dashboard({ config }: { config: AppConfig }) {
           </p>
           <div className="flex gap-2 mt-3">
             <Link to="/scan" className="h-[34px] px-3.5 inline-flex items-center rounded-md bg-ai-600 text-white text-[12.5px] font-semibold j4u-press">Scan more jobs →</Link>
-            {topEval && <Link to={`/documents?eval=${topEval.id}`} className="h-[34px] px-3.5 inline-flex items-center rounded-md bg-surface border border-ai-soft text-ai-700 text-[12.5px] font-semibold j4u-press">Tailor your top match</Link>}
+            {topEval && <Link to={`/evaluate?eval=${topEval.id}`} className="h-[34px] px-3.5 inline-flex items-center rounded-md bg-surface border border-ai-soft text-ai-700 text-[12.5px] font-semibold j4u-press">Tailor your top match</Link>}
           </div>
         </div>
       </div>
@@ -213,7 +213,7 @@ export default function Dashboard({ config }: { config: AppConfig }) {
             return (
               <Link
                 key={e.id}
-                to={`/documents?eval=${e.id}`}
+                to={`/evaluate?eval=${e.id}`}
                 className={`j4u-nav flex items-center gap-3.5 px-[18px] py-3.5 ${i < recent.length - 1 ? 'border-b border-hair-subtle' : ''}`}
               >
                 <GradeBadge grade={e.grade} />
@@ -237,7 +237,7 @@ export default function Dashboard({ config }: { config: AppConfig }) {
                 ? <>Your <b>{topEval.jobTitle || 'top'}</b> role scored an <b>{topEval.grade}</b>. Want me to tailor your CV and draft a cover letter for it?</>
                 : <>Evaluate a job and I'll suggest exactly how to tailor your CV to match it.</>}
             </p>
-            <Link to={topEval ? `/documents?eval=${topEval.id}` : '/documents'} className="mt-3 inline-flex h-[34px] px-3.5 items-center rounded-md bg-ai-600 text-white text-[12.5px] font-semibold j4u-press">Tailor it →</Link>
+            <Link to={topEval ? `/evaluate?eval=${topEval.id}` : '/evaluate'} className="mt-3 inline-flex h-[34px] px-3.5 items-center rounded-md bg-ai-600 text-white text-[12.5px] font-semibold j4u-press">Tailor it →</Link>
           </div>
 
           {/* waiting on you */}

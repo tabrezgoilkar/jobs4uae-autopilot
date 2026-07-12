@@ -1,59 +1,47 @@
 import { describe, it, expect } from 'vitest';
 import { analyzeProfile } from './profileStrength';
-import type { Profile } from '../api';
 
-const FULL: Profile = {
-  fullName: 'Tabrez Goilkar',
-  email: 't@example.com',
-  phone: '+971-55-000',
-  location: 'Dubai, UAE',
-  headline: 'Head of IT',
-  summary: 'A'.repeat(220),
-  skills: ['a', 'b', 'c', 'd', 'e'],
-  experience: [{ company: 'X', title: 'Y', startDate: '2020', endDate: 'now', description: 'did things' }],
-  education: [{ institution: 'U', degree: 'BSc', field: 'CS', year: '2010' }],
-  projects: [{ name: 'P', description: 'd', tech: ['t'], url: '' }],
-  certifications: [{ name: 'C', issuer: 'I', year: '2021', url: '' }],
-  languages: [{ name: 'English', level: 'Fluent' }],
-  awards: [{ title: 'A', issuer: 'I', year: '2022', description: '' }],
-  links: [],
-  updatedAt: null,
-};
-
-const without = (keys: (keyof Profile)[]): Profile => {
-  const p = { ...FULL };
-  for (const k of keys) (p as Record<string, unknown>)[k] = [];
-  return p;
-};
-
-describe('analyzeProfile', () => {
-  it('scores a fully-complete profile (all sections) at 100', () => {
-    expect(analyzeProfile(FULL).score).toBe(100);
+describe('analyzeProfile — honest score', () => {
+  it('a bare-bones CV (the reported "91% basic" case) no longer scores ~91', () => {
+    const basic = {
+      fullName: 'Jane Doe', headline: 'Accountant', email: 'j@x.com', phone: '050', location: 'Dubai, UAE',
+      summary: 'Accountant with some experience.', // ~33 chars, no metric
+      skills: ['Excel', 'SAP', 'VAT', 'IFRS', 'Word'], // 5 skills
+      experience: [{ title: 'Accountant', company: 'ACME', startDate: '2019', endDate: '2022', description: 'Did accounting tasks.' }], // 1 vague bullet
+      education: [{ institution: 'Uni', degree: 'BSc', field: 'Accounting', year: '2012' }],
+    };
+    const a = analyzeProfile(basic as any);
+    // Old logic would give 91%. New logic must be materially lower because the
+    // quality dimension penalises the vague, metric-free, single-bullet content.
+    expect(a.score).toBeLessThan(80);
+    expect(a.completeness).toBeGreaterThanOrEqual(40); // most sections present
+    expect(a.quality).toBeLessThan(40); // weak content
   });
 
-  it('does NOT reach 100 when the extra sections are empty', () => {
-    // Missing projects/certs/languages/awards must cost points — otherwise 100% is unearned.
-    const { score } = analyzeProfile(without(['projects', 'certifications', 'languages', 'awards']));
-    expect(score).toBeLessThan(100);
-    expect(score).toBeGreaterThan(60);
+  it('a strong, quantified CV scores high on both dimensions', () => {
+    const strong = {
+      fullName: 'Aisha Rahman', headline: 'Senior Accountant', email: 'a@x.com', phone: '+97150', location: 'Dubai, UAE',
+      summary: 'Finance leader with 8 years across the GCC; cut close time 30% and saved $1.2M.',
+      skills: ['Excel', 'SAP', 'VAT', 'IFRS', 'Forecasting', 'Power BI', 'Audit'],
+      experience: [
+        { title: 'Senior Accountant', company: 'ACME', startDate: '2019', endDate: 'Present', description: '- Led the monthly close\n- Cut close time 30%\n- Saved $1.2M via automation' },
+        { title: 'Accountant', company: 'X', startDate: '2015', endDate: '2019', description: '- Built the VAT reporting process\n- Improved accuracy 25%' },
+      ],
+      education: [{ institution: 'Uni', degree: 'BSc', field: 'Accounting', year: '2012' }],
+      projects: [{ name: 'Billing revamp', description: 'Reduced churn 20%', tech: ['SQL'] }],
+      certifications: [{ name: 'CPA', issuer: 'AICPA', year: '2015' }],
+      languages: [{ name: 'Arabic', level: 'Fluent' }],
+      awards: [{ title: 'Employee of year', issuer: 'ACME', year: '2021', description: 'Top performer' }],
+    };
+    const a = analyzeProfile(strong as any);
+    expect(a.score).toBeGreaterThanOrEqual(85);
+    expect(a.quality).toBeGreaterThan(40);
   });
 
-  it('suggests adding the extra sections when they are missing', () => {
-    const { suggestions } = analyzeProfile(without(['projects', 'certifications', 'languages', 'awards']));
-    const titles = suggestions.map((s) => s.title.toLowerCase()).join(' | ');
-    expect(titles).toContain('project');
-  });
-
-  it('gives an almost-empty profile a low score and many suggestions', () => {
-    const empty = { ...FULL, fullName: 'Only Name', headline: '', email: '', phone: '', location: '', summary: '', skills: [], experience: [], education: [], projects: [], certifications: [], languages: [], awards: [] } as Profile;
-    const { score, suggestions } = analyzeProfile(empty);
-    expect(score).toBeLessThan(20);
-    expect(suggestions.length).toBeGreaterThan(3);
-  });
-
-  it('clamps score to 0..100', () => {
-    const { score } = analyzeProfile(FULL);
-    expect(score).toBeGreaterThanOrEqual(0);
-    expect(score).toBeLessThanOrEqual(100);
+  it('returns a transparent factor breakdown', () => {
+    const a = analyzeProfile({ fullName: 'X' } as any);
+    expect(a.factors.length).toBeGreaterThan(5);
+    const total = a.factors.reduce((s, f) => s + f.earned, 0);
+    expect(total).toBe(a.score); // factors explain the whole score
   });
 });

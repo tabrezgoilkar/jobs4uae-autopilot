@@ -1,5 +1,6 @@
 import type { ReactElement } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { useClerk } from '@clerk/clerk-react';
 import { IconHome, IconUser, IconBars, IconSearch, IconSend, IconSparkle, IconSettings } from './icons';
 
 // In the cloud build, hide features that aren't online yet (Tracker, Scan,
@@ -49,6 +50,7 @@ function NavItem({ to, label, Icon, active, onNavigate }: { to: string; label: s
 
 export default function Sidebar({ engine, open = false, onClose }: { engine: string | null; open?: boolean; onClose?: () => void }) {
   const { pathname } = useLocation();
+  const { signOut } = useClerk();
   const isActive = (to: string) => (to === '/' ? pathname === '/' : pathname === to || pathname.startsWith(to + '/'));
   const closeOnMobile = () => onClose?.();
 
@@ -98,6 +100,16 @@ export default function Sidebar({ engine, open = false, onClose }: { engine: str
             <div style={{ fontSize: 11, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{engine ? `AI · ${engine}` : 'AI not set up'}</div>
           </div>
           {engine && <span title="AI connected" style={{ width: 7, height: 7, flex: 'none', borderRadius: '50%', background: 'var(--success)' }} />}
+          <button
+            type="button"
+            onClick={() => { signOut(); window.location.href = '/'; }}
+            title="Sign out"
+            aria-label="Sign out"
+            className="j4u-press text-ink-muted hover:text-ink-strong"
+            style={{ fontSize: 11.5, fontWeight: 600, padding: '4px 8px', borderRadius: 6, border: '1px solid var(--border-subtle)' }}
+          >
+            Sign out
+          </button>
         </div>
       </aside>
     </>

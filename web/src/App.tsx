@@ -13,6 +13,7 @@ import AutoApplyPage from './pages/AutoApplyPage';
 import UpskillPage from './pages/UpskillPage';
 import SettingsPage from './pages/SettingsPage';
 import ComingSoon from './pages/ComingSoon';
+import ErrorBoundary from './components/ErrorBoundary';
 import { useIsMobile } from './mobile/useIsMobile';
 import MobileApp from './mobile/MobileApp';
 
@@ -70,18 +71,20 @@ export default function App() {
   return (
     <BrowserRouter>
       <AppShell engine={config.engine}>
-        <Routes>
-          <Route path="/" element={<Dashboard config={config} />} />
-          <Route path="/profile" element={<ProfilePage />} />
-          <Route path="/evaluate" element={<EvaluatePage />} />
-          {/* Documents was merged into Evaluate; redirect old links. */}
-          <Route path="/documents/*" element={<Navigate to="/evaluate" replace />} />
-          <Route path="/tracker" element={IS_CLOUD ? <ComingSoon title="Tracker" kind="soon" /> : <TrackerPage />} />
-          <Route path="/scan" element={<ScanPage />} />
-          <Route path="/upskill" element={<UpskillPage />} />
-          <Route path="/auto-apply" element={<AutoApplyPage />} />
-          <Route path="/settings" element={<SettingsPage />} />
-        </Routes>
+        <ErrorBoundary>
+          <Routes>
+            <Route path="/" element={<Dashboard config={config} />} />
+            <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/evaluate" element={<EvaluatePage />} />
+            {/* Documents was merged into Evaluate; redirect old links. */}
+            <Route path="/documents/*" element={<Navigate to="/evaluate" replace />} />
+            <Route path="/tracker" element={IS_CLOUD ? <ComingSoon title="Tracker" kind="soon" /> : <TrackerPage />} />
+            <Route path="/scan" element={<ScanPage />} />
+            <Route path="/upskill" element={<UpskillPage />} />
+            <Route path="/auto-apply" element={<AutoApplyPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
+          </Routes>
+        </ErrorBoundary>
       </AppShell>
     </BrowserRouter>
   );

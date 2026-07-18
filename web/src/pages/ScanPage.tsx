@@ -8,10 +8,12 @@ import {
   estimateSalary,
   listBoards,
   optimizeResume,
+  researchCompany,
   type Board,
   type Listing,
   type SalaryEstimate,
   type ResumeOptimization,
+  type CompanyBrief,
 } from '../features/scanner/scannerApi';
 import { matchJob } from '../features/scanner/match';
 import { getProfile, getFitScore, type Profile, type FitScore } from '../api';
@@ -540,6 +542,18 @@ function ScanCopilot({ sel, salary, fit, onEvaluate }: { sel: { listing?: Listin
     }
   }
 
+  const [brief, setBrief] = useState<{ busy: boolean; data: CompanyBrief | null; error: string | null }>({ busy: false, data: null, error: null });
+  async function runResearch() {
+    if (!listing.company) return;
+    setBrief({ busy: true, data: null, error: null });
+    try {
+      const data = await researchCompany(listing.company);
+      setBrief({ busy: false, data, error: null });
+    } catch (e) {
+      setBrief({ busy: false, data: null, error: e instanceof Error ? e.message : 'Could not research this company.' });
+    }
+  }
+
   return (
     <div>
       <div className="text-[13.5px] font-semibold text-ink-strong leading-snug truncate">{listing.title}</div>
@@ -655,6 +669,38 @@ function ScanCopilot({ sel, salary, fit, onEvaluate }: { sel: { listing?: Listin
                   <div>
                     <div className="text-[10px] font-bold uppercase tracking-wide text-ink-muted mb-1.5">ATS keywords to add</div>
                     <div className="flex flex-wrap gap-1.5">{opt.data.keywords_for_ats.slice(0, 10).map((s, i) => <span key={i} className="text-[11px] font-medium px-2.5 py-0.5 rounded-pill bg-surface-sunken text-ink-secondary">{s}</span>)}</div>
+                  </div>
+                )}
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={runResearch}
+              disabled={brief.busy || !listing.company}
+              className="inline-flex items-center justify-center gap-1.5 h-10 rounded-md border border-hair bg-surface text-ink-strong text-[13px] font-semibold j4u-press j4u-focus hover:bg-surface-sunken transition-colors disabled:opacity-60"
+            >
+              <IconSparkle size={15} />{brief.busy ? 'Researching…' : listing.company ? `Research ${listing.company}` : 'Research company'}
+            </button>
+            {brief.error && <p role="alert" className="text-xs text-danger-text">{brief.error}</p>}
+            {brief.data && (
+              <div className="mt-1 space-y-3">
+                {brief.data.snapshot && <p className="text-[12px] text-ink-secondary leading-snug">{brief.data.snapshot}</p>}
+                {brief.data.market_position && (
+                  <div>
+                    <div className="text-[10px] font-bold uppercase tracking-wide text-ink-muted mb-1">Market position</div>
+                    <p className="text-[11.5px] text-ink-secondary leading-snug">{brief.data.market_position}</p>
+                  </div>
+                )}
+                {brief.data.culture_signals?.length > 0 && (
+                  <div>
+                    <div className="text-[10px] font-bold uppercase tracking-wide text-ink-muted mb-1.5">Culture signals</div>
+                    <div className="flex flex-wrap gap-1.5">{brief.data.culture_signals.map((s, i) => <span key={i} className="text-[11px] font-medium px-2.5 py-0.5 rounded-pill bg-surface-sunken text-ink-secondary">{s}</span>)}</div>
+                  </div>
+                )}
+                {brief.data.interview_questions?.length > 0 && (
+                  <div>
+                    <div className="text-[10px] font-bold uppercase tracking-wide text-ink-muted mb-1.5">Likely interview questions</div>
+                    <ul className="list-disc pl-4 space-y-1 text-[11.5px] text-ink-secondary">{brief.data.interview_questions.map((q, i) => <li key={i}>{q}</li>)}</ul>
                   </div>
                 )}
               </div>

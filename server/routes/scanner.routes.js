@@ -8,6 +8,30 @@ import { htmlToJobText } from '../scanner/extract.js';
 import { assertFetchableUrl } from '../lib/ssrf.js';
 import { extractJdSkills } from '../ai/jdSkills.js';
 import { optimizeResume } from '../apply/resumeOptimize.js';
+import { researchCompany } from '../apply/companyResearch.js';
+
+/**
+ * Extract a LinkedIn numeric job id from a pasted job URL, or null if it isn't
+ * a recognizable LinkedIn posting link. Handles the common shapes:
+ *   linkedin.com/jobs/view/<id>
+ *   linkedin.com/jobs/search/?currentJobId=<id>
+ *   linkedin.com/jobs/collections/...?jobId=<id>
+ */
+function linkedInJobId(url) {
+  try {
+    const u = new URL(url);
+    if (!/(^|\.)linkedin\.com$/i.test(u.hostname)) return null;
+    const view = u.pathname.match(/\/jobs\/view\/(\d{6,})/i);
+    if (view) return view[1];
+    const current = u.searchParams.get('currentJobId');
+    if (current && /^\d{6,}$/.test(current)) return current;
+    const jobId = u.searchParams.get('jobId');
+    if (jobId && /^\d{6,}$/.test(jobId)) return jobId;
+    return null;
+  } catch {
+    return null;
+  }
+}
 
 export function scannerRouter({ cloud = false } = {}) {
   const router = Router();
@@ -55,6 +79,26 @@ export function scannerRouter({ cloud = false } = {}) {
       const profile = await loadProfile(req.userId);
       const suggestions = await optimizeResume({ profile, jobText, engine });
       res.json(suggestions);
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  /**
+   * POST /api/scanner/company-research
+   * Body: { company }
+   * Returns a concise, honest company briefing + likely interview questions.
+   * Cloud-safe (engine-backed, setup-wizard gated). No separate search key needed.
+   */
+  router.post('/scanner/company-research', async (req, res) => {
+    try {
+      const company = (req.body?.company ?? '').toString().trim();
+      if (!company) return res.status(400).json({ error: 'Please provide a company name.' });
+      const config = await loadConfig(req.userId);
+      if (!config.setupComplete) return res.status(409).json({ error: 'Please complete the AI setup wizard first.' });
+      const engine = createEngine(config);
+      const brief = await researchCompany({ company, engine });
+      res.json(brief);
     } catch (e) {
       res.status(500).json({ error: e.message });
     }
@@ -118,12 +162,35 @@ export function scannerRouter({ cloud = false } = {}) {
    * On the cloud app this needs a browser, so it is unavailable there.
    */
   router.post('/scanner/fetch-job', async (req, res) => {
-    if (cloud) {
-      return res.status(501).json({ error: 'Opening a raw job link needs the local desktop app (a browser). Use the LinkedIn or FreeHire board search on the web app instead.' });
-    }
     const url = (req.body?.url ?? '').toString().trim();
     if (!/^https?:\/\/\S+$/i.test(url)) {
       return res.status(400).json({ error: 'Please paste a valid job link (starting with http).' });
+    }
+
+    // Cloud-safe fast path: a pasted LinkedIn job URL works from datacenter IPs
+    // via the public jobs-guest detail API (no browser needed). This is the most
+    // common case for UAE jobseekers, so route it before the desktop-only branch.
+    const liJobId = cloud ? linkedInJobId(url) : null;
+    if (liJobId) {
+      try {
+        const detail = await fetchJobDetail(liJobId);
+        if (!detail || !detail.description) {
+          return res.status(422).json({ error: "Couldn't read that LinkedIn posting. It may be expired or private — try the LinkedIn board search instead." });
+        }
+        return res.json({
+          jobText: detail.description,
+          source: 'linkedin',
+          title: detail.title,
+          company: detail.company,
+          location: detail.location,
+        });
+      } catch (e) {
+        return res.status(502).json({ error: `Couldn't open that LinkedIn posting (${e.message}). Try the LinkedIn board search instead.` });
+      }
+    }
+
+    if (cloud) {
+      return res.status(501).json({ error: 'Opening a raw job link from other sites needs the local desktop app (a browser). Use the LinkedIn or FreeHire board search on the web app instead — or paste the description text via your CV tools.' });
     }
     // SSRF guard: only fetch public hosts — never loopback/private/link-local/metadata.
     let pin;

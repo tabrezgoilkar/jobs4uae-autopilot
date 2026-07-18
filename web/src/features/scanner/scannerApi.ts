@@ -129,6 +129,23 @@ export async function optimizeResume(jobText: string): Promise<ResumeOptimizatio
   return apiJson<ResumeOptimization>(res);
 }
 
+export interface CompanyBrief {
+  snapshot: string;
+  market_position: string;
+  culture_signals: string[];
+  interview_questions: string[];
+}
+
+/** Concise, honest company briefing + interview questions. Cloud-safe. */
+export async function researchCompany(company: string): Promise<CompanyBrief> {
+  const res = await fetch('/api/scanner/company-research', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ company }),
+  });
+  return apiJson<CompanyBrief>(res);
+}
+
 /**
  * Evaluate a listing by composing job text from listing fields
  * and posting to /api/evaluate.

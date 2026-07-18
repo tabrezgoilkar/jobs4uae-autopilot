@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { CLOUD_BOARDS, allBoards, scan, scanAll, BROWSER_UA } from '../scanner/engine.js';
 import { fetchJobDetail } from '../scanner/boards/linkedin.js';
 import { loadConfig } from '../config/store.js';
+import { loadProfile } from '../profile/store.js';
 import { createEngine } from '../ai/index.js';
 import { estimateSalary } from '../scanner/salary.js';
 import { htmlToJobText } from '../scanner/extract.js';

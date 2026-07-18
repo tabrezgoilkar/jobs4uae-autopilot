@@ -206,6 +206,19 @@ export default function ScanPage() {
     setPicked(new Set());
   }
 
+  // Deterministic per-listing match (blacklist flag + "why it fits" reason),
+  // derived from the profile. Computed client-side so results show instantly and
+  // the cloud build needs no extra round-trip. Mirrors server/evaluate/match.js.
+  // Declared BEFORE blockedCount/ranked because those reference `matches` during
+  // render (a later `const` would be a temporal-dead-zone ReferenceError).
+  const matches = useMemo(() => {
+    const map: Record<string, { blocked: boolean; reason: string }> = {};
+    if (profile) {
+      for (const l of listings) map[l.url] = matchJob(profile, l);
+    }
+    return map;
+  }, [profile, listings]);
+
   // Ranked: evaluated jobs first (by fit), then the rest in scan order.
   // Blocked companies are filtered out of the main list (they're flagged + counted).
   const blockedCount = profile ? listings.filter((l) => matchJob(profile, l).blocked).length : 0;
@@ -218,18 +231,6 @@ export default function ScanPage() {
   });
   const canScan = keyword.trim().length > 0 && !scanning;
   const sel = selected ? { listing: listings.find((l) => l.url === selected), row: rows[selected] } : null;
-
-  // Deterministic per-listing match (blacklist flag + "why it fits" reason),
-  // derived from the profile. Computed client-side so results show instantly and
-  // the cloud build needs no extra round-trip. Mirrors server/evaluate/match.js.
-  const matches = useMemo(() => {
-    const map: Record<string, { blocked: boolean; reason: string }> = {};
-    if (profile) {
-      for (const l of listings) map[l.url] = matchJob(profile, l);
-    }
-    return map;
-  }, [profile, listings]);
-
   // Auto-fetch a salary benchmark once a job is selected + evaluated.
   useEffect(() => {
     if (!sel?.listing || !sel.row?.result) return;

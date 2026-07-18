@@ -1,14 +1,8 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
-// TEMP DIAGNOSTIC: unminified + sourcemaps so the production TDZ error shows
-// the real variable name + file:line. Revert to minified after the fix.
 export default defineConfig({
   plugins: [react()],
-  build: {
-    minify: false,
-    sourcemap: true,
-  },
   server: {
     port: 5173,
     open: true,

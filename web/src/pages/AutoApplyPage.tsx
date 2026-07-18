@@ -2,22 +2,14 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   getConfig,
-  getConnections,
-  connectBoard,
-  confirmBoard,
-  disconnectBoard,
   getApplicationDetails,
   saveApplicationDetails,
-  applyStart,
-  applyAnswer,
   composeEmail,
   draftApplication,
   getReviewQueue,
   resolveReviewItem,
   clearReviewQueue,
-  type Connection,
   type ApplicationFields,
-  type PendingQuestion,
   type EmailDraft,
   type ApplyDraft,
   type ReviewQueueItem,
@@ -60,20 +52,9 @@ function BriefcaseIcon({ className = '' }: { className?: string }) {
 }
 
 export default function AutoApplyPage() {
-  const [connections, setConnections] = useState<Connection[]>([]);
-  const [phase, setPhase] = useState<'idle' | 'connecting' | 'awaiting-login'>('idle');
   const [form, setForm] = useState<ApplicationFields>(EMPTY_FIELDS);
   const [savingDetails, setSavingDetails] = useState(false);
   const [detailsMsg, setDetailsMsg] = useState<string | null>(null);
-
-  // apply workspace
-  const [jobUrl, setJobUrl] = useState('');
-  const [starting, setStarting] = useState(false);
-  const [filledCount, setFilledCount] = useState<number | null>(null);
-  const [pending, setPending] = useState<PendingQuestion[]>([]);
-  const [answers, setAnswers] = useState<Record<string, string>>({});
-  const [applyError, setApplyError] = useState<string | null>(null);
-  const [savingAnswers, setSavingAnswers] = useState(false);
 
   // confidence-gated "Needs review" queue (low-confidence answers not submitted)
   const [reviewItems, setReviewItems] = useState<ReviewQueueItem[]>([]);
@@ -87,11 +68,7 @@ export default function AutoApplyPage() {
   const [draft, setDraft] = useState<EmailDraft | null>(null);
   const [emailError, setEmailError] = useState<string | null>(null);
 
-  const indeed = connections.find((c) => c.id === 'indeed');
-  const connected = !!indeed?.connected;
-
   useEffect(() => {
-    getConnections().then(setConnections).catch(() => {});
     Promise.all([getApplicationDetails().catch(() => null), getConfig().catch(() => null)]).then(([d, cfg]) => {
       const fields = { ...EMPTY_FIELDS, ...(d?.fields ?? {}) };
       // Seed blanks from the Settings application details, if any, so nothing is re-typed.
@@ -103,57 +80,6 @@ export default function AutoApplyPage() {
     });
     getReviewQueue().then((q) => setReviewItems(q.items)).catch(() => {});
   }, []);
-
-  async function onConnect() {
-    setPhase('connecting');
-    try {
-      await connectBoard('indeed');
-      setPhase('awaiting-login'); // a login window opened; user logs in there
-    } catch {
-      setPhase('idle');
-    }
-  }
-  async function onConfirm() {
-    try {
-      setConnections(await confirmBoard('indeed'));
-    } finally {
-      setPhase('idle');
-    }
-  }
-  async function onDisconnect() {
-    setConnections(await disconnectBoard('indeed'));
-    setFilledCount(null); setPending([]); setAnswers({});
-  }
-
-  async function onStart() {
-    if (!jobUrl.trim()) return;
-    setStarting(true); setApplyError(null); setFilledCount(null); setPending([]);
-    try {
-      const res = await applyStart({ board: 'indeed', jobUrl: jobUrl.trim() });
-      setFilledCount(res.filledCount);
-      setPending(res.pending);
-      setAnswers(Object.fromEntries(res.pending.map((q) => [q.id, q.draft ?? ''])));
-    } catch (e) {
-      setApplyError(e instanceof Error ? e.message : 'Could not start the application.');
-    } finally {
-      setStarting(false);
-    }
-  }
-
-  async function onSubmitAnswers() {
-    const filled = pending.filter((q) => (answers[q.id] ?? '').trim()).map((q) => ({ id: q.id, answer: answers[q.id].trim() }));
-    if (filled.length === 0) return;
-    setSavingAnswers(true); setApplyError(null);
-    try {
-      const { remaining } = await applyAnswer({ board: 'indeed', answers: filled });
-      setPending(remaining);
-      setAnswers(Object.fromEntries(remaining.map((q) => [q.id, q.draft ?? ''])));
-    } catch (e) {
-      setApplyError(e instanceof Error ? e.message : 'Could not fill those answers.');
-    } finally {
-      setSavingAnswers(false);
-    }
-  }
 
   async function onResolveReview(id: string) {
     const edited = editingReview[id] ?? '';
@@ -242,12 +168,15 @@ export default function AutoApplyPage() {
         </div>
       </div>
 
-      {/* Connections */}
+      {/* Connections — desktop companion only. On the cloud/website build there is
+          no headed browser, so board auto-fill cannot run here. The Email-apply
+          and Tailor-CV sections below are the cloud-safe path. */}
       <section className="space-y-3">
         <div className="flex items-center justify-between gap-3">
-          <h2 className="text-sm font-bold text-ink-strong">Connections</h2>
-          <span className="text-[11.5px] text-ink-muted">Indeed is live · more rolling out</span>
+          <h2 className="text-sm font-bold text-ink-strong">Board auto-fill <span className="text-[11.5px] font-normal text-ink-muted">(desktop companion)</span></h2>
+          <span className="text-[11.5px] text-ink-muted">runs in the desktop app</span>
         </div>
+        <p className="text-[12px] text-ink-muted leading-snug">One-click board autofill opens a real browser and needs the desktop companion. On this website, use <b className="text-ink-secondary">Email apply</b> or <b className="text-ink-secondary">Tailor a CV</b> below — both work here.</p>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {BOARDS.map((b) => (
             <div key={b.id} className={`flex flex-col gap-3 rounded-md border p-4 transition-colors ${b.available ? 'border-hair-subtle bg-surface shadow-sm' : 'border-hair-subtle bg-surface-sunken'}`}>
@@ -257,83 +186,19 @@ export default function AutoApplyPage() {
                   <div className="text-[13.5px] font-semibold text-ink-strong truncate">{b.name}</div>
                   <div className="text-[11.5px] text-ink-muted truncate">{b.blurb}</div>
                 </div>
-                {b.available
-                  ? <Badge tone={connected ? 'success' : 'neutral'}>{connected ? 'connected' : 'live'}</Badge>
-                  : <Badge tone="neutral">coming soon</Badge>}
+                <Badge tone="neutral">desktop</Badge>
               </div>
 
               {!b.available && (
                 <button type="button" disabled aria-disabled className="inline-flex items-center justify-center h-9 rounded-md border border-hair-subtle text-ink-muted text-[12.5px] font-semibold cursor-not-allowed">Coming soon</button>
               )}
-              {b.available && connected && (
-                <button type="button" onClick={onDisconnect} className="j4u-chip inline-flex items-center justify-center h-9 rounded-md border border-hair text-ink-secondary text-[12.5px] font-semibold">Disconnect</button>
-              )}
-              {b.available && !connected && phase !== 'awaiting-login' && (
-                <button type="button" onClick={onConnect} disabled={phase === 'connecting'} className="inline-flex items-center justify-center gap-2 h-9 rounded-md bg-primary-600 text-white text-[12.5px] font-semibold j4u-press j4u-focus hover:bg-primary-700 transition-colors disabled:opacity-60">
-                  {phase === 'connecting' ? <><span className="inline-block w-3.5 h-3.5 rounded-full border-2 border-white border-t-transparent animate-spin" /> Opening…</> : 'Connect'}
-                </button>
-              )}
-              {b.available && !connected && phase === 'awaiting-login' && (
-                <div className="space-y-1.5">
-                  <p className="text-[11.5px] text-ink-secondary leading-snug">Log in to Indeed in the window that opened, then:</p>
-                  <button type="button" onClick={onConfirm} className="w-full inline-flex items-center justify-center h-9 rounded-md bg-success text-white text-[12.5px] font-semibold j4u-press">I've logged in</button>
-                </div>
+              {b.available && (
+                <button type="button" disabled aria-disabled className="inline-flex items-center justify-center h-9 rounded-md border border-hair-subtle text-ink-muted text-[12.5px] font-semibold cursor-not-allowed">Desktop only</button>
               )}
             </div>
           ))}
         </div>
       </section>
-
-      {/* Apply workspace — only once connected */}
-      {connected && (
-        <section className="space-y-3">
-          <h2 className="text-sm font-bold text-ink-strong">Apply to a job</h2>
-          <div className="rounded-md border border-hair-subtle bg-surface p-4 shadow-sm space-y-3">
-            <label className="block">
-              <span className={LABEL}>Indeed job URL</span>
-              <div className="mt-1 flex gap-2 flex-wrap">
-                <input className={`${FIELD} flex-1 min-w-[220px] mt-0`} placeholder="https://ae.indeed.com/viewjob?jk=…" value={jobUrl} onChange={(e) => setJobUrl(e.target.value)} />
-                <button onClick={onStart} disabled={starting || !jobUrl.trim()} className="inline-flex items-center justify-center gap-2 h-[38px] px-4 rounded-md bg-primary-600 text-white text-[12.5px] font-semibold j4u-press disabled:opacity-60">
-                  {starting ? 'Opening & filling…' : 'Open & autofill'}
-                </button>
-              </div>
-            </label>
-
-            {applyError && <p role="alert" className="text-sm rounded-md p-2.5 bg-danger-soft text-danger-text border border-danger-soft">{applyError}</p>}
-
-            {filledCount !== null && (
-              <div className="rounded-md border border-success-soft bg-success-soft text-success-text px-3 py-2 text-[12.5px]">
-                Filled {filledCount} field{filledCount === 1 ? '' : 's'} in the open window{pending.length > 0 ? ` · ${pending.length} question${pending.length === 1 ? '' : 's'} need you below.` : '.'}
-              </div>
-            )}
-
-            {pending.length > 0 && (
-              <div className="space-y-3">
-                <div className="text-[12.5px] font-semibold text-ink-strong">Answer these once — they'll be remembered:</div>
-                {pending.map((q) => (
-                  <label key={q.id} className="block">
-                    <span className={LABEL}>{q.label}{q.draft ? <span className="ml-2 text-[10px] font-semibold text-ai-700 uppercase tracking-wide">AI draft — review</span> : null}</span>
-                    {q.type === 'textarea' || q.draft ? (
-                      <textarea className={FIELD} rows={3} value={answers[q.id] ?? ''} onChange={(e) => setAnswers((a) => ({ ...a, [q.id]: e.target.value }))} />
-                    ) : (
-                      <input className={FIELD} value={answers[q.id] ?? ''} onChange={(e) => setAnswers((a) => ({ ...a, [q.id]: e.target.value }))} />
-                    )}
-                  </label>
-                ))}
-                <button onClick={onSubmitAnswers} disabled={savingAnswers} className="inline-flex items-center justify-center h-9 px-4 rounded-md bg-primary-600 text-white text-[12.5px] font-semibold j4u-press disabled:opacity-60">
-                  {savingAnswers ? 'Filling…' : 'Fill these into the form'}
-                </button>
-              </div>
-            )}
-
-            {filledCount !== null && pending.length === 0 && (
-              <div className="rounded-md j4u-grad-ai px-3 py-2.5 text-[12.5px] text-ink-strong font-medium flex items-center gap-2">
-                <IconSparkle size={15} color="var(--ai-600)" /> Everything's filled. Review the form in the browser window and click <b>Submit</b> yourself.
-              </div>
-            )}
-          </div>
-        </section>
-      )}
 
       {/* Confidence-gated "Needs review" queue — low-confidence answers were NOT submitted */}
       <section className="space-y-3">

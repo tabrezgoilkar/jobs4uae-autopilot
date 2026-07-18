@@ -60,11 +60,12 @@ export default function ScanPage() {
   useEffect(() => {
     listBoards()
       .then((live) => {
-        setBoards(live);
+        const safe = Array.isArray(live) ? live : [];
+        setBoards(safe);
         // On cloud, `live` contains only the cloud-safe boards. If the current
         // selection isn't among them, fall back to the first returned board.
-        if (!live.some((b) => b.id === selectedBoard)) {
-          const first = live[0];
+        if (!safe.some((b) => b.id === selectedBoard)) {
+          const first = safe[0];
           if (first) setSelectedBoard(first.id);
         }
       })

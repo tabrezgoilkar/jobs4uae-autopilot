@@ -432,7 +432,7 @@ function BasicsCard(c: EditorCtx) {
 
 /* ---------- Experience ---------- */
 function ExperienceCard(c: EditorCtx) {
-  const items = c.profile.experience;
+  const items = c.profile.experience ?? [];
   return (
     <Card title="Experience" action={<AddBtn onClick={() => c.addItem('experience', { company: '', title: '', startDate: '', endDate: '', description: '' }, 'exp')} />}>
       <div id="sec-experience" className="space-y-4 scroll-mt-20">
@@ -499,7 +499,7 @@ function ExperienceEditor({ c, x, i }: { c: EditorCtx; x: import('../api').Exper
 
 /* ---------- Education ---------- */
 function EducationCard(c: EditorCtx) {
-  const items = c.profile.education;
+  const items = c.profile.education ?? [];
   return (
     <Card title="Education" action={<AddBtn onClick={() => c.addItem('education', { institution: '', degree: '', field: '', year: '' }, 'edu')} />}>
       <div id="sec-education" className="space-y-4 scroll-mt-20">
@@ -528,7 +528,7 @@ function EducationCard(c: EditorCtx) {
 
 /* ---------- Projects ---------- */
 function ProjectsCard(c: EditorCtx) {
-  const items = c.profile.projects;
+  const items = c.profile.projects ?? [];
   return (
     <Card title="Projects" action={<AddBtn onClick={() => c.addItem('projects', { name: '', description: '', tech: [], url: '' }, 'proj')} />}>
       <div id="sec-projects" className="space-y-4 scroll-mt-20">
@@ -558,7 +558,7 @@ function ProjectsCard(c: EditorCtx) {
 
 /* ---------- Certifications ---------- */
 function CertificationsCard(c: EditorCtx) {
-  const items = c.profile.certifications;
+  const items = c.profile.certifications ?? [];
   return (
     <Card title="Certifications" action={<AddBtn onClick={() => c.addItem('certifications', { name: '', issuer: '', year: '', url: '' }, 'cert')} />}>
       <div id="sec-certifications" className="space-y-3 scroll-mt-20">
@@ -584,7 +584,7 @@ function CertificationsCard(c: EditorCtx) {
 
 /* ---------- Languages ---------- */
 function LanguagesCard(c: EditorCtx) {
-  const items = c.profile.languages;
+  const items = c.profile.languages ?? [];
   return (
     <Card title="Languages" action={<AddBtn onClick={() => c.addItem('languages', { name: '', level: '' }, 'lang')} />}>
       <div id="sec-languages" className="space-y-3 scroll-mt-20">
@@ -608,7 +608,7 @@ function LanguagesCard(c: EditorCtx) {
 
 /* ---------- Awards ---------- */
 function AwardsCard(c: EditorCtx) {
-  const items = c.profile.awards;
+  const items = c.profile.awards ?? [];
   return (
     <Card title="Awards & honors" action={<AddBtn onClick={() => c.addItem('awards', { title: '', issuer: '', year: '', description: '' }, 'award')} />}>
       <div id="sec-awards" className="space-y-3 scroll-mt-20">

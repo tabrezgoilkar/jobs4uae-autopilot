@@ -25,7 +25,7 @@ export async function allBoards() {
 // Boards safe to expose on the cloud (Vercel) app — must NOT require a browser.
 export const CLOUD_BOARDS = REST_BOARDS;
 
-const BROWSER_UA =
+export const BROWSER_UA =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36';
 
 /** Plain server-side fetch for REST boards (no Playwright). Cached + UA-set. */
@@ -51,6 +51,30 @@ export async function fetchRest(url, { ttlMs = 60_000 } = {}) {
  * @param {object} [opts.req]     - Express request (used for cloud rate-limiting)
  * @param {boolean} [opts.cloud]  - when true, only rest boards are allowed
  */
+/**
+ * Scan ALL cloud-safe boards for a keyword and merge the results.
+ * Boards that fail (rate-limited, upstream error, not ready) are SILENTLY
+ * skipped — the user just gets whatever came back. Used by the simplified
+ * "Scan jobs" flow so there's no board picker and no "local only" noise.
+ *
+ * @returns {Promise<{ listings: object[], errors: string[] }>}
+ */
+export async function scanAll({ keyword, country, city, req, cloud = false } = {}) {
+  const boards = cloud ? CLOUD_BOARDS : await allBoards();
+  const errors = [];
+  const listings = [];
+  for (const board of boards) {
+    if (cloud && !board.rest) continue; // silently skip browser-only boards on cloud
+    try {
+      const { listings: found } = await scan({ board: board.id, keyword, country, city, req, cloud });
+      for (const l of found) listings.push(l);
+    } catch {
+      // Silent skip — not ready / failed; never block the other boards.
+    }
+  }
+  return { listings, errors };
+}
+
 export async function scan({ board: boardId, keyword, country, city, req, cloud = false }) {
   const boards = cloud ? CLOUD_BOARDS : await allBoards();
   const board = boards.find((b) => b.id === boardId);

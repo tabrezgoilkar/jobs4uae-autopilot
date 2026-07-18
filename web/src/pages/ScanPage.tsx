@@ -6,10 +6,8 @@ import {
   evaluateJobText,
   fetchJobFromUrl,
   estimateSalary,
-  listBoards,
   optimizeResume,
   researchCompany,
-  type Board,
   type Listing,
   type SalaryEstimate,
   type ResumeOptimization,
@@ -22,28 +20,22 @@ import { PageHeader, Button, Badge, GradeBadge, type Tone } from '../components/
 import { learningLinks } from '../lib/skills';
 import { IconSparkle } from '../components/icons';
 
-// The cloud build has no browser, so the "paste a job link" flow (which needs a
-// headed browser to open the URL) is unavailable there.
-const IS_CLOUD = !!import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
-
 const GCC_COUNTRIES = ['UAE', 'Saudi Arabia', 'Qatar', 'Kuwait', 'Bahrain', 'Oman'];
-// Boards the cloud app actually supports (no browser needed). Used as the
-// default board list on cloud so LinkedIn/FreeHire render as selectable
-// immediately — chip rendering must not depend on the auth-gated /boards call
-// succeeding (it 401s when the session cookie isn't sent yet).
-const CLOUD_BOARDS: Board[] = [
-  { id: 'linkedin', name: 'LinkedIn', status: 'experimental' },
-  { id: 'freehire', name: 'FreeHire', status: 'experimental' },
-];
-const BOARDS_STATIC: Board[] = IS_CLOUD ? CLOUD_BOARDS : [{ id: 'indeed', name: 'Indeed', status: 'verified' }];
-// Board chips shown in the design — Indeed is live; the rest are coming soon.
-const CHIP_BOARDS = [
-  { id: 'indeed', name: 'Indeed' },
-  { id: 'bayt', name: 'Bayt' },
-  { id: 'naukrigulf', name: 'Naukrigulf' },
-  { id: 'gulftalent', name: 'GulfTalent' },
-];
 const GRADE_PCT: Record<string, number> = { A: 92, B: 82, C: 68, D: 52, F: 35 };
+
+// Friendly label + tone for the source tag on each scanned/pasted job.
+const SOURCE_LABEL: Record<string, { label: string; tone: string }> = {
+  linkedin: { label: 'LinkedIn', tone: 'bg-[#e8f0fb] text-[#0a66c2] border-[#cfe1f7]' },
+  freehire: { label: 'FreeHire', tone: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+  indeed: { label: 'Indeed', tone: 'bg-blue-50 text-blue-700 border-blue-200' },
+};
+function sourceTag(source?: string) {
+  if (!source) return { label: 'Link', tone: 'bg-surface-sunken text-ink-muted border-hair-subtle' };
+  const known = SOURCE_LABEL[source];
+  if (known) return known;
+  // Unknown sources (company careers pages, ATS links, etc.) — show the host as-is.
+  return { label: source.length > 22 ? source.slice(0, 20) + '…' : source, tone: 'bg-surface-sunken text-ink-secondary border-hair-subtle' };
+}
 const FIELD = 'rounded-md border border-hair bg-surface text-ink p-2 text-sm j4u-focus placeholder:text-ink-muted disabled:opacity-60';
 const REC_TONE: Record<string, { label: string; tone: Tone }> = {
   apply: { label: 'Apply', tone: 'success' },
@@ -54,49 +46,11 @@ const REC_TONE: Record<string, { label: string; tone: Tone }> = {
 interface SalaryState { busy: boolean; data: SalaryEstimate | null; error: string | null; }
 
 export default function ScanPage() {
-  const initial = useMemo(() => loadScanState(defaultScanState(BOARDS_STATIC[0].id, GCC_COUNTRIES[0])), []);
+  const initial = useMemo(() => loadScanState(defaultScanState(GCC_COUNTRIES[0])), []);
 
   const [profile, setProfile] = useState<Profile | null>(null);
   useEffect(() => { getProfile().then(setProfile).catch(() => {}); }, []);
 
-  const [boards, setBoards] = useState<Board[]>(BOARDS_STATIC);
-  const [selectedBoard, setSelectedBoard] = useState(initial.board);
-  useEffect(() => {
-    listBoards()
-      .then((live) => {
-        const safe = Array.isArray(live) ? live : [];
-        setBoards(safe);
-        // On cloud, `live` contains only the cloud-safe boards. If the current
-        // selection isn't among them, fall back to the first returned board.
-        if (!safe.some((b) => b.id === selectedBoard)) {
-          const first = safe[0];
-          if (first) setSelectedBoard(first.id);
-        }
-      })
-      .catch(() => {});
-  }, []);
-
-  // On the cloud build, boards that need a headed browser (indeed, bayt, …) are
-  // not available. Clicking one shows an instructive "run locally" panel instead
-  // of submitting an invalid board and erroring.
-  // On the cloud, listBoards() returns ONLY the cloud-safe boards (LinkedIn,
-  // FreeHire). So "live/selectable" means "present in the boards the server
-  // returned" — not a hardcoded status string. A board the server didn't return
-  // (indeed, bayt, …) is local-only on cloud.
-  const selectedIsLocalOnly = IS_CLOUD && !boards.some((b) => b.id === selectedBoard);
-  const selectedBoardName = CHIP_BOARDS.find((b) => b.id === selectedBoard)?.name ?? selectedBoard;
-
-  // Chips = the boards the API reports as available (LinkedIn/FreeHire on cloud,
-  // all on desktop) PLUS the known browser-only boards (Indeed/Bayt/…) shown as
-  // "local" so users know they exist and how to get them. Deduped by id, live
-  // boards first.
-  const chips = useMemo(() => {
-    const known: Board[] = [...boards];
-    for (const b of CHIP_BOARDS) {
-      if (!known.some((x) => x.id === b.id)) known.push({ id: b.id, name: b.name, status: 'experimental' });
-    }
-    return known;
-  }, [boards]);
   const [keyword, setKeyword] = useState(initial.keyword);
   const [country, setCountry] = useState(initial.country);
   const [city] = useState(initial.city);
@@ -134,8 +88,8 @@ export default function ScanPage() {
   }
 
   useEffect(() => {
-    saveScanState({ board: selectedBoard, keyword, country, city, listings, rows, selected, hasScanned });
-  }, [selectedBoard, keyword, country, city, listings, rows, selected, hasScanned]);
+    saveScanState({ keyword, country, city, listings, rows, selected, hasScanned });
+  }, [keyword, country, city, listings, rows, selected, hasScanned]);
 
   function setRow(url: string, patch: Partial<RowState>) {
     setRows((prev) => ({ ...prev, [url]: { ...(prev[url] ?? { busy: false, result: null, error: null }), ...patch } }));
@@ -144,10 +98,9 @@ export default function ScanPage() {
   async function handleScan(e: React.FormEvent) {
     e.preventDefault();
     if (!keyword.trim() || scanning) return;
-    if (selectedIsLocalOnly) return; // local-only boards are blocked on cloud; the notice explains why
     setScanning(true); setScanError(null); setListings([]); setRows({}); setSelected(null); setHasScanned(false); setPicked(new Set());
     try {
-      const result = await scan({ board: selectedBoard, keyword: keyword.trim(), country, city: city.trim() || undefined });
+      const result = await scan({ keyword: keyword.trim(), country, city: city.trim() || undefined });
       setListings(result.listings);
       if (result.listings[0]) setSelected(result.listings[0].url);
       if (result.error && result.listings.length === 0) setScanError(result.error);
@@ -289,69 +242,14 @@ export default function ScanPage() {
                 <select id="scan-country" aria-label="GCC country" value={country} onChange={(e) => setCountry(e.target.value)} disabled={scanning} className={`${FIELD} flex-1 sm:w-36`}>
                   {GCC_COUNTRIES.map((c) => <option key={c} value={c}>{c}</option>)}
                 </select>
-                <Button type="submit" disabled={!canScan || selectedIsLocalOnly}>
+                <Button type="submit" disabled={!canScan}>
                   {scanning ? (<><span className="inline-block w-3.5 h-3.5 rounded-full border-2 border-white border-t-transparent animate-spin" /> Scanning…</>) : 'Scan new'}
                 </Button>
               </div>
             </div>
-            {/* Board chips — live boards (LinkedIn/FreeHire on cloud) are selectable;
-                browser-only boards (Indeed/Bayt/…) show as "local" with run-locally steps. */}
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-[11px] font-semibold uppercase tracking-wide text-ink-muted">Boards</span>
-              {chips.map((b) => {
-                // A board is selectable if it's in the server's returned list
-                // (on cloud that's only LinkedIn/FreeHire; on desktop it's all).
-                const live = boards.some((x) => x.id === b.id);
-                const active = selectedBoard === b.id;
-                const isLocalOnly = IS_CLOUD && !live;
-                return (
-                  <button
-                    key={b.id}
-                    type="button"
-                    onClick={() => setSelectedBoard(b.id)}
-                    aria-pressed={active}
-                    title={live ? `Search ${b.name}` : `${b.name} — local app only`}
-                    className={`inline-flex items-center gap-1.5 rounded-pill border px-3 py-1 text-[12px] font-semibold transition-colors j4u-focus ${
-                      active ? 'border-primary-600 bg-primary-50 text-primary-700'
-                      : live ? 'border-hair bg-surface text-ink-secondary hover:border-border-strong'
-                      : isLocalOnly ? 'border-amber-300 bg-amber-50 text-amber-700 hover:border-amber-400'
-                      : 'border-hair-subtle bg-surface-sunken text-ink-muted cursor-not-allowed'
-                    }`}
-                  >
-                    {b.name}
-                    {isLocalOnly && <span className="text-[10px] font-medium">local</span>}
-                    {!IS_CLOUD && !live && <span className="text-[10px] font-medium text-ink-muted">soon</span>}
-                  </button>
-                );
-              })}
-            </div>
           </form>
 
-          {selectedIsLocalOnly && (
-            <div className="rounded-md border border-amber-300 bg-amber-50 p-4 text-[13px] leading-relaxed text-amber-900">
-              <div className="flex items-start gap-2">
-                <span className="mt-0.5 grid place-items-center w-5 h-5 flex-none rounded-full bg-amber-200 text-amber-800 text-[11px] font-bold">!</span>
-                <div>
-                  <div className="font-bold">“{selectedBoardName}” scanning is a local-app feature</div>
-                  <p className="mt-1">
-                    Scanning {selectedBoardName} needs a headed browser, which can’t run on the hosted cloud.
-                    To use it, run Jobs4UAE on your own PC:
-                  </p>
-                  <pre className="mt-2 overflow-x-auto rounded bg-white/70 p-2 text-[12px] text-ink"><code>{`git clone https://github.com/tabrezgoilkar/jobs4uae-autopilot.git
-cd jobs4uae-autopilot
-npm install
-npm run dev          # opens http://localhost:5173
-npx playwright install chromium   # for Indeed/Bayt scanning`}</code></pre>
-                  <p className="mt-2 text-amber-800">
-                    On the cloud you can still scan <strong>LinkedIn</strong> and <strong>FreeHire</strong> directly above.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Paste a job link — needs a headed browser, unavailable on the cloud build */}
-          {!IS_CLOUD && (
+          {/* Paste a job link — now cloud-safe (server fetches + extracts text) */}
           <form onSubmit={handlePasteLink} aria-label="Paste a job link" className="bg-surface border border-hair-subtle rounded-md p-2 shadow-sm flex items-center gap-2">
             <span className="grid place-items-center w-9 h-9 flex-none rounded-md bg-surface-sunken text-ink-muted">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg>
@@ -373,7 +271,6 @@ npx playwright install chromium   # for Indeed/Bayt scanning`}</code></pre>
               {pasteBusy ? (<><span className="inline-block w-3.5 h-3.5 rounded-full border-2 border-white border-t-transparent animate-spin" /> Adding…</>) : (<><IconSparkle size={14} color="#fff" /> Add &amp; evaluate</>)}
             </button>
           </form>
-          )}
 
           {scanError && (
             <div role="alert" className="flex items-start gap-2.5 rounded-md bg-warning-soft border border-warning-soft px-3.5 py-3 text-warning-text text-[12.5px]">
@@ -438,7 +335,11 @@ npx playwright install chromium   # for Indeed/Bayt scanning`}</code></pre>
                         <span className="flex-1 min-w-0">
                           <span className="block text-[13.5px] font-semibold text-ink-strong truncate">{job.title}</span>
                           <span className="block text-xs text-ink-muted truncate">
-                            {[job.company, job.location].filter(Boolean).join(' · ')} · <span className="font-mono text-[11px]">{job.source}</span>{job.posted ? ` · ${job.posted}` : ''}
+                            {[job.company, job.location].filter(Boolean).join(' · ')}
+                            {(() => { const t = sourceTag(job.source); return (
+                              <span className={`ml-1.5 inline-flex items-center rounded-pill border px-1.5 py-px text-[10px] font-semibold align-middle ${t.tone}`}>{t.label}</span>
+                            ); })()}
+                            {job.posted ? ` · ${job.posted}` : ''}
                           </span>
                           {m ? (
                             <span className={`mt-0.5 block text-[11.5px] truncate ${blocked ? 'text-danger-text font-semibold' : 'text-ai-700'}`}>

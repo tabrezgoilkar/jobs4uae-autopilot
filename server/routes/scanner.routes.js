@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { CLOUD_BOARDS, allBoards, scan } from '../scanner/engine.js';
+import { CLOUD_BOARDS, allBoards, scan, scanAll, BROWSER_UA } from '../scanner/engine.js';
 import { fetchJobDetail } from '../scanner/boards/linkedin.js';
 import { loadConfig } from '../config/store.js';
 import { createEngine } from '../ai/index.js';
@@ -106,7 +106,9 @@ export function scannerRouter({ cloud = false } = {}) {
 
   /**
    * POST /api/scanner/scan
-   * Body: { board, keyword, country?, city? }
+   * Body: { keyword, country?, city?, board? }
+   * If `board` is omitted, scans ALL cloud-safe boards and merges results,
+   * silently skipping any board that fails (no "local only" noise).
    * Returns: { listings, error? }
    */
   router.post('/scanner/scan', async (req, res) => {
@@ -117,12 +119,15 @@ export function scannerRouter({ cloud = false } = {}) {
         return res.status(400).json({ error: 'Please enter a keyword to search for.' });
       }
 
-      const valid = cloud ? CLOUD_BOARDS : await allBoards();
-      const validIds = valid.map((b) => b.id).join(', ');
+      // No board → scan everything cloud-safe and merge.
       if (!board) {
-        return res.status(400).json({ error: `Unknown board. Valid options: ${validIds}.` });
+        const { listings } = await scanAll({ keyword: String(keyword).trim(), country, city, req, cloud });
+        return res.json({ listings, error: listings.length ? null : 'No openings found right now. Try a different keyword or country.' });
       }
+
+      const valid = cloud ? CLOUD_BOARDS : await allBoards();
       if (!valid.some((b) => b.id === board)) {
+        const validIds = valid.map((b) => b.id).join(', ');
         return res.status(400).json({ error: `Unknown board "${board}". Valid options: ${validIds}.` });
       }
 
@@ -190,7 +195,30 @@ export function scannerRouter({ cloud = false } = {}) {
     }
 
     if (cloud) {
-      return res.status(501).json({ error: 'Opening a raw job link from other sites needs the local desktop app (a browser). Use the LinkedIn or FreeHire board search on the web app instead — or paste the description text via your CV tools.' });
+      // Generic cloud-safe path: plain server-side fetch + HTML→text extraction.
+      // No browser needed. Works for any public posting (company careers pages,
+      // job boards, ATS links, etc.). Falls back gracefully if extraction fails.
+      try {
+        const pin = await assertFetchableUrl(url);
+        const resFetch = await fetch(url, {
+          headers: { 'user-agent': BROWSER_UA, accept: 'text/html,application/xhtml+xml,*/*' },
+          redirect: 'follow',
+        });
+        if (!resFetch.ok) throw new Error(`Upstream responded ${resFetch.status}`);
+        const html = await resFetch.text();
+        const jobText = htmlToJobText(html);
+        if (!jobText || jobText.length < 40) {
+          return res.status(422).json({ error: "Couldn't read a job description from that link. Open it in your browser and paste the text via your CV tools." });
+        }
+        let host = '';
+        try { host = new URL(url).hostname.replace(/^www\./, ''); } catch { /* keep blank */ }
+        return res.json({ jobText, source: host, title: '', company: '', location: '' });
+      } catch (e) {
+        const msg = e?.message === 'BLOCKED'
+          ? 'That site blocked the fetch (anti-bot). Open it in your browser and paste the description, or try another link.'
+          : 'Could not open that link. Check the URL and try again.';
+        return res.status(502).json({ error: msg });
+      }
     }
     // SSRF guard: only fetch public hosts — never loopback/private/link-local/metadata.
     let pin;

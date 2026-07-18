@@ -45,10 +45,13 @@ describe('cloud app', () => {
     expect(ids).not.toContain('indeed');
   });
 
-  it('raw fetch-job link is 501 on cloud (needs the desktop browser)', async () => {
+  it('raw fetch-job link is cloud-safe (no 501) — generic fetch extracts text', async () => {
     const { createCloudApp } = await import('../cloudApp.js');
+    // On the cloud, a non-LinkedIn URL no longer 501s; it goes through the
+    // server-side fetch + HTML→text extraction. example.com has no job text,
+    // so it returns a graceful 422 (not a 501 "needs desktop browser").
     const res = await request(createCloudApp()).post('/api/scanner/fetch-job').send({ url: 'https://example.com/job' });
-    expect(res.status).toBe(501);
+    expect(res.status).not.toBe(501);
   });
 
   it('exposes the cloud-safe email-compose route', async () => {

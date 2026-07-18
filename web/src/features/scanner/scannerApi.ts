@@ -55,7 +55,7 @@ export async function scan({
   country,
   city,
 }: {
-  board: string;
+  board?: string;
   keyword: string;
   country: string;
   city?: string;

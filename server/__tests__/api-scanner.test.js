@@ -101,13 +101,14 @@ describe('scanner API', () => {
       expect(res.body.error).toBeTruthy();
     });
 
-    it('returns 400 when board is missing', async () => {
+    it('scans all boards when board is omitted (simplified flow)', async () => {
       const { createApp } = await import('../app.js');
       const res = await request(createApp())
         .post('/api/scanner/scan')
         .send({ keyword: 'accountant' });
-      expect(res.status).toBe(400);
-      expect(res.body.error).toBeTruthy();
+      // No board → scan every available board and merge (silent skip on failure).
+      expect(res.status).toBe(200);
+      expect(Array.isArray(res.body.listings)).toBe(true);
     });
 
     it('returns 200 with {listings:[], error} when fetchHtml rejects (graceful failure)', async () => {

@@ -10,7 +10,6 @@ export interface RowState {
 }
 
 export interface ScanState {
-  board: string;
   keyword: string;
   country: string;
   city: string;
@@ -29,8 +28,8 @@ export function clearBusy(rows: Record<string, RowState>): Record<string, RowSta
   return out;
 }
 
-export function defaultScanState(board: string, country: string): ScanState {
-  return { board, keyword: '', country, city: '', listings: [], rows: {}, selected: null, hasScanned: false };
+export function defaultScanState(country: string): ScanState {
+  return { keyword: '', country, city: '', listings: [], rows: {}, selected: null, hasScanned: false };
 }
 
 export function loadScanState(fallback: ScanState): ScanState {

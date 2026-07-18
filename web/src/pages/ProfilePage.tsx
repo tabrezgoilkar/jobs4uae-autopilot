@@ -16,6 +16,7 @@ import { formatBullets } from '../lib/bullets';
 import LinkedinImportModal from '../components/LinkedinImportModal';
 import ProfileAssistant from '../components/ProfileAssistant';
 import CvExportModal from '../features/cv/CvExportModal';
+import FaqModal from '../components/FaqModal';
 
 const FIELD = 'mt-1 w-full rounded-md border border-hair bg-surface text-ink p-2 text-sm j4u-focus placeholder:text-ink-muted';
 const LABEL = 'text-[12.5px] font-medium text-ink-secondary';
@@ -33,6 +34,7 @@ export default function ProfilePage() {
   const [linkedinOpen, setLinkedinOpen] = useState(false);
   const [assistantOpen, setAssistantOpen] = useState(false);
   const [cvOpen, setCvOpen] = useState(false);
+  const [faqOpen, setFaqOpen] = useState(false);
   const [suggest, setSuggest] = useState<string[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -111,12 +113,24 @@ export default function ProfilePage() {
   async function onLinkedinApply(merged: Profile) {
     setLinkedinOpen(false);
     try {
-      const saved = await saveProfile(merged);
-      setProfile(saved);
+      await saveProfile(merged);
+      setProfile(merged);
       setMessage({ ok: true, text: 'LinkedIn details merged & saved.' });
     } catch {
       setProfile(merged);
       setMessage({ ok: false, text: 'Merged locally but could not save — press an Edit then Save to persist.' });
+    }
+  }
+
+  async function onFaqSave(faq: import('../api').FaqItem[]) {
+    if (!profile) return;
+    setFaqOpen(false);
+    try {
+      const saved = await saveProfile({ ...profile, faq });
+      setProfile(saved);
+      setMessage({ ok: true, text: 'FAQ bank saved.' });
+    } catch {
+      setMessage({ ok: false, text: 'Could not save FAQ bank.' });
     }
   }
 
@@ -166,6 +180,9 @@ export default function ProfilePage() {
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14 3H6v18h12V8z" /><path d="M14 3v5h5" /></svg>
             View / export CV
           </button>
+          <button type="button" onClick={() => setFaqOpen(true)} className="inline-flex items-center gap-2 h-9 px-3 rounded-md border border-hair text-ink-secondary text-xs font-semibold j4u-press">
+            FAQ bank
+          </button>
         </div>
       </Card>
 
@@ -182,12 +199,14 @@ export default function ProfilePage() {
           <CertificationsCard {...editor} />
           <LanguagesCard {...editor} />
           <AwardsCard {...editor} />
+          <BlockedCompaniesCard {...editor} />
         </div>
         <ProfileRail profile={profile} onFix={onFix} onImprove={() => setAssistantOpen(true)} />
       </div>
 
       {cvOpen && <CvExportModal profile={profile} onClose={() => setCvOpen(false)} />}
       {linkedinOpen && <LinkedinImportModal onApply={onLinkedinApply} onClose={() => setLinkedinOpen(false)} />}
+      {faqOpen && <FaqModal profile={profile} onClose={() => setFaqOpen(false)} onSave={onFaqSave} />}
       {assistantOpen && (
         <ProfileAssistant
           current={profile}
@@ -196,6 +215,63 @@ export default function ProfilePage() {
         />
       )}
     </div>
+  );
+}
+
+/* ---------- Blocked companies ---------- */
+function BlockedCompaniesCard(c: EditorCtx) {
+  const list = c.profile.blockedCompanies ?? [];
+  const [draft, setDraft] = useState('');
+  function add() {
+    const name = draft.trim();
+    if (!name || list.some((x) => x.toLowerCase() === name.toLowerCase())) {
+      setDraft('');
+      return;
+    }
+    c.patch({ blockedCompanies: [...list, name] });
+    c.saveEdit();
+    setDraft('');
+  }
+  function remove(name: string) {
+    c.patch({ blockedCompanies: list.filter((x) => x !== name) });
+    c.saveEdit();
+  }
+  return (
+    <Card title="Blocked companies" action={null}>
+      <div className="space-y-2.5">
+        <p className="text-[12px] text-ink-muted leading-snug">
+          Jobs from these companies are hidden and flagged as blocked in the scanner. Matching is case-insensitive (substring).
+        </p>
+        {list.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {list.map((name) => (
+              <span key={name} className="inline-flex items-center gap-1 rounded-full border border-danger-soft bg-danger-soft/50 px-2.5 py-0.5 text-xs text-danger-text">
+                {name}
+                <button type="button" onClick={() => remove(name)} aria-label={`Remove ${name} from blacklist`} className="ml-0.5 rounded-full hover:bg-danger-soft/80 j4u-focus">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5.6 5.6l12.8 12.8" /></svg>
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
+        {list.length === 0 && (
+          <p className="text-[12px] text-ink-muted">No companies blocked yet.</p>
+        )}
+        <div className="flex items-center gap-2">
+          <input
+            className={`${FIELD} flex-1`}
+            aria-label="Company to block"
+            placeholder="e.g. Acme Corp"
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); add(); } }}
+          />
+          <button type="button" onClick={add} disabled={!draft.trim()} className="j4u-press text-[12.5px] font-semibold text-white bg-primary-600 rounded-md px-3.5 h-9 disabled:opacity-60">
+            Block
+          </button>
+        </div>
+      </div>
+    </Card>
   );
 }
 

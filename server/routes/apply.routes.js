@@ -3,6 +3,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { loadDetails, saveDetails, rememberAnswer } from '../apply/answers/store.js';
+import { loadQueue, enqueueReview, resolveReview, clearQueue } from '../apply/answers/reviewQueue.js';
+import { gradeAnswer, gradeEvaluation } from '../apply/confidence.js';
 import * as connections from '../apply/connections/manager.js';
 import * as browser from '../apply/browser.js';
 import { getBoard } from '../apply/boards/index.js';
@@ -71,6 +73,43 @@ export function applyRouter() {
     try { res.json(await connections.disconnect(req.params.board)); } catch (e) { res.status(400).json({ error: e.message }); }
   });
 
+  // --- Confidence-gated auto-apply: deterministic grading + review queue (flagship) ---
+  // The confidence model grades every answer WITHOUT an LLM. These routes are
+  // purely storage/compute — no browser, no Playwright — so they are cloud-safe.
+  router.post('/apply/grade', (req, res) => {
+    try {
+      const { question, answerDraft, profile = {}, faq = [] } = req.body ?? {};
+      res.json(gradeAnswer(question, answerDraft, profile, faq));
+    } catch (e) { res.status(500).json({ error: e.message }); }
+  });
+
+  router.post('/apply/grade-evaluation', (req, res) => {
+    try {
+      const { answers = [], profile = {}, faq = [] } = req.body ?? {};
+      res.json(gradeEvaluation(answers, profile, faq));
+    } catch (e) { res.status(500).json({ error: e.message }); }
+  });
+
+  // "Needs review" queue — low-confidence answers that were NOT submitted.
+  router.get('/apply/review-queue', async (req, res) => {
+    try { res.json(await loadQueue(req.userId)); } catch (e) { res.status(500).json({ error: e.message }); }
+  });
+  router.post('/apply/review-queue', async (req, res) => {
+    try {
+      const { entries = [], jobUrl = '' } = req.body ?? {};
+      res.json(await enqueueReview(req.userId, entries, jobUrl));
+    } catch (e) { res.status(400).json({ error: e.message }); }
+  });
+  router.post('/apply/review-queue/resolve', async (req, res) => {
+    try {
+      const { id, answer } = req.body ?? {};
+      res.json(await resolveReview(req.userId, id, { answer }));
+    } catch (e) { res.status(400).json({ error: e.message }); }
+  });
+  router.post('/apply/review-queue/clear', async (req, res) => {
+    try { res.json(await clearQueue(req.userId)); } catch (e) { res.status(400).json({ error: e.message }); }
+  });
+
   // --- Apply flow ---
   router.post('/apply/start', async (req, res) => {
     try {
@@ -107,6 +146,18 @@ export function applyRouter() {
       const { adapter } = await browser.openJobPage(board, jobUrl);
       const result = await autofillJob(adapter, { board, profile, details, documents, job: jobUrl }, engine);
       setSession(boardId, { boardId, adapter, pending: result.pending });
+
+      // Confidence-gated: low-confidence answers are NOT submitted — they go to
+      // the "Needs review" queue for the human to confirm/edit instead.
+      const lowConfidence = result.pending.filter((p) => p.confidence === 'low' && p.draft);
+      if (lowConfidence.length > 0) {
+        await enqueueReview(req.userId, lowConfidence.map((p) => ({
+          id: p.id,
+          label: p.label,
+          answer: p.draft,
+          missingReference: p.missingReference ?? 'profile/FAQ',
+        })), jobUrl);
+      }
       res.json(result);
     } catch (e) {
       res.status(400).json({ error: e.message });

@@ -1,4 +1,5 @@
 import { matchQuestion } from './match.js';
+import { gradeAnswer } from './confidence.js';
 
 // Autofills a board's application form through an injected page `adapter` (so the
 // orchestration is unit-testable without a real browser). It fills mapped contact
@@ -37,14 +38,26 @@ export async function autofillJob(adapter, ctx, engine) {
   }
 
   // 3) Screening questions: fill what we can, surface the rest for the user.
+  //    Every answered question is graded with the deterministic confidence
+  //    model — high-confidence ('fill') answers are submitted; low-confidence
+  //    drafts are returned as pending for human review (never auto-submitted).
+  //    Grounded answers = verified memory + application-details fields.
+  const groundedAnswers = [
+    ...memory.map((m) => ({ label: m.questionLabel, answer: m.answer })),
+    ...Object.values(fields ?? {}).filter((v) => typeof v === 'string' && v.trim()).map((v) => ({ answer: v })),
+  ];
   const pending = [];
   const questions = (await adapter.detectQuestions()) ?? [];
   for (const q of questions) {
     const decision = await matchQuestion({ label: q.label }, { fields, memory, profile, job: ctx.job ?? '' }, engine);
-    if (decision.action === 'fill' && decision.answer) {
-      if (await adapter.fillField(q.selector, decision.answer)) filledCount++;
-    } else if (decision.action === 'draft') {
-      pending.push({ id: q.id, selector: q.selector, label: q.label, type: q.type, draft: decision.answer });
+    if ((decision.action === 'fill' || decision.action === 'draft') && decision.answer) {
+      const grade = gradeAnswer(q.label, decision.answer, profile, profile.faq ?? [], groundedAnswers);
+      if (grade.confidence === 'high') {
+        if (await adapter.fillField(q.selector, decision.answer)) filledCount++;
+      } else {
+        // Grounded answer could not be verified — route to review, do NOT submit.
+        pending.push({ id: q.id, selector: q.selector, label: q.label, type: q.type, draft: decision.answer, confidence: 'low', missingReference: grade.reference ?? 'profile/FAQ' });
+      }
     } else {
       pending.push({ id: q.id, selector: q.selector, label: q.label, type: q.type });
     }

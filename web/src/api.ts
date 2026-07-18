@@ -112,8 +112,15 @@ export interface Profile {
   languages: Language[];
   awards: Award[];
   links: string[];
+  // Company names the scanner should filter out / flag as blocked
+  // (case-insensitive substring match against a job's company).
+  blockedCompanies: string[];
+  // Auto-generated, grounded Q&A bank (editable + saved back by the user).
+  faq: FaqItem[];
   updatedAt: string | null;
 }
+
+export interface FaqItem { question: string; answer: string; }
 
 export async function getProfile(): Promise<Profile> {
   const res = await fetch('/api/profile').then(checkOk);
@@ -252,6 +259,22 @@ export async function buildBaseline(profile: Profile): Promise<BaselineResult> {
 }
 
 export interface AssistResult { reply: string; questions: string[]; proposed: Profile | null; }
+
+export interface FaqResult { faq: FaqItem[]; }
+/** Generate a grounded FAQ bank from the current profile (AI = phrasing only). */
+export async function generateFaq(): Promise<FaqResult> {
+  const res = await fetch('/api/profile/faq', { method: 'POST', headers: { 'content-type': 'application/json' } });
+  if (!res.ok) {
+    const b = await res.json().catch(() => ({ error: `Server error ${res.status}` }));
+    throw new Error(b.error || `Server error ${res.status}`);
+  }
+  return res.json();
+}
+/** Fetch the previously saved FAQ bank. */
+export async function getFaq(): Promise<FaqResult> {
+  const res = await fetch('/api/profile/faq').then(checkOk);
+  return res.json();
+}
 export async function assistProfile(message: string): Promise<AssistResult> {
   const res = await fetch('/api/profile/assist', {
     method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ message }),
@@ -295,6 +318,26 @@ export async function saveApplicationDetails(fields: Partial<ApplicationFields>)
   return (await fetch('/api/application-details', {
     method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ fields }),
   }).then(checkOk)).json();
+}
+
+export interface ReviewQueueItem { id: string; label: string; answer: string; confidence: string; missingReference: string; jobUrl: string; createdAt: string; }
+export interface ReviewQueueData { items: ReviewQueueItem[]; }
+
+export async function getReviewQueue(): Promise<ReviewQueueData> {
+  return (await fetch('/api/apply/review-queue').then(checkOk)).json();
+}
+export async function resolveReviewItem(id: string, answer?: string): Promise<ReviewQueueData> {
+  return readApply(await fetch('/api/apply/review-queue/resolve', {
+    method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id, answer }),
+  }));
+}
+export async function clearReviewQueue(): Promise<ReviewQueueData> {
+  return readApply(await fetch('/api/apply/review-queue/clear', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' }));
+}
+export async function gradeAnswers(answers: { label: string; answer: string }[], profile: unknown = {}, faq: unknown = []): Promise<{ submitted: unknown[]; review: unknown[] }> {
+  return readApply(await fetch('/api/apply/grade-evaluation', {
+    method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ answers, profile, faq }),
+  }));
 }
 
 async function readApply<T>(res: Response): Promise<T> {

@@ -4,6 +4,7 @@ import { loadProfile, saveProfile } from '../profile/store.js';
 import { extractText } from '../profile/extract.js';
 import { parseCvText } from '../profile/parse.js';
 import { assistProfile } from '../profile/assist.js';
+import { generateFaqBank } from '../profile/faq.js';
 import { normalizeProfile } from '../profile/schema.js';
 import { linkedinToProfile, looksLikeLinkedinExport } from '../profile/linkedin/map.js';
 import { fetchLinkedinJsonLd, isLinkedinProfileUrl } from '../profile/linkedin/fetchPublic.js';
@@ -76,6 +77,21 @@ export function profileRouter({ localLinkedinFetcher = null } = {}) {
   router.post('/', async (req, res) => {
     try {
       res.json(await saveProfile(req.userId, req.body ?? {}));
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // Generate a grounded FAQ bank from the current profile (AI = phrasing only).
+  // Returns { faq: FaqItem[] }. The client saves it back via POST / (profile.faq).
+  router.post('/faq', async (req, res) => {
+    try {
+      const config = await loadConfig(req.userId);
+      if (!config.setupComplete) return res.status(409).json({ error: 'Please complete the AI setup wizard first.' });
+      const profile = await loadProfile(req.userId);
+      const engine = createEngine(config);
+      const faq = await generateFaqBank(profile, engine);
+      res.json({ faq });
     } catch (e) {
       res.status(500).json({ error: e.message });
     }

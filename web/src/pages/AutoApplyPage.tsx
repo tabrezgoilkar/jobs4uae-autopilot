@@ -12,11 +12,15 @@ import {
   applyAnswer,
   composeEmail,
   draftApplication,
+  getReviewQueue,
+  resolveReviewItem,
+  clearReviewQueue,
   type Connection,
   type ApplicationFields,
   type PendingQuestion,
   type EmailDraft,
   type ApplyDraft,
+  type ReviewQueueItem,
 } from '../api';
 import { PageHeader, Badge } from '../components/ui';
 import { IconSparkle } from '../components/icons';
@@ -71,6 +75,11 @@ export default function AutoApplyPage() {
   const [applyError, setApplyError] = useState<string | null>(null);
   const [savingAnswers, setSavingAnswers] = useState(false);
 
+  // confidence-gated "Needs review" queue (low-confidence answers not submitted)
+  const [reviewItems, setReviewItems] = useState<ReviewQueueItem[]>([]);
+  const [editingReview, setEditingReview] = useState<Record<string, string>>({});
+  const [resolving, setResolving] = useState(false);
+
   // email-apply workspace
   const [emailJobText, setEmailJobText] = useState('');
   const [emailRecruiter, setEmailRecruiter] = useState('');
@@ -92,6 +101,7 @@ export default function AutoApplyPage() {
       }
       setForm(fields);
     });
+    getReviewQueue().then((q) => setReviewItems(q.items)).catch(() => {});
   }, []);
 
   async function onConnect() {
@@ -143,6 +153,23 @@ export default function AutoApplyPage() {
     } finally {
       setSavingAnswers(false);
     }
+  }
+
+  async function onResolveReview(id: string) {
+    const edited = editingReview[id] ?? '';
+    if (!edited.trim()) return;
+    setResolving(true);
+    try {
+      const q = await resolveReviewItem(id, edited.trim());
+      setReviewItems(q.items);
+      setEditingReview((e) => { const n = { ...e }; delete n[id]; return n; });
+    } finally {
+      setResolving(false);
+    }
+  }
+  async function onClearReview() {
+    setResolving(true);
+    try { setReviewItems((await clearReviewQueue()).items); } finally { setResolving(false); }
   }
 
   async function onSaveDetails() {
@@ -307,6 +334,41 @@ export default function AutoApplyPage() {
           </div>
         </section>
       )}
+
+      {/* Confidence-gated "Needs review" queue — low-confidence answers were NOT submitted */}
+      <section className="space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-sm font-bold text-ink-strong">Needs review</h2>
+          <span className="text-[11.5px] text-ink-muted">low-confidence answers — never auto-submitted</span>
+        </div>
+        <div className="rounded-md border border-warning-soft bg-surface p-4 shadow-sm space-y-3">
+          {reviewItems.length === 0 ? (
+            <p className="text-[12.5px] text-ink-muted">Nothing here. Low-confidence answers from apply passes land here for you to confirm or edit before they go on a form.</p>
+          ) : (
+            <>
+              {reviewItems.map((it) => (
+                <div key={it.id} className="rounded-md border border-hair-subtle bg-surface-sunken p-3 space-y-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="text-[12.5px] font-semibold text-ink-strong">{it.label}</span>
+                    <Badge tone="warning">low confidence</Badge>
+                  </div>
+                  <p className="text-[11.5px] text-ink-muted">Missing grounding: <code className="text-ink-secondary">{it.missingReference}</code></p>
+                  <label className="block">
+                    <span className={LABEL}>Review / edit the answer, then confirm</span>
+                    <textarea className={FIELD} rows={2} value={editingReview[it.id] ?? it.answer} onChange={(e) => setEditingReview((s) => ({ ...s, [it.id]: e.target.value }))} />
+                  </label>
+                  <div className="flex gap-2">
+                    <button onClick={() => onResolveReview(it.id)} disabled={resolving} className="inline-flex items-center justify-center h-8 px-3 rounded-md bg-primary-600 text-white text-[12px] font-semibold j4u-press disabled:opacity-60">
+                      {resolving ? 'Saving…' : 'Confirm & remove'}
+                    </button>
+                  </div>
+                </div>
+              ))}
+              <button onClick={onClearReview} disabled={resolving} className="j4u-chip inline-flex items-center justify-center h-9 rounded-md border border-hair text-ink-secondary text-[12.5px] font-semibold">Clear all</button>
+            </>
+          )}
+        </div>
+      </section>
 
       {/* Email-Apply — for "send your CV to hr@…" post-jobs (no board connection needed) */}
       <section className="space-y-3">

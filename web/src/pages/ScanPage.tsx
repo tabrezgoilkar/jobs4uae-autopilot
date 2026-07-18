@@ -11,6 +11,8 @@ import {
   type Listing,
   type SalaryEstimate,
 } from '../features/scanner/scannerApi';
+import { matchJob } from '../features/scanner/match';
+import { getProfile, type Profile } from '../api';
 import { loadScanState, saveScanState, defaultScanState, type RowState } from '../features/scanner/scanStore';
 import { PageHeader, Button, Badge, GradeBadge, type Tone } from '../components/ui';
 import { learningLinks } from '../lib/skills';
@@ -49,6 +51,9 @@ interface SalaryState { busy: boolean; data: SalaryEstimate | null; error: strin
 
 export default function ScanPage() {
   const initial = useMemo(() => loadScanState(defaultScanState(BOARDS_STATIC[0].id, GCC_COUNTRIES[0])), []);
+
+  const [profile, setProfile] = useState<Profile | null>(null);
+  useEffect(() => { getProfile().then(setProfile).catch(() => {}); }, []);
 
   const [boards, setBoards] = useState<Board[]>(BOARDS_STATIC);
   const [selectedBoard, setSelectedBoard] = useState(initial.board);
@@ -201,13 +206,28 @@ export default function ScanPage() {
   }
 
   // Ranked: evaluated jobs first (by fit), then the rest in scan order.
-  const ranked = [...listings].sort((a, b) => {
+  // Blocked companies are filtered out of the main list (they're flagged + counted).
+  const blockedCount = profile ? listings.filter((l) => matchJob(profile, l).blocked).length : 0;
+  const ranked = [...listings]
+    .filter((l) => !(profile && matches[l.url]?.blocked))
+    .sort((a, b) => {
     const fa = GRADE_PCT[(rows[a.url]?.result?.grade || '').toUpperCase()] ?? -1;
     const fb = GRADE_PCT[(rows[b.url]?.result?.grade || '').toUpperCase()] ?? -1;
     return fb - fa;
   });
   const canScan = keyword.trim().length > 0 && !scanning;
   const sel = selected ? { listing: listings.find((l) => l.url === selected), row: rows[selected] } : null;
+
+  // Deterministic per-listing match (blacklist flag + "why it fits" reason),
+  // derived from the profile. Computed client-side so results show instantly and
+  // the cloud build needs no extra round-trip. Mirrors server/evaluate/match.js.
+  const matches = useMemo(() => {
+    const map: Record<string, { blocked: boolean; reason: string }> = {};
+    if (profile) {
+      for (const l of listings) map[l.url] = matchJob(profile, l);
+    }
+    return map;
+  }, [profile, listings]);
 
   // Auto-fetch a salary benchmark once a job is selected + evaluated.
   useEffect(() => {
@@ -338,9 +358,16 @@ npx playwright install chromium   # for Indeed/Bayt scanning`}</code></pre>
           {hasScanned && !scanning && listings.length > 0 && (
             <>
               <div className="flex items-center justify-between px-0.5">
-                <span className="text-[13px] font-bold text-ink-strong">{listings.length} job{listings.length !== 1 ? 's' : ''} · auto-evaluated for you</span>
+                <span className="text-[13px] font-bold text-ink-strong">{ranked.length} job{ranked.length !== 1 ? 's' : ''} · auto-evaluated for you</span>
                 <span className="text-[11.5px] text-ink-muted">ranked by fit</span>
               </div>
+
+              {blockedCount > 0 && (
+                <div className="flex items-center gap-2 rounded-md border border-danger-soft bg-danger-soft/40 px-3 py-2 text-[12px] text-danger-text">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M5.6 5.6l12.8 12.8" /></svg>
+                  {blockedCount} job{blockedCount !== 1 ? 's' : ''} hidden — matched your company blacklist. Edit it on your profile.
+                </div>
+              )}
 
               {picked.size > 0 && (
                 <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-hair-subtle bg-surface px-3.5 py-2.5 shadow-sm">
@@ -360,10 +387,12 @@ npx playwright install chromium   # for Indeed/Bayt scanning`}</code></pre>
                   const isSel = selected === job.url;
                   const isPicked = picked.has(job.url);
                   const rec = r?.result ? (REC_TONE[r.result.recommendation] ?? { label: r.result.recommendation, tone: 'neutral' as Tone }) : null;
+                  const m = matches[job.url];
+                  const blocked = !!m?.blocked;
                   return (
                     <div
                       key={job.url}
-                      className={`flex items-center gap-2.5 rounded-md border px-3 py-3 transition-colors ${isSel ? 'border-primary-600 bg-primary-50' : 'border-hair-subtle bg-surface hover:border-border-strong'}`}
+                      className={`flex items-center gap-2.5 rounded-md border px-3 py-3 transition-colors ${isSel ? 'border-primary-600 bg-primary-50' : blocked ? 'border-danger-soft bg-danger-soft/40' : 'border-hair-subtle bg-surface hover:border-border-strong'}`}
                     >
                       <input
                         type="checkbox"
@@ -383,8 +412,15 @@ npx playwright install chromium   # for Indeed/Bayt scanning`}</code></pre>
                           <span className="block text-xs text-ink-muted truncate">
                             {[job.company, job.location].filter(Boolean).join(' · ')} · <span className="font-mono text-[11px]">{job.source}</span>{job.posted ? ` · ${job.posted}` : ''}
                           </span>
+                          {m ? (
+                            <span className={`mt-0.5 block text-[11.5px] truncate ${blocked ? 'text-danger-text font-semibold' : 'text-ai-700'}`}>
+                              {blocked ? `Blocked — ${job.company} is on your company blacklist` : m.reason}
+                            </span>
+                          ) : null}
                         </span>
-                        {rec ? <Badge tone={rec.tone}>{rec.label}</Badge> : (
+                        {blocked ? (
+                          <Badge tone="danger">Blocked</Badge>
+                        ) : rec ? <Badge tone={rec.tone}>{rec.label}</Badge> : (
                           <span className="text-[11.5px] font-semibold text-primary-700 shrink-0">{r?.busy ? '…' : 'Evaluate →'}</span>
                         )}
                       </button>

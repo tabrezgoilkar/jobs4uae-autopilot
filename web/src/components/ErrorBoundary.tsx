@@ -19,15 +19,17 @@ export default class ErrorBoundary extends Component<{ children: ReactNode }, St
 
   render() {
     if (this.state.error) {
+      const e = this.state.error;
+      const stack = (e as any)?.stack ? String((e as any).stack) : String(e);
       return (
         <div className="min-h-screen flex items-center justify-center p-6">
-          <div className="max-w-lg w-full rounded-md border border-danger-soft bg-surface p-5 shadow-sm space-y-3">
+          <div className="max-w-2xl w-full rounded-md border border-danger-soft bg-surface p-5 shadow-sm space-y-3">
             <div className="text-[14px] font-bold text-danger-text">Something broke on this page</div>
             <p className="text-[12.5px] text-ink-secondary leading-relaxed">
               The page hit an unexpected error and stopped rendering. Try reloading. If it keeps happening,
               your saved profile may contain data the page can’t display — re-open My profile and check the resume/CV section.
             </p>
-            <pre className="text-[11.5px] text-ink-muted whitespace-pre-wrap break-words rounded bg-surface-sunken p-2 max-h-40 overflow-auto">{String(this.state.error?.message || this.state.error)}</pre>
+            <pre className="text-[11.5px] text-ink-muted whitespace-pre-wrap break-words rounded bg-surface-sunken p-2 max-h-60 overflow-auto">{stack}</pre>
             <button
               type="button"
               onClick={() => window.location.reload()}

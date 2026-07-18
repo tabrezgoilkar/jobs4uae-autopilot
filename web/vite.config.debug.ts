@@ -1,8 +1,7 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
-// TEMP DIAGNOSTIC: unminified + sourcemaps so the production TDZ error shows
-// the real variable name + file:line. Revert to minified after the fix.
+// TEMP: unminified + sourcemaps for diagnosing the production TDZ crash.
 export default defineConfig({
   plugins: [react()],
   build: {

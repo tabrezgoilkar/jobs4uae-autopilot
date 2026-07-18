@@ -7,12 +7,14 @@ import {
   fetchJobFromUrl,
   estimateSalary,
   listBoards,
+  optimizeResume,
   type Board,
   type Listing,
   type SalaryEstimate,
+  type ResumeOptimization,
 } from '../features/scanner/scannerApi';
 import { matchJob } from '../features/scanner/match';
-import { getProfile, type Profile } from '../api';
+import { getProfile, getFitScore, type Profile, type FitScore } from '../api';
 import { loadScanState, saveScanState, defaultScanState, type RowState } from '../features/scanner/scanStore';
 import { PageHeader, Button, Badge, GradeBadge, type Tone } from '../components/ui';
 import { learningLinks } from '../lib/skills';
@@ -115,6 +117,20 @@ export default function ScanPage() {
   // Salary benchmark cache, keyed by listing url.
   const [salaries, setSalaries] = useState<Record<string, SalaryState>>({});
 
+  // Deterministic weighted fit score (no AI) keyed by listing url — the
+  // transparent "where does the number come from" breakdown.
+  const [fitByUrl, setFitByUrl] = useState<Record<string, FitScore | null>>({});
+
+  async function fetchFit(url: string, jobText: string) {
+    if (!profile) return;
+    try {
+      const fit = await getFitScore(jobText);
+      setFitByUrl((prev) => ({ ...prev, [url]: fit }));
+    } catch {
+      /* fit is best-effort; never block the page on it */
+    }
+  }
+
   useEffect(() => {
     saveScanState({ board: selectedBoard, keyword, country, city, listings, rows, selected, hasScanned });
   }, [selectedBoard, keyword, country, city, listings, rows, selected, hasScanned]);
@@ -172,9 +188,16 @@ export default function ScanPage() {
   async function evalCore(listing: Listing) {
     const key = listing.url;
     setRow(key, { busy: true, error: null, result: null });
+    const jobText = [
+      listing.title && `Job Title: ${listing.title}`,
+      listing.company && `Company: ${listing.company}`,
+      listing.location && `Location: ${listing.location}`,
+      listing.url && `URL: ${listing.url}`,
+    ].filter(Boolean).join('\n');
     try {
       const result = await evaluateListing(listing);
       setRow(key, { busy: false, result, error: null });
+      void fetchFit(key, jobText);
     } catch (e) {
       setRow(key, { busy: false, result: null, error: e instanceof Error ? e.message : 'Evaluation failed.' });
     }
@@ -231,6 +254,7 @@ export default function ScanPage() {
   });
   const canScan = keyword.trim().length > 0 && !scanning;
   const sel = selected ? { listing: listings.find((l) => l.url === selected), row: rows[selected] } : null;
+  const fit = selected ? fitByUrl[selected] ?? null : null;
   // Auto-fetch a salary benchmark once a job is selected + evaluated.
   useEffect(() => {
     if (!sel?.listing || !sel.row?.result) return;
@@ -445,7 +469,7 @@ npx playwright install chromium   # for Indeed/Bayt scanning`}</code></pre>
             <span className="text-[13.5px] font-bold text-ink-strong">Copilot · fit &amp; tailor</span>
           </div>
           <div className="p-4">
-            <ScanCopilot sel={sel} salary={selected ? salaries[selected] : undefined} onEvaluate={evaluate} />
+            <ScanCopilot sel={sel} salary={selected ? salaries[selected] : undefined} fit={fit} onEvaluate={evaluate} />
           </div>
         </aside>
       </div>
@@ -453,16 +477,20 @@ npx playwright install chromium   # for Indeed/Bayt scanning`}</code></pre>
   );
 }
 
-function DimensionBar({ name, grade }: { name: string; grade: string }) {
-  const pct = GRADE_PCT[(grade || '').toUpperCase()] ?? 0;
+function DimensionBar({ name, grade, weight }: { name: string; grade: string | number; weight?: number }) {
+  // Accept either a letter grade (A–F) or a raw 0–100 number.
+  const pct = typeof grade === 'number'
+    ? Math.max(0, Math.min(100, grade))
+    : (GRADE_PCT[String(grade || '').toUpperCase()] ?? 0);
   const tone = pct >= 80 ? 'var(--success)' : pct >= 60 ? 'var(--warning)' : 'var(--danger)';
   return (
     <div className="flex items-center gap-2.5">
-      <span className="w-28 flex-none text-xs text-ink-secondary truncate">{name}</span>
+      <span className="w-32 flex-none text-xs text-ink-secondary truncate">{name}</span>
       <span className="flex-1 h-1.5 rounded-pill bg-surface-sunken overflow-hidden">
         <span className="block h-full rounded-pill" style={{ width: `${pct}%`, background: tone, transition: 'width 0.7s cubic-bezier(0.22,1,0.36,1)' }} />
       </span>
-      <span className="w-5 flex-none text-right text-[11px] font-bold text-ink-strong tabular-nums">{grade}</span>
+      <span className="w-9 flex-none text-right text-[11px] font-bold text-ink-strong tabular-nums">{typeof grade === 'number' ? `${Math.round(pct)}%` : grade}</span>
+      {weight != null && <span className="w-9 flex-none text-right text-[10px] text-ink-muted tabular-nums">{Math.round(weight * 100)}%</span>}
     </div>
   );
 }
@@ -488,13 +516,29 @@ function SalaryBenchmark({ salary, country }: { salary?: SalaryState; country?: 
   );
 }
 
-function ScanCopilot({ sel, salary, onEvaluate }: { sel: { listing?: Listing; row?: RowState } | null; salary?: SalaryState; onEvaluate: (l: Listing) => void }) {
+function ScanCopilot({ sel, salary, fit, onEvaluate }: { sel: { listing?: Listing; row?: RowState } | null; salary?: SalaryState; fit: FitScore | null; onEvaluate: (l: Listing) => void }) {
   if (!sel?.listing) {
     return <p className="text-[13px] text-ink-muted leading-relaxed">Run a scan or paste a job link, then pick a job on the left. I'll score its fit, break it down dimension by dimension, estimate the pay, and tailor your CV for it.</p>;
   }
   const { listing, row } = sel;
   const result = row?.result;
   const strong = result ? (GRADE_PCT[(result.grade || '').toUpperCase()] ?? 0) >= 80 : false;
+
+  const [opt, setOpt] = useState<{ busy: boolean; data: ResumeOptimization | null; error: string | null }>({ busy: false, data: null, error: null });
+  async function runOptimize() {
+    const jobText = [
+      listing?.title && `Job Title: ${listing.title}`,
+      listing?.company && `Company: ${listing.company}`,
+      listing?.location && `Location: ${listing.location}`,
+    ].filter(Boolean).join('\n');
+    setOpt({ busy: true, data: null, error: null });
+    try {
+      const data = await optimizeResume(jobText);
+      setOpt({ busy: false, data, error: null });
+    } catch (e) {
+      setOpt({ busy: false, data: null, error: e instanceof Error ? e.message : 'Could not generate suggestions.' });
+    }
+  }
 
   return (
     <div>
@@ -532,6 +576,32 @@ function ScanCopilot({ sel, salary, onEvaluate }: { sel: { listing?: Listing; ro
             </div>
           )}
 
+          {fit && (
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-[10px] font-bold uppercase tracking-wide text-ink-muted">Weighted fit (instant, no AI)</div>
+                <div className="text-[11px] font-bold text-ink-strong tabular-nums">{fit.score}% <span className="font-normal text-ink-muted">· {fit.verdict}</span></div>
+              </div>
+              <div className="flex flex-col gap-2">
+                {fit.dimensions.map((d, i) => <DimensionBar key={i} name={d.name} grade={d.score} weight={d.weight} />)}
+              </div>
+              <div className="flex items-center gap-3 mt-1.5 text-[9.5px] text-ink-muted">
+                <span>Bars = match score</span><span>Right = weight %</span>
+              </div>
+            </div>
+          )}
+
+          {fit?.missingSkills && fit.missingSkills.length > 0 && (
+            <div>
+              <div className="text-[10px] font-bold uppercase tracking-wide text-warning-text mb-1.5">Skills to build</div>
+              <div className="flex flex-wrap gap-1.5">
+                {fit.missingSkills.slice(0, 8).map((s) => (
+                  <span key={s} className="text-[11px] font-medium px-2.5 py-0.5 rounded-pill bg-warning-soft text-warning-text">{s}</span>
+                ))}
+              </div>
+            </div>
+          )}
+
           {result.missingSkills?.length > 0 && (
             <div>
               <div className="text-[10px] font-bold uppercase tracking-wide text-warning-text mb-1.5">Worth strengthening</div>
@@ -549,6 +619,46 @@ function ScanCopilot({ sel, salary, onEvaluate }: { sel: { listing?: Listing; ro
           </div>
 
           <div className="flex flex-col gap-2 pt-1">
+            <button
+              type="button"
+              onClick={runOptimize}
+              disabled={opt.busy}
+              className="inline-flex items-center justify-center gap-1.5 h-10 rounded-md border border-hair bg-surface text-ink-strong text-[13px] font-semibold j4u-press j4u-focus hover:bg-surface-sunken transition-colors disabled:opacity-60"
+            >
+              <IconSparkle size={15} />{opt.busy ? 'Analyzing your CV…' : 'Suggest CV improvements'}
+            </button>
+            {opt.error && <p role="alert" className="text-xs text-danger-text">{opt.error}</p>}
+            {opt.data && (
+              <div className="mt-1 space-y-3">
+                {opt.data.content_suggestions?.length > 0 && (
+                  <div>
+                    <div className="text-[10px] font-bold uppercase tracking-wide text-ink-muted mb-1.5">Rewrite suggestions</div>
+                    <div className="space-y-2">
+                      {opt.data.content_suggestions.slice(0, 6).map((s, i) => (
+                        <div key={i} className="rounded-md border border-hair bg-surface-sunken p-2.5">
+                          <div className="text-[11px] font-semibold text-ink-strong">{s.section}</div>
+                          <div className="mt-1 text-[11px] text-ink-muted line-through">{s.before}</div>
+                          <div className="text-[11.5px] text-ink-secondary">{s.after}</div>
+                          <div className="mt-1 text-[10.5px] text-ai-700">{s.rationale}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {opt.data.skills_to_highlight?.length > 0 && (
+                  <div>
+                    <div className="text-[10px] font-bold uppercase tracking-wide text-ink-muted mb-1.5">Skills to highlight</div>
+                    <div className="flex flex-wrap gap-1.5">{opt.data.skills_to_highlight.slice(0, 8).map((s, i) => <span key={i} className="text-[11px] font-medium px-2.5 py-0.5 rounded-pill bg-ai-soft text-ai-700">{s}</span>)}</div>
+                  </div>
+                )}
+                {opt.data.keywords_for_ats?.length > 0 && (
+                  <div>
+                    <div className="text-[10px] font-bold uppercase tracking-wide text-ink-muted mb-1.5">ATS keywords to add</div>
+                    <div className="flex flex-wrap gap-1.5">{opt.data.keywords_for_ats.slice(0, 10).map((s, i) => <span key={i} className="text-[11px] font-medium px-2.5 py-0.5 rounded-pill bg-surface-sunken text-ink-secondary">{s}</span>)}</div>
+                  </div>
+                )}
+              </div>
+            )}
             <Link to={`/evaluate?eval=${result.id}`} className="inline-flex items-center justify-center gap-1.5 h-10 rounded-md bg-ai-600 text-white text-[13px] font-semibold j4u-press j4u-focus hover:bg-ai-700 transition-colors"><IconSparkle size={15} color="#fff" />Open tailored CV &amp; cover letter</Link>
             <Link to="/auto-apply" className="inline-flex items-center justify-center gap-1.5 h-10 rounded-md bg-primary-600 text-white text-[13px] font-semibold j4u-press j4u-focus hover:bg-primary-700 transition-colors">Apply now on Auto-apply →</Link>
             {listing.url && !listing.url.startsWith('pasted:') && <a href={listing.url} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center h-9 rounded-md border border-hair text-ink-strong text-xs font-semibold j4u-press j4u-focus hover:bg-surface-sunken transition-colors">Open the listing ↗</a>}

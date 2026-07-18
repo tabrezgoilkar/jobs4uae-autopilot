@@ -7,6 +7,7 @@ import { estimateSalary } from '../scanner/salary.js';
 import { htmlToJobText } from '../scanner/extract.js';
 import { assertFetchableUrl } from '../lib/ssrf.js';
 import { extractJdSkills } from '../ai/jdSkills.js';
+import { optimizeResume } from '../apply/resumeOptimize.js';
 
 export function scannerRouter({ cloud = false } = {}) {
   const router = Router();
@@ -33,6 +34,27 @@ export function scannerRouter({ cloud = false } = {}) {
       const { jobDescription } = req.body ?? {};
       const engine = createEngine(config);
       res.json(await extractJdSkills(jobDescription, engine));
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  /**
+   * POST /api/scanner/optimize
+   * Body: { jobText }
+   * Returns CrewAI-style structured CV optimization suggestions (before/after per
+   * section, skills to highlight, ATS keywords). Cloud-safe, engine-backed, honest.
+   */
+  router.post('/scanner/optimize', async (req, res) => {
+    try {
+      const jobText = (req.body?.jobText ?? '').trim();
+      if (!jobText) return res.status(400).json({ error: 'Please provide a job description.' });
+      const config = await loadConfig(req.userId);
+      if (!config.setupComplete) return res.status(409).json({ error: 'Please complete the AI setup wizard first.' });
+      const engine = createEngine(config);
+      const profile = await loadProfile(req.userId);
+      const suggestions = await optimizeResume({ profile, jobText, engine });
+      res.json(suggestions);
     } catch (e) {
       res.status(500).json({ error: e.message });
     }

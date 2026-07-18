@@ -111,6 +111,24 @@ export async function evaluateJobText(jobText: string): Promise<EvaluationResult
   return apiJson<EvaluationResult>(res);
 }
 
+export interface ResumeOptimization {
+  content_suggestions: { section: string; before: string; after: string; rationale: string }[];
+  skills_to_highlight: string[];
+  achievements_to_add: string[];
+  keywords_for_ats: string[];
+  formatting_suggestions: string[];
+}
+
+/** CrewAI-style structured CV optimization (before/after per section). Cloud-safe. */
+export async function optimizeResume(jobText: string): Promise<ResumeOptimization> {
+  const res = await fetch('/api/scanner/optimize', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ jobText }),
+  });
+  return apiJson<ResumeOptimization>(res);
+}
+
 /**
  * Evaluate a listing by composing job text from listing fields
  * and posting to /api/evaluate.

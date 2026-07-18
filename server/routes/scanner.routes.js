@@ -6,6 +6,7 @@ import { createEngine } from '../ai/index.js';
 import { estimateSalary } from '../scanner/salary.js';
 import { htmlToJobText } from '../scanner/extract.js';
 import { assertFetchableUrl } from '../lib/ssrf.js';
+import { extractJdSkills } from '../ai/jdSkills.js';
 
 export function scannerRouter({ cloud = false } = {}) {
   const router = Router();
@@ -17,6 +18,24 @@ export function scannerRouter({ cloud = false } = {}) {
   router.get('/scanner/boards', async (req, res) => {
     const list = cloud ? CLOUD_BOARDS : await allBoards();
     res.json(list.map(({ id, name, status }) => ({ id, name, status: status ?? 'experimental' })));
+  });
+
+  /**
+   * POST /api/scanner/jd-skills
+   * Body: { jobDescription }
+   * Returns 5-category skill classification of a JD (tech_stack, technical_skills,
+   * other_skills, required_skills, nice_to_have). Cloud-safe, engine-backed.
+   */
+  router.post('/scanner/jd-skills', async (req, res) => {
+    try {
+      const config = await loadConfig(req.userId);
+      if (!config.setupComplete) return res.status(409).json({ error: 'Please complete the AI setup wizard first.' });
+      const { jobDescription } = req.body ?? {};
+      const engine = createEngine(config);
+      res.json(await extractJdSkills(jobDescription, engine));
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
   });
 
   /**

@@ -8,6 +8,8 @@
 // so the route never breaks. Salary / availability / start-date are not profile
 // fields → answered "Not specified." with NO engine call.
 
+import { resolvablePresets } from './faqPresets.js';
+
 // Questions that can be answered purely from the profile (deterministic).
 const FACTFUL_TEMPLATES = [
   { q: 'Why are you a strong fit for this role?', pick: (p) => summaryOrHighlights(p) },
@@ -24,17 +26,21 @@ const FACTFUL_TEMPLATES = [
 const ALWAYS_ASKED = [
   { q: 'What are your salary expectations?', answer: 'Not specified.' },
   { q: 'When would you be available to start?', answer: 'Not specified.' },
-  { q: 'Are you authorized to work in the UAE?', pick: (p) => (p.location || '').toLowerCase().includes('uae') ? 'Yes — based in the UAE.' : 'Not specified.', onlyIf: (p) => (p.location || '').toLowerCase().includes('uae') },
+  { q: 'Are you authorized to work in the UAE?', answer: 'Yes — based in the UAE.', onlyIf: (p) => (p.location || '').toLowerCase().includes('uae') },
 ];
 
 function summaryOrHighlights(p) {
   if (p.summary?.trim()) return p.summary.trim();
   const exp = (p.experience || [])[0];
-  return exp ? `${p.headline || p.fullName}: ${exp.title} at ${exp.company}.` : (p.headline || 'Not specified.');
+  const bits = [p.headline || p.fullName, exp?.title, exp?.company].filter(Boolean);
+  return bits.length > 1 ? `${bits[0]}: ${bits.slice(1).join(' at ')}.` : (bits[0] || 'Not specified.');
 }
 function topExperience(p) {
   const e = (p.experience || [])[0];
-  return e ? `${e.title} at ${e.company} — ${e.description || ''}`.trim() : 'Not specified.';
+  if (!e) return 'Not specified.';
+  const title = e.title || 'your role';
+  const rest = [e.company, e.description].filter(Boolean).join(' — ');
+  return rest ? `${title} — ${rest}`.trim() : title;
 }
 function topProject(p) {
   const pr = (p.projects || [])[0];
@@ -79,6 +85,16 @@ export async function generateFaqBank(profile = {}, engine = null) {
   for (const t of ALWAYS_ASKED) {
     if (t.onlyIf && !t.onlyIf(p)) continue;
     bank.push({ question: t.q, answer: t.answer });
+  }
+
+  // Seed the common LinkedIn "Easy Apply" screening questions that we can
+  // already answer from the profile (visa status, portfolio, experience…).
+  // Sourced from the open-source auto-applier question catalogs; only the
+  // resolvable ones are added (null-answer presets are left for the user).
+  for (const preset of resolvablePresets(p)) {
+    if (!bank.some((b) => b.question === preset.question)) {
+      bank.push({ question: preset.question, answer: preset.answer });
+    }
   }
 
   // Guarantee a sane minimum even for an empty profile.

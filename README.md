@@ -147,6 +147,26 @@ POC taps one public source channel — [@WePostJobs](https://t.me/WePostJobs) �
    no user-account automation, nothing is auto-posted without you running the
    command (schedule it with cron/Task Scheduler if you want a feed).
 
+3. **Ingest groups & forwards with your bot** — the t.me preview only exists for
+   public *channels*; for **groups** (like @WePostJobs) the bot reads posts via
+   the official `getUpdates` API instead:
+
+   - @BotFather → `/setprivacy` → your bot → **Disable** (lets it read group posts)
+   - add the bot to your destination group as **admin**
+   - source groups: an admin adds your bot, **or** you simply *forward* job posts
+     to the bot's private chat — same pipeline, no third-party admin needed
+
+   ```bash
+   TELEGRAM_BOT_TOKEN=123:abc TELEGRAM_CHAT_ID=-100123456789 npm run telegram:ingest
+   ```
+
+4. **Fully automatic, no PC needed** — `.github/workflows/telegram-pipeline.yml`
+   runs both steps hourly on GitHub's servers. Add `TELEGRAM_BOT_TOKEN` and
+   `TELEGRAM_CHAT_ID` as repository **secrets** (Settings → Secrets and variables
+   → Actions) to activate it; optionally set a `TELEGRAM_SOURCE_CHANNEL`
+   repository **variable** to also scrape a public channel. Dedupe state persists
+   between runs via the Actions cache.
+
 ---
 
 ## Project layout

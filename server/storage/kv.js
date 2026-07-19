@@ -3,15 +3,27 @@ import path from 'node:path';
 import { dataDir } from '../config/paths.js';
 
 // Per-user JSON key-value storage, async so the same store code runs locally
-// (filesystem) and in the cloud (Neon Postgres). Selected by DATABASE_URL:
-//   - set   → Postgres (serverless-friendly HTTP driver)
-//   - unset → filesystem (local dev; 'local' user stays flat for back-compat)
+// (filesystem) and in the cloud (Neon Postgres). Selected by any Postgres URL:
+//   - DATABASE_URL / DATABASE_URL_UNPOOLED / POSTGRES_URL_NON_POOLING set → Postgres
+//   - none set → filesystem (local dev; 'local' user stays flat for back-compat)
 //
 //   await getJson(userId, key) -> parsed value | null
 //   await setJson(userId, key, value) -> value
 
+// Resolve a usable Postgres connection string from the vars Vercel/Neon expose.
+// (DATABASE_URL is the canonical name; the project also sets POSTGRES_URL_NON_POOLING
+// and DATABASE_URL_UNPOOLED, and we must not hard-fail if only those are present.)
+function pgConnectionString() {
+  return (
+    process.env.DATABASE_URL?.trim() ||
+    process.env.DATABASE_URL_UNPOOLED?.trim() ||
+    process.env.POSTGRES_URL_NON_POOLING?.trim() ||
+    ''
+  );
+}
+
 export function usingPostgres() {
-  return !!process.env.DATABASE_URL?.trim();
+  return !!pgConnectionString();
 }
 const safe = (s, fallback) => {
   const cleaned = String(s ?? '').replace(/[^a-zA-Z0-9_.-]/g, '_');
@@ -47,7 +59,7 @@ let ensured;
 async function sql() {
   if (!sqlClient) {
     const { neon } = await import('@neondatabase/serverless');
-    sqlClient = neon(process.env.DATABASE_URL);
+    sqlClient = neon(pgConnectionString());
   }
   return sqlClient;
 }

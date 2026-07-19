@@ -12,6 +12,7 @@
     "dev:web": "npm --prefix web run dev",
     "build": "npm --prefix web run build",
     "start": "node server/index.js",
+    "telegram:repost": "node scripts/telegram-repost.js",
     "test": "vitest run",
     "test:watch": "vitest"
   },

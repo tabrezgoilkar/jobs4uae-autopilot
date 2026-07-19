@@ -2,12 +2,13 @@ import { cached, rateLimit, clientIp } from '../lib/cache.js';
 import indeed from './boards/indeed.js';
 import linkedin from './boards/linkedin.js';
 import freehire from './boards/freehire.js';
+import telegram from './boards/telegram.js';
 
 // Cloud-safe boards (plain server-side fetch, no browser) are imported
 // statically. The `indeed` board needs a real headed browser + XHR interception
 // (desktop companion only) and imports Playwright — so it is loaded lazily via
 // dynamic import on the desktop path, keeping Playwright out of the cloud bundle.
-export const REST_BOARDS = [linkedin, freehire];
+export const REST_BOARDS = [linkedin, freehire, telegram];
 
 let browserBoards = null;
 async function getBrowserBoards() {

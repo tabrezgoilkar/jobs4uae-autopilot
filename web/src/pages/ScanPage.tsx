@@ -27,6 +27,7 @@ const GRADE_PCT: Record<string, number> = { A: 92, B: 82, C: 68, D: 52, F: 35 };
 const SOURCE_LABEL: Record<string, { label: string; tone: string }> = {
   linkedin: { label: 'LinkedIn', tone: 'bg-[#e8f0fb] text-[#0a66c2] border-[#cfe1f7]' },
   freehire: { label: 'FreeHire', tone: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+  telegram: { label: 'Telegram', tone: 'bg-sky-50 text-sky-700 border-sky-200' },
   indeed: { label: 'Indeed', tone: 'bg-blue-50 text-blue-700 border-blue-200' },
 };
 function sourceTag(source?: string) {

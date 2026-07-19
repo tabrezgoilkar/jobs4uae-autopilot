@@ -224,10 +224,10 @@ export default function ScanPage() {
   }, [sel?.listing, sel?.row?.result, country, city, salaries]);
 
   return (
-    <div className="space-y-5 j4u-rise">
+    <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 space-y-5 j4u-rise">
       <PageHeader
         title="Scan GCC boards"
-        subtitle="Search Indeed, or paste a job link — the copilot scores and tailors each one. A browser window opens briefly while we fetch."
+        subtitle="Scan GCC job boards or paste any job link — the copilot scores and tailors each one."
       />
 
       <div className="grid lg:grid-cols-[minmax(0,1fr)_372px] gap-[18px] items-start">
@@ -237,12 +237,12 @@ export default function ScanPage() {
           <form onSubmit={handleScan} aria-label="Job search" className="bg-surface border border-hair-subtle rounded-md p-4 shadow-sm space-y-3">
             <div className="grid gap-2.5 sm:grid-cols-[1fr_auto]">
               <input aria-label="Search keyword" required value={keyword} onChange={(e) => setKeyword(e.target.value)} disabled={scanning} placeholder="Role or keyword — e.g. Accountant" className={`${FIELD} w-full`} />
-              <div className="flex gap-2.5">
+              <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
                 <label className="sr-only" htmlFor="scan-country">Country</label>
                 <select id="scan-country" aria-label="GCC country" value={country} onChange={(e) => setCountry(e.target.value)} disabled={scanning} className={`${FIELD} flex-1 sm:w-36`}>
                   {GCC_COUNTRIES.map((c) => <option key={c} value={c}>{c}</option>)}
                 </select>
-                <Button type="submit" disabled={!canScan}>
+                <Button type="submit" disabled={!canScan} className="w-full sm:w-auto">
                   {scanning ? (<><span className="inline-block w-3.5 h-3.5 rounded-full border-2 border-white border-t-transparent animate-spin" /> Scanning…</>) : 'Scan new'}
                 </Button>
               </div>
@@ -538,7 +538,7 @@ function ScanCopilot({ sel, salary, fit, onEvaluate }: { sel: { listing?: Listin
               type="button"
               onClick={runOptimize}
               disabled={opt.busy}
-              className="inline-flex items-center justify-center gap-1.5 h-10 rounded-md border border-hair bg-surface text-ink-strong text-[13px] font-semibold j4u-press j4u-focus hover:bg-surface-sunken transition-colors disabled:opacity-60"
+              className="inline-flex w-full sm:w-auto items-center justify-center gap-1.5 h-10 rounded-md border border-hair bg-surface text-ink-strong text-[13px] font-semibold j4u-press j4u-focus hover:bg-surface-sunken transition-colors disabled:opacity-60"
             >
               <IconSparkle size={15} />{opt.busy ? 'Analyzing your CV…' : 'Suggest CV improvements'}
             </button>
@@ -578,7 +578,7 @@ function ScanCopilot({ sel, salary, fit, onEvaluate }: { sel: { listing?: Listin
               type="button"
               onClick={runResearch}
               disabled={brief.busy || !listing.company}
-              className="inline-flex items-center justify-center gap-1.5 h-10 rounded-md border border-hair bg-surface text-ink-strong text-[13px] font-semibold j4u-press j4u-focus hover:bg-surface-sunken transition-colors disabled:opacity-60"
+              className="inline-flex w-full sm:w-auto items-center justify-center gap-1.5 h-10 rounded-md border border-hair bg-surface text-ink-strong text-[13px] font-semibold j4u-press j4u-focus hover:bg-surface-sunken transition-colors disabled:opacity-60"
             >
               <IconSparkle size={15} />{brief.busy ? 'Researching…' : listing.company ? `Research ${listing.company}` : 'Research company'}
             </button>

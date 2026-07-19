@@ -23,7 +23,7 @@ export function escapeHtml(s) {
  * Telegram HTML supports <b>/<i>/<a>; keep it compact — title, key facts,
  * a teaser of the original text, and credit back to the source post.
  */
-export function formatRepostMessage(listing, { sourceChannel } = {}) {
+export function formatRepostMessage(listing, { sourceChannel, sourceLabel } = {}) {
   const lines = [`💼 <b>${escapeHtml(listing.title)}</b>`];
   if (listing.location) lines.push(`📍 ${escapeHtml(listing.location)}`);
   if (listing.applyEmail) lines.push(`📧 Apply: ${escapeHtml(listing.applyEmail)}`);
@@ -37,8 +37,14 @@ export function formatRepostMessage(listing, { sourceChannel } = {}) {
   }
 
   lines.push('');
-  const credit = sourceChannel ? ` · via @${escapeHtml(sourceChannel)}` : '';
-  lines.push(`🔗 <a href="${escapeHtml(listing.url)}">Original post</a>${credit}`);
+  // Public posts get a permalink; private-group/forwarded posts have none —
+  // credit the source by name instead.
+  const creditName = sourceChannel ? `@${sourceChannel}` : sourceLabel || '';
+  if (listing.url) {
+    lines.push(`🔗 <a href="${escapeHtml(listing.url)}">Original post</a>${creditName ? ` · via ${escapeHtml(creditName)}` : ''}`);
+  } else if (creditName) {
+    lines.push(`📢 via ${escapeHtml(creditName)}`);
+  }
   lines.push('🤖 Shared by Jobs4UAE Autopilot — free GCC job copilot');
   return lines.join('\n');
 }

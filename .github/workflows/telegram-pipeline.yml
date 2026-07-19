@@ -1,0 +1,60 @@
+name: Telegram jobs pipeline
+
+# Hourly community-jobs run, entirely on GitHub's servers:
+#   1. ingest — repost job posts the bot can see (source groups + forwards)
+#   2. channel scrape — optional extra source: set a TELEGRAM_SOURCE_CHANNEL
+#      repository *variable* to any public channel name
+# Both steps no-op safely until the TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID
+# repository *secrets* are configured. Dedupe state persists via actions/cache.
+
+on:
+  schedule:
+    - cron: '23 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: telegram-pipeline
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    env:
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Restore pipeline state
+        uses: actions/cache/restore@v4
+        with:
+          path: data
+          key: telegram-state-${{ github.run_id }}
+          restore-keys: telegram-state-
+
+      - name: Ingest bot updates → repost to group
+        if: env.TELEGRAM_BOT_TOKEN != '' && env.TELEGRAM_CHAT_ID != ''
+        run: node scripts/telegram-ingest.js
+
+      - name: Scrape public channel → repost (optional)
+        if: env.TELEGRAM_BOT_TOKEN != '' && env.TELEGRAM_CHAT_ID != '' && vars.TELEGRAM_SOURCE_CHANNEL != ''
+        env:
+          TELEGRAM_SOURCE_CHANNEL: ${{ vars.TELEGRAM_SOURCE_CHANNEL }}
+        run: node scripts/telegram-repost.js
+
+      - name: Not configured yet
+        if: env.TELEGRAM_BOT_TOKEN == '' || env.TELEGRAM_CHAT_ID == ''
+        run: echo "Skipping — add TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID repository secrets to activate this pipeline."
+
+      - name: Save pipeline state
+        if: env.TELEGRAM_BOT_TOKEN != '' && env.TELEGRAM_CHAT_ID != ''
+        uses: actions/cache/save@v4
+        with:
+          path: data
+          key: telegram-state-${{ github.run_id }}

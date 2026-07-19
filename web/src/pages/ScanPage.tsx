@@ -8,6 +8,8 @@ import {
   estimateSalary,
   optimizeResume,
   researchCompany,
+  saveScannedJobs,
+  listScannedJobs,
   type Listing,
   type SalaryEstimate,
   type ResumeOptimization,
@@ -91,6 +93,13 @@ export default function ScanPage() {
     saveScanState({ keyword, country, city, listings, rows, selected, hasScanned });
   }, [keyword, country, city, listings, rows, selected, hasScanned]);
 
+  // Hydrate previously scanned jobs from the server (cross-device sync).
+  useEffect(() => {
+    listScannedJobs().then((saved) => {
+      if (saved.length && listings.length === 0) setListings(saved);
+    }).catch(() => {});
+  }, []);
+
   function setRow(url: string, patch: Partial<RowState>) {
     setRows((prev) => ({ ...prev, [url]: { ...(prev[url] ?? { busy: false, result: null, error: null }), ...patch } }));
   }
@@ -102,6 +111,7 @@ export default function ScanPage() {
     try {
       const result = await scan({ keyword: keyword.trim(), country, city: city.trim() || undefined });
       setListings(result.listings);
+      if (result.listings.length) saveScannedJobs(result.listings).catch(() => {});
       if (result.listings[0]) setSelected(result.listings[0].url);
       if (result.error && result.listings.length === 0) setScanError(result.error);
     } catch (err) {

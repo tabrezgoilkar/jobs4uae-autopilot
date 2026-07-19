@@ -131,5 +131,23 @@ describe('scanner API', () => {
       expect(res.status).toBe(200);
       expect(res.body.error).toMatch(/Indeed/i);
     });
+
+    it('saves and returns the user scanned jobs (cross-device)', async () => {
+      const { createApp } = await import('../app.js');
+      const app = createApp();
+      const saved = await request(app)
+        .post('/api/scanner/jobs')
+        .send({ listings: [
+          { title: 'A', company: 'Co', location: 'Dubai', url: 'https://x.com/1', source: 'linkedin' },
+          { title: 'A', company: 'Co', location: 'Dubai', url: 'https://x.com/1', source: 'linkedin' }, // dup
+          { title: 'B', company: 'Co2', location: 'Abu Dhabi', url: 'https://x.com/2', source: 'freehire' },
+        ] });
+      expect(saved.status).toBe(200);
+      expect(saved.body.listings).toHaveLength(2); // deduped by url
+      const got = await request(app).get('/api/scanner/jobs');
+      expect(got.status).toBe(200);
+      expect(got.body.listings).toHaveLength(2);
+      expect(got.body.listings.map((l) => l.source).sort()).toEqual(['freehire', 'linkedin']);
+    });
   });
 });

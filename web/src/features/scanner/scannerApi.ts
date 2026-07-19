@@ -73,6 +73,24 @@ export async function scan({
   return apiJson<ScanResult>(res);
 }
 
+/** Persist the scanned listings for the logged-in user (cross-device). */
+export async function saveScannedJobs(listings: Listing[]): Promise<{ listings: Listing[] }> {
+  const res = await fetch('/api/scanner/jobs', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ listings }),
+  });
+  return apiJson<{ listings: Listing[] }>(res);
+}
+
+/** Load the user's previously scanned listings (so they replicate across devices). */
+export async function listScannedJobs(): Promise<Listing[]> {
+  const res = await fetch('/api/scanner/jobs');
+  if (!res.ok) return [];
+  const body = await res.json().catch(() => ({ listings: [] }));
+  return Array.isArray(body.listings) ? body.listings : [];
+}
+
 export interface SalaryEstimate {
   low: number | null;
   high: number | null;

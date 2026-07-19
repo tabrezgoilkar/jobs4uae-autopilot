@@ -10,6 +10,7 @@ import { assertFetchableUrl } from '../lib/ssrf.js';
 import { extractJdSkills } from '../ai/jdSkills.js';
 import { optimizeResume } from '../apply/resumeOptimize.js';
 import { researchCompany } from '../apply/companyResearch.js';
+import { getJson, setJson } from '../storage/kv.js';
 
 /**
  * Extract a LinkedIn numeric job id from a pasted job URL, or null if it isn't
@@ -270,6 +271,40 @@ export function scannerRouter({ cloud = false } = {}) {
         : 'Could not open that LinkedIn posting right now.';
       res.status(502).json({ error: msg });
     }
+  });
+
+  /**
+   * GET /api/scanner/jobs  and  POST /api/scanner/jobs
+   * Per-user store of the last scanned listings, so a scan started on one
+   * device (desktop) shows up on another (mobile) under the same login.
+   * POST body: { listings: Listing[] } — replaces the saved list (deduped by url).
+   */
+  router.get('/scanner/jobs', async (req, res) => {
+    if (!req.userId) return res.status(401).json({ error: 'Sign in required.' });
+    const list = (await getJson(req.userId, 'scanned_jobs')) || [];
+    res.json({ listings: Array.isArray(list) ? list : [] });
+  });
+  router.post('/scanner/jobs', async (req, res) => {
+    if (!req.userId) return res.status(401).json({ error: 'Sign in required.' });
+    const incoming = Array.isArray(req.body?.listings) ? req.body.listings : [];
+    const seen = new Set();
+    const merged = [];
+    for (const j of incoming) {
+      const url = String(j?.url || '').trim();
+      if (!url || seen.has(url)) continue;
+      seen.add(url);
+      merged.push({
+        title: String(j.title || '').slice(0, 300),
+        company: String(j.company || '').slice(0, 200),
+        location: String(j.location || '').slice(0, 200),
+        url,
+        source: String(j.source || 'link').slice(0, 60),
+        salary: j.salary ? String(j.salary).slice(0, 120) : undefined,
+        posted: j.posted ? String(j.posted).slice(0, 120) : undefined,
+      });
+    }
+    await setJson(req.userId, 'scanned_jobs', merged.slice(0, 200));
+    res.json({ listings: merged });
   });
 
   return router;

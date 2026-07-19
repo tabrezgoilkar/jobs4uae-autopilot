@@ -1,13 +1,17 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   scan,
   fetchJobFromUrl,
   evaluateJobText,
+  evaluateListing,
   optimizeResume,
   researchCompany,
+  saveScannedJobs,
+  listScannedJobs,
   type Listing,
   type ResumeOptimization,
   type CompanyBrief,
+  type EvaluationResult,
 } from '../features/scanner/scannerApi';
 
 const GCC_COUNTRIES = ['UAE', 'Saudi Arabia', 'Qatar', 'Kuwait', 'Bahrain', 'Oman'];
@@ -36,6 +40,15 @@ export default function MobileScan() {
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<Listing | null>(null);
 
+  // Load the user's previously scanned jobs (so a desktop scan shows on mobile).
+  useEffect(() => {
+    listScannedJobs().then((saved) => { if (saved.length) setListings(saved); }).catch(() => {});
+  }, []);
+
+  async function persist(list: Listing[]) {
+    try { await saveScannedJobs(list); } catch { /* non-fatal */ }
+  }
+
   // paste-a-link
   const [pasteUrl, setPasteUrl] = useState('');
   const [pasteBusy, setPasteBusy] = useState(false);
@@ -48,6 +61,7 @@ export default function MobileScan() {
     try {
       const result = await scan({ keyword: keyword.trim(), country });
       setListings(result.listings);
+      if (result.listings.length) persist(result.listings);
       if (result.error && result.listings.length === 0) setError(result.error);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Scan failed. Please try again.');
@@ -70,6 +84,8 @@ export default function MobileScan() {
         (listing as Listing & { _eval?: unknown })._eval = ev;
       } catch { /* evaluation optional */ }
       setSelected(listing);
+      setListings((prev) => [listing, ...prev]);
+      persist([listing, ...listings]);
       setPasteUrl('');
     } catch (err) {
       setPasteMsg(err instanceof Error ? err.message : 'Could not open that link.');
@@ -169,6 +185,17 @@ export default function MobileScan() {
 function JobSheet({ listing, onClose }: { listing: Listing & { _eval?: unknown }; onClose: () => void }) {
   const [opt, setOpt] = useState<{ busy: boolean; data: ResumeOptimization | null; error: string | null }>({ busy: false, data: null, error: null });
   const [brief, setBrief] = useState<{ busy: boolean; data: CompanyBrief | null; error: string | null }>({ busy: false, data: null, error: null });
+  const [ev, setEv] = useState<{ busy: boolean; data: EvaluationResult | null; error: string | null }>({ busy: false, data: null, error: null });
+
+  async function runEvaluate() {
+    setEv({ busy: true, data: null, error: null });
+    try {
+      const data = await evaluateListing(listing);
+      setEv({ busy: false, data, error: null });
+    } catch (e) {
+      setEv({ busy: false, data: null, error: e instanceof Error ? e.message : 'Evaluation failed.' });
+    }
+  }
 
   async function runOptimize() {
     setOpt({ busy: true, data: null, error: null });
@@ -226,7 +253,41 @@ function JobSheet({ listing, onClose }: { listing: Listing & { _eval?: unknown }
               <svg width="15" height="15" viewBox="0 0 24 24" fill="#6B45F0"><path d="M12 2l2 6 6 2-6 2-2 6-2-6-6-2 6-2z" /></svg>
               {brief.busy ? 'Researching…' : listing.company ? `Research ${listing.company}` : 'Research company'}
             </button>
+            <button
+              onClick={runEvaluate}
+              disabled={ev.busy}
+              className="j4u-press w-full h-[44px] rounded-[12px] text-[13.5px] font-semibold flex items-center justify-center gap-1.5 disabled:opacity-60"
+              style={{ border: '1px solid var(--border)', background: 'var(--surface-sunken)', color: 'var(--text-strong)' }}
+            >
+              {ev.busy ? 'Evaluating fit…' : 'Evaluate fit'}
+            </button>
           </div>
+
+          {ev.error && <div className="text-[12.5px]" style={{ color: 'var(--danger-text)' }}>{ev.error}</div>}
+          {ev.data && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center justify-center" style={{ width: 46, height: 46, borderRadius: 12, background: 'var(--ai-soft)', border: '1px solid #E0D5FB' }}>
+                  <span className="text-[20px] font-bold" style={{ color: 'var(--ai-700)' }}>{ev.data.grade}</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[13px] font-semibold capitalize" style={{ color: 'var(--text-strong)' }}>{ev.data.recommendation}</div>
+                  <div className="text-[11.5px]" style={{ color: 'var(--text-muted)' }}>Fit grade</div>
+                </div>
+              </div>
+              {ev.data.summary && <p className="text-[12.5px] leading-relaxed" style={{ color: 'var(--text-secondary)' }}>{ev.data.summary}</p>}
+              {ev.data.dimensions?.length > 0 && (
+                <div className="space-y-1.5">
+                  {ev.data.dimensions.slice(0, 5).map((d, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <span className="flex-1 text-[12px] truncate" style={{ color: 'var(--text)' }}>{d.name}</span>
+                      <span className="text-[11.5px] font-semibold" style={{ color: 'var(--text-muted)' }}>{d.score}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {opt.error && <div className="text-[12.5px]" style={{ color: 'var(--danger-text)' }}>{opt.error}</div>}
           {brief.error && <div className="text-[12.5px]" style={{ color: 'var(--danger-text)' }}>{brief.error}</div>}

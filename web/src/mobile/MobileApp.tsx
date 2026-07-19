@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { AppConfig } from '../api';
 import { MobileCopilotSheet, MobileAskSheet } from './MobileSheets';
 import MobileHome from './MobileHome';
+import MobileScan from './MobileScan';
 import MobileProfile from './MobileProfile';
 import MobileDocuments from './MobileDocuments';
 import MobileSettings from './MobileSettings';
@@ -33,9 +34,9 @@ export default function MobileApp({ config }: { config: AppConfig }) {
   const [copilotOpen, setCopilotOpen] = useState(false);
 
   const go = (r: MobileRoute) => { setRoute(r); window.scrollTo?.(0, 0); };
-  // Scan / Tracker / Auto-apply aren't in the mobile build yet (browser features →
-  // desktop companion); show the on-brand coming-soon screen.
-  const comingSoon = route === 'scan' || route === 'tracker' || route === 'auto-apply';
+  // Tracker / Auto-apply aren't in the mobile build yet (browser features →
+  // desktop companion); show the on-brand coming-soon screen. Scan is now live.
+  const comingSoon = route === 'tracker' || route === 'auto-apply';
   const showBack = route === 'profile' || route === 'settings';
 
   return (
@@ -67,6 +68,7 @@ export default function MobileApp({ config }: { config: AppConfig }) {
       <main className="flex-1 min-h-0 overflow-y-auto">
         <div className="px-4 pt-4" style={{ paddingBottom: 96 }}>
           {route === 'home' && <MobileHome go={go} />}
+          {route === 'scan' && <MobileScan />}
           {route === 'profile' && <MobileProfile onOpenSettings={() => go('settings')} />}
           {route === 'evaluate' && <MobileDocuments />}
           {route === 'settings' && <MobileSettings />}

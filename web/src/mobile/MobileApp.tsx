@@ -66,7 +66,7 @@ export default function MobileApp({ config }: { config: AppConfig }) {
 
       {/* scroll area */}
       <main className="flex-1 min-h-0 overflow-y-auto">
-        <div className="px-4 pt-4" style={{ paddingBottom: 96 }}>
+        <div className="px-4 pt-4" style={{ paddingBottom: 'calc(96px + env(safe-area-inset-bottom, 0px))' }}>
           {route === 'home' && <MobileHome go={go} />}
           {route === 'scan' && <MobileScan />}
           {route === 'profile' && <MobileProfile onOpenSettings={() => go('settings')} />}
@@ -76,8 +76,10 @@ export default function MobileApp({ config }: { config: AppConfig }) {
         </div>
       </main>
 
-      {/* bottom tab bar */}
-      <nav className="flex-none flex items-stretch border-t" style={{ background: 'var(--surface)', borderColor: 'var(--border-subtle)', padding: '6px 6px 18px' }}>
+      {/* bottom tab bar — fixed (not flex-anchored) so it stays visible in
+          WhatsApp/Telegram in-app browsers that misreport 100dvh, with
+          safe-area padding for gesture-nav phones. */}
+      <nav className="fixed inset-x-0 bottom-0 z-40 flex items-stretch border-t" style={{ background: 'var(--surface)', borderColor: 'var(--border-subtle)', padding: '6px 6px calc(10px + env(safe-area-inset-bottom, 8px))' }}>
         {TABS.map((t) => {
           const active = route === t.route;
           return (

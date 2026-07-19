@@ -59,8 +59,17 @@ async function main() {
   if (!res.ok) throw new Error(`t.me responded ${res.status} — is the channel public?`);
   const html = await res.text();
 
-  const jobs = parseMessages(html).filter((m) => looksLikeJob(m.text));
-  console.log(`Found ${jobs.length} job-looking post(s) on the page.`);
+  const messages = parseMessages(html);
+  const jobs = messages.filter((m) => looksLikeJob(m.text));
+  console.log(`Parsed ${messages.length} message(s), ${jobs.length} look like job posts.`);
+  if (!messages.length) {
+    const title = html.match(/<title>([^<]*)<\/title>/i)?.[1] || '(no title)';
+    const isPreview = /tgme_widget_message/.test(html);
+    console.log(`Diagnostics: page title "${title}", bytes ${html.length}, message markup present: ${isPreview}.`);
+    if (!isPreview) {
+      console.log('t.me returned the join/landing page — this usually means the source is a GROUP or a preview-restricted channel. The t.me/s/ preview only exists for public CHANNELS.');
+    }
+  }
 
   const state = loadState();
   const fresh = selectNewPosts(jobs, state, { limit });

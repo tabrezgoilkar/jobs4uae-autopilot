@@ -68,6 +68,7 @@ describe('tracker store', () => {
   it('updateApplication changes status and updates updatedAt without touching id/createdAt', async () => {
     const { addApplication, updateApplication } = await import('../tracker/store.js');
     const a = await addApplication('local', { jobTitle: 'PM', status: 'saved' });
+    await new Promise((r) => setTimeout(r, 5)); // ensure updatedAt lands in a later millisecond
     const updated = await updateApplication('local', a.id, { status: 'interview', id: 'evil', createdAt: 'evil' });
     expect(updated.status).toBe('interview');
     expect(updated.id).toBe(a.id);

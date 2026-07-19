@@ -21,6 +21,7 @@ const SOURCE_LABEL: Record<string, { label: string; bg: string; bd: string; fg: 
   linkedin: { label: 'LinkedIn', bg: '#E8F0FB', bd: '#CFE1F7', fg: '#0A66C2' },
   freehire: { label: 'FreeHire', bg: '#ECFDF3', bd: '#BBF0C8', fg: '#06683B' },
   indeed: { label: 'Indeed', bg: '#EFF4FF', bd: '#C5D6FB', fg: '#2747E8' },
+  telegram: { label: 'Telegram', bg: '#E8F6FD', bd: '#BFE4F8', fg: '#0B6FA4' },
 };
 function sourceTag(source?: string) {
   if (!source) return { label: 'Link', bg: 'var(--surface-sunken)', bd: 'var(--border-subtle)', fg: 'var(--text-muted)' };

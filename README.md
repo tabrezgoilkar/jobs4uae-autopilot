@@ -103,8 +103,8 @@ The instant **fit score** and **Upskill plan** need no key.
 ### 3. What you can do on the cloud
 - **Evaluate** — paste a job, get an A–F "should I apply?" score plus an instant
   weighted fit breakdown (no key needed).
-- **Scan GCC boards** — search **LinkedIn** and **FreeHire** directly (these need no
-  browser). Indeed / paste-a-link / autofill are desktop-only (they need a browser,
+- **Scan GCC boards** — search **LinkedIn**, **FreeHire** and **Telegram community
+  posts** directly (these need no browser). Indeed / paste-a-link / autofill are desktop-only (they need a browser,
   so use the local app for those).
 - **Upskill plan** — see a gap heatmap of skills you're missing vs the jobs you've
   tracked.
@@ -119,6 +119,36 @@ The instant **fit score** and **Upskill plan** need no key.
 
 ---
 
+## Community jobs from Telegram (POC)
+
+Gulf jobs often surface first in Telegram/WhatsApp groups, not on job boards. This
+POC taps one public source channel — [@WePostJobs](https://t.me/WePostJobs) — two ways:
+
+1. **Scanner board** — the Scan page now includes a **Telegram (community)** source.
+   It reads the channel's public web preview (`t.me/s/WePostJobs`, no login, no API
+   key), keeps only posts that look like job ads, and turns them into normal
+   listings (title, GCC location, apply email, link to the original post) so they
+   get fit-scored and tailored like any other job. Override the source with
+   `TELEGRAM_SOURCE_CHANNEL=<channel>`.
+
+2. **Repost to your own group** — forward fresh job posts to your Telegram group via
+   the official Bot API (create a bot with [@BotFather](https://t.me/BotFather), add
+   it to your group as admin, grab the group chat id):
+
+   ```bash
+   # preview only — prints what would be sent
+   npm run telegram:repost -- --dry-run
+
+   # forward up to 5 new posts (dedupes across runs via data/telegram-repost-state.json)
+   TELEGRAM_BOT_TOKEN=123:abc TELEGRAM_CHAT_ID=-100123456789 npm run telegram:repost
+   ```
+
+   Every repost credits and links the original post. Only official APIs are used —
+   no user-account automation, nothing is auto-posted without you running the
+   command (schedule it with cron/Task Scheduler if you want a feed).
+
+---
+
 ## Project layout
 
 ```
@@ -127,7 +157,8 @@ server/            Express back end
   cloudApp.js      cloud app (no Playwright in the module graph)
   index.js         local entry (npm start)
   apply/           drafter.js, reviewer.js, atsCheck.js (honest, no fabrication)
-  scanner/         boards/ (linkedin, freehire, indeed), engine.js
+  scanner/         boards/ (linkedin, freehire, indeed, telegram), engine.js
+  community/       telegramRepost.js (forward channel jobs to your group)
   evaluate/        scoreFit.js (5-dimension weighted fit)
   upskill/         heatmap.js
   ai/              gemini / byok / ollama engines (createEngine)
